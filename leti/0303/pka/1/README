@@ -1,0 +1,14 @@
+Program options:
+  -h [ --help ]         show help
+  -c [ --client ]       start client chat
+  -s [ --server ]       start server chat
+
+Client options:
+  --ip arg                   address of server
+  -p [ --port ] arg (=10000) server port
+  -n [ --name ] arg          user name
+
+Server options:
+  -t [ --threads ] arg (=1)  number of threads
+  -p [ --port ] arg (=10000) listening port
+
