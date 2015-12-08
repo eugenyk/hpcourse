@@ -1,0 +1,3 @@
+[submodule "aptu/604_15/tsa/1"]
+	path = aptu/604_15/tsa/1
+	url = git@github.com:SerCeMan/simple_netty_chat.git
