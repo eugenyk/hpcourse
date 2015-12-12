@@ -13,8 +13,6 @@ Async chat with boost asio
 - `wget`
 - `tar`
 
-## Dependencies:
-
 ## Build:
 1. `./download_and_build_dependencies.sh` - download and build boost and protobuf libs (it will take some time)
 2. `export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PWD/protobuf/install_out/lib" && ./protobuf/install_out/bin/protoc -I=. --cpp_out=./src ./message.proto` - create message class from `message.proto`
