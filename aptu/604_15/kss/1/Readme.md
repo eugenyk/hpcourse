@@ -1,4 +1,4 @@
-Asynch chat with boost asio
+Async chat with boost asio
 ===========================
 
 ## Dependencies:
