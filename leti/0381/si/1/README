@@ -4,6 +4,7 @@ Build Requirements:
 3. Static libprotobuf version 3.0.0. Or change Message.pb.* files directory on build (See build manual below)
 4. CMake 2.8 or higher
 
+
 Build:
 Linux:
 cd $PATH_TO_SRC 
