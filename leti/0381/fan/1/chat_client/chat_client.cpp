@@ -6,6 +6,8 @@
 #include "chat_message.h"
 #include <mutex>
 
+//this is client
+
 using boost::asio::ip::tcp;
 
 typedef std::deque<chat_message> chat_message_queue;
