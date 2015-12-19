@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
     }
 	//while (!c.isEmpty()) {
 		//Sleep(100000);
-	std::cout << "All write" << std::endl;
+	std::cout << "All right" << std::endl;
 	//system("pause");
 char ccc;
 std::cin >> ccc;
