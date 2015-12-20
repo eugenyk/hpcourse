@@ -1,0 +1,25 @@
+Build Requirements:
+1. Boost 1.58 or higher
+2. g++4.8 or higher on Linux or msvc2015 on Windows
+3. Static libprotobuf version 3.0.0. Or change Message.pb.* files directory on build (See build manual below)
+4. CMake 2.8 or higher
+
+
+Build:
+Linux:
+cd $PATH_TO_SRC 
+&& mkdir build 
+&& cd ./build
+&& cmake -DCMAKE_BUILD_TYPE=Release -DG_PROTO_INCLUDE_DIR=<path to protobuf include dir> -DG_PROTO_LIBRARY_DIR=<path to protobuf library dir> [-DMESSAGE_PB_PATH=<path to your Message.pb.h and Message.pb.cc> ] .. 
+&& make
+
+Windows:
+cd $PATH_TO_SRC 
+&& mkdir build 
+&& cd ./build
+&& cmake -DCMAKE_BUILD_TYPE=Release -DG_PROTO_INCLUDE_DIR=<path to protobuf include dir> -DG_PROTO_LIBRARY_DIR=<path to protobuf library dir> [-DMESSAGE_PB_PATH=<path to your Message.pb.h and Message.pb.cc> ] .. 
+Open generated solution on Visual Studio and build it.
+
+Start server: chat_server <port> <threads count>
+
+Start client: chat_client <host> <port> <user name>
