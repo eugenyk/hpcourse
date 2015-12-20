@@ -1,0 +1,12 @@
+package ru.spbau.chat.commons.protocol;
+
+message Message {
+    enum Type {
+        COMMAND = 1;
+        MESSAGE = 2;
+    }
+
+    required Type type = 2;
+    repeated string text = 3; // repeated, чтобы сервер мог слать список строк в ответ на команду, а клиент сам проставлял сепараторы
+    optional string author = 4; // не шлем автора в случае команды
+}
