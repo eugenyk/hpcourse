@@ -35,7 +35,7 @@ public class ServerConfiguration {
             logger.info("Invalid port! Use default configuration for port!");
         }
         try {
-            threads = Integer.parseInt(prop.getProperty("nThreads"));
+            threads = Integer.parseInt(prop.getProperty("nThread"));
         } catch (NumberFormatException e) {
             logger.info("Use default configuration for nThreads!");
         }
