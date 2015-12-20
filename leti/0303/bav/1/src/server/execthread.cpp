@@ -47,16 +47,18 @@ void ExecutionThread::enqueueCommand(const QPointer<IOSocketDecorator>& from, co
     QDateTime* lastCall = calls_.object(name);
     if(lastCall)
     {
-        callsMutex_.unlock();
-
         int timeout = COMMAND_TIMEOUT - lastCall->msecsTo(timestamp);
         if(timeout > 0)
         {
+            callsMutex_.unlock();
             item.command.set_text(tr("You can't send commands within %1 ms").arg(timeout).toStdString());
             commandAccepted = false;
         }
         else
+        {
             lastCall->swap(timestamp);
+            callsMutex_.unlock();
+        }
     }
     else
     {
