@@ -4,9 +4,54 @@
 class Thread : public QThread
 {
     Q_OBJECT
+
 public:
-    Thread(QObject* parent = 0) : QThread(parent), ref_(1) {}
-    quint64 ref_;
+    QAtomicInteger<quint32> ref_;
+
+    Thread() : ref_(1)
+    {
+    }
+    ~Thread()
+    {
+        quit();
+        wait();
+    }
+
+    // returns false if Thread has been marked to be deleted
+    bool increaseExternalCount()
+    {
+        forever
+        {
+            const quint32 count = ref_.loadAcquire();
+            if(count == 0)
+                return false;
+            else
+            {
+                if(ref_.testAndSetOrdered(count, count + 1))
+                    return true;
+            }
+        }
+    }
+
+    bool freeExternalCount()
+    {
+        forever
+        {
+            const quint32 count = ref_.loadAcquire();
+            if(count == 0)
+                return false;
+            else
+            {
+                if(ref_.testAndSetOrdered(count, count - 1))
+                {
+                    if(count == 1)
+                        quit();
+
+                    return true;
+                }
+            }
+        }
+    }
 };
 
 #include "threadpool.moc"
@@ -17,17 +62,7 @@ ThreadPool::ThreadPool(quint32 maxThreadCount) : maxThreadCount_(maxThreadCount)
 
 ThreadPool::~ThreadPool()
 {
-    auto it = threads_.cbegin();
-    while(it != threads_.cend())
-    {
-        auto thread = *it;
-        if(thread)
-        {
-            thread->quit();
-            thread->wait();
-        }
-        it++;
-    }
+    qDeleteAll(threads_);
 }
 
 quint32 ThreadPool::maxThreadCount() const
@@ -43,48 +78,51 @@ void ThreadPool::setMaxThreadCount(quint32 maxThreadCount)
 QThread* ThreadPool::acquireThread()
 {
     QPointer<Thread> thread;
-    auto it = threads_.begin();
-    while(it != threads_.end())
-    {
-        if(*it)
-        {
-            if(!thread)
-                thread = *it;
-            else
-            {
-                int ref = (*it)->ref_;
-                if(ref == 0)
-                    return it->data();
-                else if(thread->ref_ > ref)
-                    thread = *it;
-            }
-
-            it++;
-        }
-        else
-            it = threads_.erase(it);
-    }
 
     if(threads_.size() < maxThreadCount_)
     {
-        //qDebug("create thread");
         thread = new Thread;
         thread->start();
         threads_.append(thread);
     }
     else
     {
-        if(thread)
-            ++thread->ref_;
-        else
+        auto it = threads_.begin();
+        while(it != threads_.end())
         {
-            //qDebug("create thread");
-            thread = new Thread;
-            thread->start();
-            threads_.append(thread);
+            if((*it)->increaseExternalCount())
+            {
+                if(thread)
+                {
+                    quint32 ref = (*it)->ref_.loadAcquire();
+                    if(thread->ref_.loadAcquire() > ref)
+                    {
+                        thread->freeExternalCount();
+                        thread = *it;
+                    }
+                    else
+                        (*it)->freeExternalCount();
+                }
+                else
+                    thread = *it;
+            }
+            else
+            {
+                Thread* tmp = it->data();
+                *it = nullptr;
+                delete tmp;
+
+                thread = new Thread;
+                thread->start();
+                *it = thread;
+                break;
+            }
+
+            it++;
         }
     }
 
+    Q_ASSERT(thread);
     return thread.data();
 }
 
@@ -93,15 +131,7 @@ void ThreadPool::releaseThread(QThread* thread)
     Thread* t = qobject_cast<Thread*>(thread);
     Q_ASSERT(t);
     if(t)
-    {
-        if(--t->ref_ == 0)
-        {
-            //qDebug("delete thread");
-            t->quit();
-            t->wait();
-            delete t;
-        }
-    }
+        t->freeExternalCount();
 }
 
 
