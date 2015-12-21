@@ -10,11 +10,12 @@ namespace network {
 
 void message::reserve(uint32_t new_size) {
 	if(!data.unique()) {
-		std::shared_ptr<char> new_data(new char[new_size]);
+		std::shared_ptr<char> new_data(new char[new_size], std::default_delete<char[]>());
 		data = new_data;
+		capacity = new_size;
 	} else {
 		if(new_size > capacity) {
-			std::shared_ptr<char> new_data(new char[new_size]);
+			std::shared_ptr<char> new_data(new char[new_size], std::default_delete<char[]>());
 			data = new_data;
 			capacity = new_size;
 		}
@@ -24,7 +25,7 @@ void message::reserve(uint32_t new_size) {
 
 void* message::getData() {
 	if(!data.unique()) {
-		std::shared_ptr<char> new_data(new char[size]);
+		std::shared_ptr<char> new_data(new char[size], std::default_delete<char[]>());
 		std::memcpy(new_data.get(), data.get(), size);
 		data = new_data;
 	}

@@ -7,6 +7,8 @@
 #include "chat_message.h"
 #include <mutex>
 
+//this is client
+
 using boost::asio::ip::tcp;
 
 typedef std::deque<chat_message> chat_message_queue;
@@ -197,7 +199,7 @@ int main(int argc, char* argv[])
     }
 	//while (!c.isEmpty()) {
 		//Sleep(100000);
-	std::cout << "All write" << std::endl;
+	std::cout << "All right" << std::endl;
 	//system("pause");
 char ccc;
 std::cin >> ccc;

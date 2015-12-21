@@ -43,7 +43,7 @@ public class ChatServer implements Runnable {
             logger.info("Server is listening at {}:{}", host, port);
             serverSocketListener.accept(null, new ConnectionHandler());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Couldn't start server", e);
         }
     }
 
