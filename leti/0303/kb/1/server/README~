@@ -1,6 +1,0 @@
-Requirements:
-	1) gradle 2.9
-	2) Android v 4.0 or higher
-To build:
-	In project directory type "gradle build"
-apk file in PROJECT_DIR/app/build/outputs/apk
