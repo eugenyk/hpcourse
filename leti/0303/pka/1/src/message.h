@@ -9,6 +9,7 @@
 
 #include <inttypes.h>
 #include <memory>
+#include <iostream>
 
 namespace network {
 
@@ -17,11 +18,12 @@ class message
 	std::shared_ptr<char> data;
 	uint32_t size, capacity;
 public:
-	message(): size(0), capacity(0) {}
-	message(uint32_t size): data(new char[size]), size(size), capacity(size) {}
-	message(message&& other): data(std::move(other.data)), size(other.size), capacity(other.capacity) {}
-	message(const message& other): data(other.data), size(other.size), capacity(other.capacity) {}
+	message(): size(0), capacity(0) { /*std::cout << "constructor empty message" << std::endl;*/ }
+	message(uint32_t size): data(new char[size], std::default_delete<char[]>()), size(size), capacity(size) { /*std::cout << "constructor " << data.get() << " message(" << size << ")" << std::endl;*/ }
+	message(message&& other): data(std::move(other.data)), size(other.size), capacity(other.capacity) { /*std::cout << "move constructor " << data.get() << " message(" << size << ")" << std::endl;*/ }
+	message(const message& other): data(other.data), size(other.size), capacity(other.capacity) { /*std::cout << "copy constructor " << data.get() << " message(" << size << ")" << std::endl;*/ }
 	message& operator=(message&& other) {
+		/*std::cout << "move assign " << data.get() << " message(" << size << ") = " << other.getData() << " (" << other.size << ")" << std::endl;*/
 		data = std::move(other.data);
 		size = other.size;
 		capacity = other.capacity;
@@ -31,6 +33,7 @@ public:
 		data = other.data;
 		size = other.size;
 		capacity = other.capacity;
+		/*std::cout << "copy assign " << data.get() << " message(" << size << ")" << std::endl;*/
 		return *this;
 	}
 
@@ -38,6 +41,7 @@ public:
 	const void* getData() const { return data.get(); }
 	void* getData();
 	void reserve(uint32_t new_size);
+	~message() { /*if(data) std::cout << "destructor " << data.get() << " message(" << size << ")" << std::endl;*/ }
 };
 
 } /* namespace network */

@@ -65,6 +65,7 @@ int main(int argc, char* argv[]) {
 			po::store(po::parse_command_line(argc, argv, desc), vm);
 			po::notify(vm);
 			run_client(ip_address, name, port);
+			google::protobuf::ShutdownProtobufLibrary();
 			return 0;
 		}
 		if(vm.count("server") == 1) {
@@ -72,17 +73,21 @@ int main(int argc, char* argv[]) {
 			po::store(po::parse_command_line(argc, argv, desc), vm);
 			po::notify(vm);
 			run_server(thread_count, port);
+			google::protobuf::ShutdownProtobufLibrary();
 			return 0;
 		}
 	} catch(po::error& e) {
 		std::cerr << "error: " << e.what() << std::endl;
 		std::cerr << desc << std::endl;
+		google::protobuf::ShutdownProtobufLibrary();
 		return -1;
 	} catch(std::exception& e) {
 		std::cerr << "error: " << e.what() << std::endl;
+		google::protobuf::ShutdownProtobufLibrary();
 		return -1;
 	}
 	std::cerr << "no option of program, run with --help, for see parameters" << std::endl;
+	google::protobuf::ShutdownProtobufLibrary();
 	return -1;
 }
 
@@ -124,6 +129,7 @@ void run_server(unsigned thread_count, short unsigned port) {
 
 	server.onDisconnect = [&](network::server::tcp::connection& client) {
 		std::string address = client.getAddress();
+		clients.erase(address);
 		std::cout << "client[" << address << "] disconnected" << std::endl;
 	};
 
