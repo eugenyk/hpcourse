@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="enterFields">#ffaeaeae</color>
+    <color name="notConnected">#ffa8252a</color>
+    <color name="connected">#ff08ae20</color>
+</resources>
