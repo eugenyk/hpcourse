@@ -1,6 +1,6 @@
 package edu.etu.client.cmd;
 
-import edu.etu.client.cmd.Message.Msg;
+import edu.etu.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +86,7 @@ public class Client {
                     }
 
                     if (msg.size() >= msgLength + 4 && msgLength > 0) {
-                        Msg from = Msg.parseFrom(Arrays.copyOfRange(msg.toByteArray(), 4, msgLength + 4));
+                        Message.Msg from = Message.Msg.parseFrom(Arrays.copyOfRange(msg.toByteArray(), 4, msgLength + 4));
                         logger.info("{}: {}", from.getSender(), from.getText());
 
                         String message = from.getSender() + ": " + from.getText() + "\n";
