@@ -15,7 +15,7 @@ public class ConsoleExecutor implements Runnable {
     private boolean isActive = true;
 
     public ConsoleExecutor() {
-        requests = new ConcurrentLinkedQueue<QueueElement>();
+        requests =  new ConcurrentLinkedQueue<QueueElement>();
     }
 
 
