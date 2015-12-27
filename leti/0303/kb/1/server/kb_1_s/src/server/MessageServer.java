@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.concurrent.*;
 public class MessageServer implements CompletionHandler<AsynchronousSocketChannel, Void> {
-	public final static int MAXMESSAGELENGTH = 1000000;
 	public final static int BUFFERSIZE = 8192;
 
 	private int nThreads;
