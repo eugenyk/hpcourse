@@ -1,0 +1,18 @@
+[package]
+name = "chat"
+version = "0.1.0"
+authors = ["Aleksey Kladov <aleksey.kladov@gmail.com>"]
+
+[dependencies]
+mio = "0.4"
+log = "0.3"
+env_logger = "0.3"
+docopt = "0.6"
+rustc-serialize = "0.3"
+byteorder = "0.4"
+protobuf = {git = "https://github.com/stepancheg/rust-protobuf.git"}
+time = "0.1"
+simple_parallel = "0.3"
+
+[profile.release]
+debug = true

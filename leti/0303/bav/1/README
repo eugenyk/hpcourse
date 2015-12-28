@@ -1,0 +1,16 @@
+Build Requirements
+
+1. Qt version 5.2 or above
+
+2. Linux:
+   a) libprotoc-dev packet
+   
+   Windows:
+   a) the path to the protobuf headers in the PATH variable
+   b) the path to the libprotobuf.lib and libprotobufd.lib in the PATH variable,
+      or just plase it into third-party/google/protobuf/x64 or third-party/google/protobuf/x64
+   you can download prepared third-party achieve for Windows here:
+   https://cloud.mail.ru/public/K5jC/cV8yyaASi	  
+   
+3. The protobuf compiler to compile common/proto/Message.proto file
+  (generated output Message.pb.h and Message.pb.cc should be placed in a common/proto folder)
