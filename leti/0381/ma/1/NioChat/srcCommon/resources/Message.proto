@@ -1,0 +1,8 @@
+syntax = "proto2";
+option java_package = "com.niochat.message";
+option java_outer_classname = "ProtoMessage";
+message Message {
+    required string Sender = 1;
+    required string Text = 2;
+    optional string Data = 3;
+}
