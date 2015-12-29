@@ -39,7 +39,7 @@
                         <phase>generate-sources</phase>
                         <configuration>
                             <tasks>
-                                <exec executable="D:/Study/protoc.exe">
+                                <exec executable="D:\\Study\\protoc.exe">
                                     <arg value="--java_out=${project.basedir}/src"/>
                                     <arg value="${project.basedir}/resources/Message.proto"/>
                                 </exec>

@@ -35,7 +35,8 @@ public class ServerMain implements Runnable{
     }
 
     void configure(String configfile) {
-        Properties prop = new Properties();
+        Properties prop = System.getProperties();
+
         try (InputStream input = new FileInputStream(configfile)) {
             prop.load(input);
         } catch (IOException | NullPointerException e) {
@@ -98,17 +99,12 @@ public class ServerMain implements Runnable{
                         e.printStackTrace();
                     }
                     log.info("Failed to accept: " + exc.getMessage());
-                   // sSocketChannel.accept(null, this);
                 }
             });
         } catch(IOException e) {
             System.out.println("IOException, server of port " +this.port+ " terminating. Stack trace:");
             e.printStackTrace();
         }
-    }
-
-    private void execute(String text) {
-        log.info("Command: " + text);
     }
 
     class ServerProc implements Processor {
@@ -188,6 +184,8 @@ public class ServerMain implements Runnable{
         }
 
         private void commandHandler(Task task) {
+            if (task == null)
+                return;
             Process process;
             try {
                 process = Runtime.getRuntime().exec(task.command);

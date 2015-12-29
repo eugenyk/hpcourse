@@ -1,0 +1,30 @@
+Build Requirements
+
+1. Java 1.8
+2. Apache Maven (version 3.3.9)
+
+Build command
+
+	mvn clean package
+
+Recommendations
+
+1. The package is located in the "target" folders inside srcClient and srcServer directories
+2. Using of client:
+	a)  java -jar srcClient\target\ChatClient-1.0-SNAPSHOT.jar
+	b)  Enter configuration
+	c)  Press connect
+3. Using of server
+	a)  java -jar srcServer\target\ChatServer-1.0-SNAPSHOT.jar
+		or
+	    java -Dhost="127.0.0.1" -Dport=12311 -Dthreads=25 -jar srcServer\target\ChatServer-1.0-SNAPSHOT.jar
+	Default: host=localhost port=10000 threads=10
+
+Structure:
+NioChat
+	srcClient - sources of client part
+	srcCommon - sources of client and server
+		resources <- Message.proto
+	srcServer - sources of server part
+	pom.xml - Maven POM
+	
