@@ -10,3 +10,6 @@
 [submodule "aptu/604_15/ypa/nio_chat"]
 	path = aptu/604_15/ypa/nio_chat
 	url = https://github.com/igrocki/nio_chat.git
+[submodule "leti/0303/mav/1"]
+	path = leti/0303/mav/1
+	url = https://github.com/AlexeyMz/DevoidTalk.git
