@@ -1,0 +1,6 @@
+Build Requirements
+
+1. Qt version 5.2 or above
+   
+2. The protobuf compile common/proto/Message.proto file
+  
