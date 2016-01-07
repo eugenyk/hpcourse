@@ -1,0 +1,9 @@
+Build Requirements
+
+1. Qt version 5.2 or above
+
+2. Linux:
+   a) libprotoc-dev packet  
+   
+3. The protobuf compiler to compile common/proto/Message.proto file
+  (generated output Message.pb.h and Message.pb.cc should be placed in a common/proto folder)
