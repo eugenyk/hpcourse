@@ -102,7 +102,7 @@ void Server::broadcast(const QPointer<SocketDecorator>& from, const server::prot
         if(client)
         {
             if(client != from)
-                client->m_writeAsync(msg);
+                client->writeAsync(msg);
         }
 
         it++;

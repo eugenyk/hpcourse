@@ -45,7 +45,6 @@ void SocketDecorator::run()
         connect(socket_handler, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(error()));
         connect(socket_handler, &Socket_Handler::read, this, &SocketDecorator::receive, Qt::QueuedConnection);
         connect(socket_handler, &Socket_Handler::disconnected, this, &SocketDecorator::disconnected, Qt::QueuedConnection);
-        connect(this,SIGNAL(m_writeAsync(server::proto::Message)),this,SLOT(writeAsync(server::proto::Message)), Qt::QueuedConnection);
 
         while (socket->waitForReadyRead(-1)){}
         wait_loop->exec();      //wait for full unlock and after destroy this object
@@ -57,9 +56,18 @@ void SocketDecorator::run()
 
 void SocketDecorator::writeAsync(const server::proto::Message& msg)
 {
-    socket_handler->write(msg);
-}
 
+    static QByteArray normalizedSignature = QMetaObject::normalizedSignature("send(const server::proto::Message&)");
+    int methodIndex = metaObject()->indexOfMethod(normalizedSignature);
+    if(methodIndex != -1)
+    {
+    if(!metaObject()->method(methodIndex).invoke(this, Qt::QueuedConnection, Q_ARG(server::proto::Message, msg)))
+                qWarning() << Q_FUNC_INFO << false;
+    }
+    else
+    qWarning() << Q_FUNC_INFO << -1;
+
+}
 
 
 void SocketDecorator::receive(const server::proto::Message& message)
