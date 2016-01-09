@@ -4,6 +4,7 @@ Build Requirements:
 3. Static libprotobuf version 3.0.0. Or change Message.pb.* files directory on build (See build manual below)
 4. CMake 2.8 or higher
 
+Please generate files from messahe.proto and put them into the folder "common"
 
 How to Build:
 Windows:
@@ -20,5 +21,10 @@ cd $PATH_TO_SRC
 && cmake -DCMAKE_BUILD_TYPE=Release -DG_PROTO_INCLUDE_DIR=<path to protobuf include dir> -DG_PROTO_LIBRARY_DIR=<path to protobuf library dir> [-DMESSAGE_PB_PATH=<path to your Message.pb.h and Message.pb.cc> ] .. 
 && make
 
+
 Start server: chat_server <port> <threads count>
 Start client: chat_client <host> <port> <user name>
+
+special commands from client: 
+/c print <text_to_print_on_server_display>
+/c exit 
