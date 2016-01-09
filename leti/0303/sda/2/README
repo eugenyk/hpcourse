@@ -1,0 +1,7 @@
+Build Requirements
+1. mingw g++ or  gcc g++ 4.8 or later
+2. Linux or Windows.
+
+Build:
+1. Windows: run make.bat
+   Linux: run ./make.sh
