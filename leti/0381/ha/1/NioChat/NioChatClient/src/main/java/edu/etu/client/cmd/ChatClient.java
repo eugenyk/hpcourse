@@ -1,13 +1,12 @@
 package edu.etu.client.cmd;
 
+import edu.etu.protobuf.Message;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.Future;
-
-import static edu.etu.client.cmd.Message.Msg;
-
 
 public class ChatClient implements Runnable {
     private Client client;
@@ -43,7 +42,7 @@ public class ChatClient implements Runnable {
     }
 
     public void send(String message) {
-        Msg pMsg = Msg.newBuilder()
+        Message.Msg pMsg = Message.Msg.newBuilder()
                 .setText(message.trim())
                 .setSender(name)
                 .build();
