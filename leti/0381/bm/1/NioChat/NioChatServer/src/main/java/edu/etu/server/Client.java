@@ -1,6 +1,7 @@
 package edu.etu.server;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import edu.etu.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,8 +14,6 @@ import java.util.Arrays;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static edu.etu.server.Message.Msg;
 
 public class Client {
     private final AsynchronousSocketChannel socketChannel;
@@ -119,7 +118,7 @@ public class Client {
 
         private boolean checkAndRun(byte[] receivedMsg) {
             try {
-                Msg from = Msg.parseFrom(Arrays.copyOfRange(receivedMsg, 4, receivedMsg.length));
+                Message.Msg from = Message.Msg.parseFrom(Arrays.copyOfRange(receivedMsg, 4, receivedMsg.length));
                 if (isCommand(from.getText())) {
                     CommandExecutor.INSTANCE.addTask(from.getText(), Client.this);
                     return true;

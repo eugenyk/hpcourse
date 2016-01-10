@@ -10,6 +10,7 @@
     <modules>
         <module>NioChatClient</module>
         <module>NioChatServer</module>
+        <module>Common</module>
     </modules>
 
     <packaging>pom</packaging>
