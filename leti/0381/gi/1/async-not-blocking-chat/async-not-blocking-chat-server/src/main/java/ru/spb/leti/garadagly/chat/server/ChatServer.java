@@ -56,7 +56,7 @@ public class ChatServer implements Runnable {
         clients.remove(client);
     }
 
-    public synchronized void broadcast(ClientHandler who, byte[] message) {
+    public void broadcast(ClientHandler who, byte[] message) {
         int currentBroadcastCount = 0;
         for (ClientHandler client : clients){
             if (!who.equals(client)) {

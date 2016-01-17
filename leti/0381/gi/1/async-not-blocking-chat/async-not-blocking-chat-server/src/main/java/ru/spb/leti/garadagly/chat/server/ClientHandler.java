@@ -36,7 +36,7 @@ public class ClientHandler {
 
     public void write(byte[] message) {
         Future<Integer> writeMessageFuture = socketChannel.write(ByteBuffer.wrap(message));
-        while (!writeMessageFuture.isDone()) ;
+//        while (!writeMessageFuture.isDone()) ;
     }
 
     @Override
