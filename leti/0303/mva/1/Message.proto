@@ -1,5 +1,0 @@
-message Msg {
-    required string Sender = 1;
-    required string Text = 2;
-    optional string Data = 3;
-}
