@@ -46,6 +46,8 @@ private:
 //    ThreadPool* threadPool_;
 
     QThreadPool *m_threadPool;
+
+    int m_threadPool_Size;
 };
 
 #endif // _SERVER_H_

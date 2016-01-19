@@ -19,17 +19,17 @@ class SocketDecorator : public QObject, public QRunnable
 public:    
     QEventLoop* wait_loop;
 
+    void writeAsync(const server::proto::Message& message);
+
 signals:
     void disconnected();
-
-    void m_writeAsync(const server::proto::Message& message);
 
 private slots:
     void receive(const server::proto::Message& message);
     void send(const server::proto::Message& message);
     void error();
 
-    void writeAsync(const server::proto::Message& message);
+
 
 private:
     SocketDecorator(qintptr socketDescriptor, QObject* parent = 0);

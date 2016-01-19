@@ -17,6 +17,7 @@ Server::Server(QObject* parent) : QTcpServer(parent)
     connect(this, &QTcpServer::acceptError, this, &Server::printError);
 
     m_threadPool=new QThreadPool(this);
+    m_threadPool_Size=0;
 }
 
 Server::~Server()
@@ -69,6 +70,8 @@ void Server::incomingConnection(qintptr socketDescriptor)
     clients_.insert(socketDescriptor, socket);
     rwmutex_.unlock();
 
+    m_threadPool_Size++;
+    m_threadPool->setMaxThreadCount(m_threadPool_Size);
     m_threadPool->start(socket);
 }
 
@@ -83,6 +86,9 @@ void Server::socketDisconnected()
         rwmutex_.unlock();
 
         socket->wait_loop->quit();
+
+        m_threadPool_Size--;
+        m_threadPool->setMaxThreadCount(m_threadPool_Size);
     }
  }
 
@@ -102,7 +108,7 @@ void Server::broadcast(const QPointer<SocketDecorator>& from, const server::prot
         if(client)
         {
             if(client != from)
-                client->m_writeAsync(msg);
+                client->writeAsync(msg);
         }
 
         it++;

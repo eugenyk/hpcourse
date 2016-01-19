@@ -75,7 +75,7 @@ void WaitingThread::enqueueCommand(const QPointer<SocketDecorator>& from, const 
     else
     {
         if(item.socket)
-            item.socket->m_writeAsync(item.command);
+            item.socket->writeAsync(item.command);
     }
 }
 
@@ -149,7 +149,7 @@ void WaitingThread::run()
             }
 
             if(!msg.text().empty() && item.socket)
-                item.socket->m_writeAsync(msg);
+                item.socket->writeAsync(msg);
 
             cmdMutex_.lock();
         }
