@@ -11,12 +11,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Arrays;
-import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Client {
     private final AsynchronousSocketChannel socketChannel;
+    private final AsyncOutputWriter.Connection connection;
     private final Logger logger = LoggerFactory.getLogger(Client.class);
     private ChatServer server;
     private ByteArrayOutputStream data;
@@ -24,6 +24,7 @@ public class Client {
 
     public Client(final AsynchronousSocketChannel socketChannel, final ChatServer server) {
         this.socketChannel = socketChannel;
+        this.connection = new AsyncOutputWriter.Connection(socketChannel);
         this.server = server;
         data = new ByteArrayOutputStream();
     }
@@ -32,9 +33,8 @@ public class Client {
         new ReadHandler();
     }
 
-    public void write(byte[] message) {
-        Future<Integer> writeMessageFuture = socketChannel.write(ByteBuffer.wrap(message));
-        while (!writeMessageFuture.isDone()) ;
+    public void write(byte[] message) throws IOException {
+        AsyncOutputWriter.flushChannel(connection, ByteBuffer.wrap(message));
     }
 
     @Override

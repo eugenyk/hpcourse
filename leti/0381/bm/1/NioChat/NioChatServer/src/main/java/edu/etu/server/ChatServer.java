@@ -21,7 +21,6 @@ public class ChatServer implements Runnable {
     private int port;
     private int nThreads;
     private CopyOnWriteArraySet<Client> clients;
-    private AtomicInteger broadcastCount = new AtomicInteger(0);
 
     public ChatServer(ServerConfiguration configuration) {
         this.nThreads = configuration.getThreads();
@@ -55,19 +54,12 @@ public class ChatServer implements Runnable {
         clients.remove(client);
     }
 
-    public synchronized void broadcast(Client who, byte[] message) {
-        int currentBroadcastCount = 0;
-        for (Client client : clients){
+    public void broadcast(Client who, byte[] message) throws IOException {
+        for (Client client : clients) {
             if (!who.equals(client)) {
                 client.write(message);
-                currentBroadcastCount++;
             }
         }
-
-        logger.info("Statistics. Available client: {}; Dispatch on: {}; All broadcast: {}",
-                clients.size(),
-                currentBroadcastCount,
-                broadcastCount.incrementAndGet());
     }
 
 
