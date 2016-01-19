@@ -1,0 +1,52 @@
+package ru.spbau.chat.commons.protocol;
+
+message Message {
+    enum Type {
+        COMMAND = 1;
+        MESSAGE = 2;
+    }
+
+    required Type type = 2;
+    repeated string text = 3; // repeated, чтобы сервер мог слать список строк в ответ на команду, а клиент сам проставлял сепараторы
+    optional string author = 4; // не шлем автора в случае команды
+}
+
+// Имя сервера: SERVER
+// Порт сервера: 20053
+
+// Совпадение имен участников чата допускается
+// Команда - то, что начинается с "command", посылаем серверу как есть.
+
+// Отправка сообщения с клиента:
+// - пишем размер сообщения (raw varint 32) с помощью протобуфа
+// - пишем сообщение с помощью протобуфа
+
+// Чтение сообщения на клиенте:
+// - читаем размер сообщения (raw varint 32) с помощью протобуфа
+// - читаем нужное количество байт
+// - полученные байты отдаем протобуфу
+
+// Обработка сообщения сервером:
+// - читаем размер сообщения (raw varint 32) с помощью протобуфа
+// - читаем нужное количество байт
+// - полученные байты отдаем протобуфу
+// - если пришла команда, обрабатываем, посылаем ответ
+// - иначе пересылаем байты остальным участникам чата
+
+// В Java для записи используем MessageLite#writeDelimitedTo(java.io.OutputStream),
+// в вашем языке программирования либо аналог в библиотеке, либо аналог следующего кода:
+
+// public void writeDelimitedTo(final OutputStream output) throws IOException {
+//     final int size = getSerializedSize();
+//
+//     final int bufferSize = CodedOutputStream.computePreferredBufferSize(
+//         CodedOutputStream.computeRawVarint32Size(size) + size
+//     );
+//
+//     final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output, bufferSize);
+//
+//     codedOutput.writeRawVarint32(size);
+//     writeTo(codedOutput);
+//
+//     codedOutput.flush();
+// }
