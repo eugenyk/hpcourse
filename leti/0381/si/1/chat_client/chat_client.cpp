@@ -2,6 +2,7 @@
 #include <deque>
 #include <iostream>
 #include <thread>
+#include <chrono>
 #include <boost/asio.hpp>
 #include "chat_message.h"
 #include <mutex>
@@ -57,12 +58,16 @@ private:
   void do_connect(tcp::resolver::iterator endpoint_iterator)
   {
     boost::asio::async_connect(socket_, endpoint_iterator,
-        [this](boost::system::error_code ec, tcp::resolver::iterator)
+        [this](boost::system::error_code ec, tcp::resolver::iterator it)
         {
           if (!ec && !isStopped())
           {
             do_read_header();
-          }
+		  }
+		  else {
+			  stop();
+			  std::cout << "Connect error. " << ec.category().name() << ':' << ec.value() << " " << ec.message();
+		  }
         });
   }
 
@@ -173,11 +178,12 @@ int main(int argc, char* argv[])
 
     std::string line;
     //while (getline(std::cin, line))
-	for (int i = 0; i < 1000000; i++)
+	for (int i = 0; i < 10000; i++)
     {
       chat_message msg;
 	  if (i % 100 == 0) {
 		  line.clear();
+		  std::this_thread::sleep_for(std::chrono::seconds(1));
 	  }
 	  line.push_back(std::rand() % ('z'-'a') + 'a');
 	  msg().set_text(line);

@@ -12,6 +12,7 @@ class chat_message
 	
 public:
   typedef server::proto::Message Message;
+  typedef std::int32_t SizeT;
   enum { header_length = 4 };
 
   chat_message()
@@ -45,7 +46,7 @@ public:
     return data_;
   }
 
-  std::size_t length() const
+  SizeT length() const
   {
     return header_length + body_length_;
   }
@@ -60,12 +61,12 @@ public:
     return data_ + header_length;
   }
 
-  std::size_t body_length() const
+  SizeT body_length() const
   {
     return body_length_;
   }
 
-  void body_length(std::size_t new_length)
+  void body_length(SizeT new_length)
   {
     body_length_ = new_length;
   }
@@ -82,6 +83,7 @@ public:
 	  del_data();
 	  data_ = new char[length()];
 	  bool res = mess_.SerializeToArray((void*)body(),s);
+	  mess_.Clear();
 	  encode_header();
 	  return res;
   }
@@ -98,9 +100,8 @@ public:
 
   bool decode_header()
   {
-    char header[header_length + 1] = "";
-    std::strncat(header, data_, header_length);
-    body_length(std::atoi(header));
+	auto t = (*(reinterpret_cast<SizeT*>(data_)));
+    body_length(t);
 	del_data();
 	data_ = new char[length()];
 	encode_header();
@@ -109,9 +110,7 @@ public:
 
   void encode_header()
   {
-    char header[header_length + 1] = "";
-    std::sprintf(header, "%4d", body_length_);
-    std::memcpy(data_, header, header_length);
+    std::memcpy(data_, (void*)&body_length_, sizeof(body_length_));
   }
   private:
 	  void del_data() {
@@ -120,7 +119,7 @@ public:
 	  }
 private:
   char* data_ = nullptr;
-  std::size_t body_length_ = 0;
+  SizeT body_length_ = 0;
   Message mess_;
 };
 

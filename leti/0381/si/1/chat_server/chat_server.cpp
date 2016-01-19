@@ -5,6 +5,7 @@
 #include <memory>
 #include <set>
 #include <utility>
+#include <atomic>
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include "chat_message.h"
@@ -66,6 +67,10 @@ public:
 
   void deliver(const chat_message& msg)
   {
+	  auto count = messCount.fetch_add(1, std::memory_order_seq_cst);
+	  if (count % 10000 == 0) {
+		  std::cout << "Recieved " << count << " messages" << std::endl;
+	  }
 	  addRecentMsg(msg);
     for (auto participant: participants_)
       participant->deliver(msg);
@@ -82,6 +87,8 @@ private:
   chat_message_queue recent_msgs_;
   SharedMutex mutex_;
   SharedMutex mutexPart_;
+  std::atomic<long long> messCount = 0;
+
 };
 
 //----------------------------------------------------------------------
@@ -214,8 +221,8 @@ private:
           if (!ec)
           {
 			  if (read_msg_.decode_body()) {
-				  std::string s = read_msg_().text();
-				  std::cout << "Recieved message:" << s << std::endl;
+				  const std::string& s = read_msg_().text();
+				  //std::cout << "Recieved message:" << s << std::endl;
 				  std::string findStr("/c");
 				  if (s.size() > findStr.size() && s.substr(0, findStr.size()) == findStr) {
 					  chat_.addCmd(read_msg_);
@@ -286,7 +293,7 @@ int main(int argc, char* argv[])
 	boost::thread_group threads; // thread pool of 10 threads
  	int port = atoi(argv[1]);
 	if(port < 1000 || port > 60000){
- 		std::cerr << "Error port. Threads must be in [1000,60000]" << std::endl;
+ 		std::cerr << "Error port. Port must be in [1000,60000]" << std::endl;
 		return 1;
 	}
 	int N = atoi(argv[2]);
@@ -294,7 +301,7 @@ int main(int argc, char* argv[])
 		std::cerr << "Error threads count. Threads must be in [1,100]" << std::endl;
 		return 1;
 	}
-	for (std::size_t i = 0; i < N; ++i){
+	for (int i = 0; i < N; ++i){
 		threads.create_thread(boost::bind(&boost::asio::io_service::run, &io_service)); 
 	}
 
