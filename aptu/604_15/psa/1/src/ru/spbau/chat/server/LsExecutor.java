@@ -1,24 +1,26 @@
 package ru.spbau.chat.server;
 
+import ru.spbau.chat.commons.protocol.ChatProtocol;
+
 import java.io.File;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.Arrays;
-import java.util.List;
 
 class LsExecutor implements Runnable {
 
-    private final ServerDispatcher dispatcher;
-    private final AsynchronousSocketChannel channel;
+    private final ClientHandler clientHandler;
 
-    public LsExecutor(final ServerDispatcher dispatcher, final AsynchronousSocketChannel channel) {
-        this.dispatcher = dispatcher;
-        this.channel = channel;
+    public LsExecutor(final ClientHandler clientHandler) {
+        this.clientHandler = clientHandler;
     }
 
     @Override
     public void run() {
-        final List<String> result = Arrays.asList(new File(".").list());
+        final ChatProtocol.Message message = ChatProtocol.Message.newBuilder()
+                .setType(ChatProtocol.Message.Type.MESSAGE)
+                .addAllText(Arrays.asList(new File("." ).list()))
+                .setAuthor(Server.SERVER_NAME)
+                .build();
 
-        dispatcher.onCompletedCommand(channel, result);
+        clientHandler.send(message);
     }
 }
