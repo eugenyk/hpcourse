@@ -93,39 +93,36 @@ int main(int argc, char *argv[])
 		
 		printf("\n FINAL SUM = %lf ", ans);
 	}
-
-	// работа с итыми процессами
-	for (int j = 1; j < ProcNum; j++)
+	else // работа с итыми процессами
 	{
-		if (ProcRank == j)
+		int j = ProcRank;
+		info to_recv;
+		MPI_Recv(&to_recv, 1, myStructType, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &Status);
+
+		double h = (to_recv.b - to_recv.a) / N;
+
+		std::thread* my_thread_pool[N];
+		for (int i = 0; i < N; i++)
 		{
-			info to_recv;
-			MPI_Recv(&to_recv, 1, myStructType, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &Status);
-
-			double h = (to_recv.b - to_recv.a) / N;
-
-			std::thread* my_thread_pool[N];
-			for (int i = 0; i < N; i++)
-			{
-				my_thread_pool[i] = new std::thread(my_integrate, to_recv.a+h*i, to_recv.a+h*(i + 1), 0.001, j);
-			}
-
-			for (int i = 0; i < N; i++)
-			{
-				my_thread_pool[i]->join();
-			}
-			
-			printf("\n proc #%d", j);
-			printf(": integrate ");
-			printf("%s", function.c_str());
-			printf("*(sin(x))^%d", j);
-			printf(" from %lf", to_recv.a);
-			printf(" to %lf", to_recv.b);
-			printf(" = %lf", ans);
-
-			MPI_Send(&ans, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+			my_thread_pool[i] = new std::thread(my_integrate, to_recv.a + h*i, to_recv.a + h*(i + 1), 0.001, j);
 		}
+
+		for (int i = 0; i < N; i++)
+		{
+			my_thread_pool[i]->join();
+		}
+
+		printf("\n proc #%d", j);
+		printf(": integrate ");
+		printf("%s", function.c_str());
+		printf("*(sin(x))^%d", j);
+		printf(" from %lf", to_recv.a);
+		printf(" to %lf", to_recv.b);
+		printf(" = %lf", ans);
+
+		MPI_Send(&ans, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 	}
+
 	MPI_Finalize();
 
 	return 0;
