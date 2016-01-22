@@ -1,0 +1,5 @@
+Server:
+	Requirements:
+		1) JDE 1.7
+	Server parameters:
+		1) Number of threads
