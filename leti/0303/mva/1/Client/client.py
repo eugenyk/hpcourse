@@ -4,15 +4,18 @@ import random
 import socket
 import sys
 import struct
-import thread
 import Message_pb2
-
+import threading
 try:
-  import readline
+    import thread
 except ImportError:
-  import pyreadline as readline
+    import _thread as thread
+try:
+    import readline
+except ImportError:
+    import pyreadline as readline
 
-BUFFER = 4096
+BUFFER = 1024
 
 
 def cmd_input(sock):
@@ -23,37 +26,39 @@ def cmd_input(sock):
         message.Sender = 'client%s' % str(name)
 
         while cmd != 'exit':
-            cmd = str(raw_input(' '))
+            cmd = str(input(' '))
             if len(cmd) != 0:
                 message.Text = cmd
                 size = struct.pack('!I', len(message.SerializeToString()))
                 sock.send(size + message.SerializeToString())
+                # sock.send(message.SerializeToString())
     except:
         return 0
 
 
 def read_thread(sock):
     while True:
-        sys.stdout.write('\r'+' '*(len(readline.get_line_buffer())+2)+'\r')
+        sys.stdout.write('\r' + ' ' * (len(readline.get_line_buffer()) + 2) + '\r')
         data = None
         try:
             data = sock.recv(BUFFER)
         except:
-            print "read error"
+            print("read error")
             break
         if data is not None:
-            size = struct.unpack('!I',data[:4])[0]
+            size = struct.unpack('!I', data[:4])[0]
             if size == len(data[4:]):
                 msg = Message_pb2.Msg()
                 msg.ParseFromString(data[4:])
-                print msg.Sender + " : " + msg.Text
+                print(msg.Sender + " : " + msg.Text)
         sys.stdout.write(' ' + readline.get_line_buffer())
         sys.stdout.flush()
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--server', default='localhost')
-    parser.add_argument('-p', '--port', default='10000')
+    parser.add_argument('-s', '--server', default='localhost')  # 172.20.10.3
+    parser.add_argument('-p', '--port', default='10001')
     parsed_args = parser.parse_args()
     try:
         sock = socket.socket()
@@ -62,5 +67,5 @@ if __name__ == '__main__':
         cmd_input(sock)
         sock.close()
     except:
-         print '\nBye'
+        print('\nBye')
     sys.exit(0)
