@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 public class Server implements Runnable {
@@ -35,9 +36,10 @@ public class Server implements Runnable {
 
     }
 
-    public synchronized void broadcast(byte[] msg) {
+    public void broadcast(byte[] msg) {
         for (AsynchronousSocketChannel socket : socketChannels) {
-            socket.write(ByteBuffer.wrap(msg));
+            Future future = socket.write(ByteBuffer.wrap(msg));
+            while (!future.isDone());
         }
     }
 
