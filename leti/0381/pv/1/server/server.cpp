@@ -8,24 +8,32 @@ using boost::asio::ip::tcp;
 
 typedef std::deque<chat_message> chat_message_queue;
 typedef boost::condition Condition;
+typedef boost::shared_mutex SharedMutex;
+typedef boost::lock_guard<SharedMutex> WriteLock;
+typedef boost::shared_lock<SharedMutex> ReadLock;
+typedef boost::condition Condition;
 typedef boost::mutex Mutex;
 typedef boost::unique_lock<Mutex> Lock;
 typedef boost::shared_ptr<chat_participant> chat_participant_ptr;
 
 void chat_room::join(chat_participant_ptr participant)
 {
+	WriteLock lockPart(mutex_participants_);
 	participants_.insert(participant);
+	ReadLock lockMsgs(mutex_msgs_);
 	std::for_each(recent_msgs_.begin(), recent_msgs_.end(),
 		boost::bind(&chat_participant::deliver, participant, _1));
 }
 
 void chat_room::leave(chat_participant_ptr participant)
 {
+	WriteLock lock(mutex_participants_);
 	participants_.erase(participant);
 }
 
 void chat_room::deliver(const chat_message& msg)
 {
+	WriteLock lock(mutex_msgs_);
 	recent_msgs_.push_back(msg);
 	while (recent_msgs_.size() > max_recent_msgs)
 		recent_msgs_.pop_front();
@@ -169,7 +177,7 @@ void chat_server::handle_accept(chat_session_ptr session,
 void chat_server::handle_message() {
 	while (!io_service_.stopped()) {
 		std::string cmdWithArg;
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_cmd_);
 		while (cmdMessQueue_.empty()) {
 			cond.wait(lock);
 		}
