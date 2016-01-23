@@ -13,8 +13,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class Server implements Runnable {
@@ -25,7 +26,8 @@ public class Server implements Runnable {
     private int threadsNum;
     private int buffer;
     private AsynchronousServerSocketChannel asynchronousServerSocketChannel;
-    private final Set<AsynchronousSocketChannel> socketChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<ClientHandler> socketChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
 
 
     public Server(String host, int port, int threadsNum, int buffer) {
@@ -37,9 +39,8 @@ public class Server implements Runnable {
     }
 
     public void broadcast(byte[] msg) {
-        for (AsynchronousSocketChannel socket : socketChannels) {
-            Future future = socket.write(ByteBuffer.wrap(msg));
-            while (!future.isDone());
+        for (ClientHandler socket : socketChannels) {
+            socket.write(msg);
         }
     }
 
@@ -58,8 +59,9 @@ public class Server implements Runnable {
                     try {
                         asynchronousServerSocketChannel.accept(null, this);
                         logger.info("Connect from {}", socketChannel.getRemoteAddress());
-                        socketChannels.add(socketChannel);
-                        readMessage(socketChannel);
+                        ClientHandler clientHandler = new ClientHandler(socketChannel);
+                        socketChannels.add(clientHandler);
+                        readMessage(clientHandler);
 
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -77,10 +79,10 @@ public class Server implements Runnable {
         }
     }
 
-    public void readMessage(AsynchronousSocketChannel socketChannel) {
+    public void readMessage(ClientHandler clientHandler) {
 
         ByteBuffer buffer = ByteBuffer.allocate(this.buffer);
-
+        AsynchronousSocketChannel socketChannel = clientHandler.getSocketChannel();
 
         socketChannel.read(buffer, null, new CompletionHandler<Integer, Void>() {
             @Override
@@ -88,9 +90,10 @@ public class Server implements Runnable {
                 int length;
                 try {
                     if (result == -1) {
-                        socketChannel.close();
+
                         logger.info("Disconnect {}", socketChannel.getRemoteAddress());
-                        socketChannels.remove(socketChannel);
+                        socketChannels.remove(clientHandler);
+                        socketChannel.close();
                         return;
                     }
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -126,6 +129,8 @@ public class Server implements Runnable {
                     socketChannel.read(buffer, null, this);
 
                 } catch (IOException e) {
+                    socketChannels.remove(clientHandler);
+                    logger.error("Disconnect");
                     e.printStackTrace();
                 }
             }
@@ -137,7 +142,7 @@ public class Server implements Runnable {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 } finally {
-                    socketChannels.remove(socketChannel);
+                    socketChannels.remove(clientHandler);
                 }
             }
         });
