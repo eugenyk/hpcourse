@@ -39,7 +39,7 @@ public class Server implements Runnable {
     public void broadcast(byte[] msg) {
         for (AsynchronousSocketChannel socket : socketChannels) {
             Future future = socket.write(ByteBuffer.wrap(msg));
-            while (future.isDone());
+            while (!future.isDone());
         }
     }
 
