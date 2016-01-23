@@ -56,6 +56,8 @@ private:
 	std::set<chat_participant_ptr> participants_;
 	enum { max_recent_msgs = 100 };
 	chat_message_queue recent_msgs_;
+	SharedMutex mutex_msgs_;
+	SharedMutex mutex_participants_;
 };
 
 //----------------------------------------------------------------------
@@ -114,7 +116,7 @@ private:
 
 	std::shared_ptr<boost::thread> thread_;
 	chat_message_queue cmdMessQueue_;
-	boost::mutex mutex_;
+	boost::mutex mutex_cmd_;
 	boost::condition cond;
 };
 
