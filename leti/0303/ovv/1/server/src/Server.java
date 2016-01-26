@@ -52,6 +52,9 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
         }
 
         serverSocketChannel.accept(null, this);
+
+        ServerReceiver receiver = new ServerReceiver(connections, client);
+        receiver.start();
     }
 
     @Override

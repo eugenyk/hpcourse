@@ -16,7 +16,6 @@ public class ServerRunner {
         Server hpserver = new Server(serverAddress, numberOfThreads);
 
         hpserver.start();
-
     }
 
     private static InetSocketAddress getServerAddressFromArgs(String[] args) {
