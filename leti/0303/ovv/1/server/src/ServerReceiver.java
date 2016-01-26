@@ -1,6 +1,7 @@
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.Iterator;
 import java.util.Map;
 
 public class ServerReceiver implements CompletionHandler<Integer, Void> {
@@ -31,6 +32,8 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
         } else {
             try {
                 System.out.format("Received message from %s: %s\n", client.getRemoteAddress().toString(), new String(recievedData.array(), 0, recievedData.position()));
+
+                broadcastMessageForAllConnections(recievedData.array());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -48,6 +51,21 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
             e.printStackTrace();
         }
     }
+
+    private void broadcastMessageForAllConnections(byte[] message) {
+        Iterator<AsynchronousSocketChannel> iterator = connections.values().iterator();
+
+        while (iterator.hasNext()) {
+            AsynchronousSocketChannel connection = iterator.next();
+
+            if(connection != client && connection.isOpen()) {
+                ServerResponder responder = new ServerResponder(connection, message);
+
+                responder.send();
+            }
+        }
+    }
+
 
     @Override
     public void failed(Throwable e, Void attachment) {
