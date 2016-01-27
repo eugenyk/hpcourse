@@ -84,6 +84,7 @@ void chat_session::handle_read_header(const boost::system::error_code& error)
 	{
 		boost::asio::async_read(socket_,
 			boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
+			boost::asio::transfer_all(),
 			boost::bind(&chat_session::handle_read_body, shared_from_this(),
 				boost::asio::placeholders::error));
 	}
@@ -150,7 +151,7 @@ chat_server::chat_server(boost::asio::io_service& io_service,
 
 void chat_server::addCmd(const chat_message& mess) 
 {
-	boost::unique_lock<boost::mutex> lock(mutex_);
+	boost::unique_lock<boost::mutex> lock(mutex_cmd_);
 	cmdMessQueue_.push_back(mess);
 	cond.notify_one();
 }
