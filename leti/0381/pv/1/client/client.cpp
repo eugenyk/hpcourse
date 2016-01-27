@@ -53,6 +53,7 @@ private:
 		{
 			boost::asio::async_read(socket_,
 				boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
+				boost::asio::transfer_all(),
 				boost::bind(&chat_client::handle_read_body, this,
 					boost::asio::placeholders::error));
 		}
