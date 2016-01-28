@@ -6,23 +6,26 @@ import java.util.Map;
 
 public class ServerReceiver implements CompletionHandler<Integer, Void> {
 
-    private ByteBuffer recievedData;
+    private ByteBuffer receivedData;
 
     private Map<String, AsynchronousSocketChannel> connections;
 
     private AsynchronousSocketChannel client;
 
-    public ServerReceiver(Map<String, AsynchronousSocketChannel> connections, AsynchronousSocketChannel client) {
+    private ServerExecutor executor;
+
+    public ServerReceiver(Map<String, AsynchronousSocketChannel> connections, AsynchronousSocketChannel client, ServerExecutor executor) {
         this.connections = connections;
         this.client = client;
+        this.executor = executor;
 
-        recievedData = ByteBuffer.allocate(8192);
+        receivedData = ByteBuffer.allocate(4096);
     }
 
     public void start() {
-        recievedData.position(0);
+        receivedData.position(0);
 
-        client.read(recievedData, null, this);
+        client.read(receivedData, null, this);
     }
 
     @Override
@@ -30,15 +33,29 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
         if (result == -1) {
             removeClientFromConnections();
         } else {
-            try {
-                System.out.format("Received message from %s: %s\n", client.getRemoteAddress().toString(), new String(recievedData.array(), 0, recievedData.position()));
+            String message = new String(receivedData.array(), 0, receivedData.position());
 
-                broadcastMessageForAllConnections(recievedData.array());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            processMessage(message);
 
             start();
+        }
+    }
+
+    private void processMessage(String message) {
+        String clientAddress;
+
+        try {
+            clientAddress = client.getRemoteAddress().toString();
+
+            System.out.format("Received message from %s: %s\n", clientAddress, message);
+
+            if (message.matches("^/c [\\s\\S]+")) {
+                executor.addRequest(new ServerExecutorRequest(client, message.substring(3)));
+            } else {
+                broadcastMessageForAllConnections((clientAddress + ": " + message) .getBytes());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -65,7 +82,6 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
             }
         }
     }
-
 
     @Override
     public void failed(Throwable e, Void attachment) {

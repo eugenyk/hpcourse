@@ -11,6 +11,8 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
     private InetSocketAddress address;
     private int numberOfThreads;
 
+    private ServerExecutor executor = new ServerExecutor();
+
     private AsynchronousChannelGroup channelGroup;
     private AsynchronousServerSocketChannel serverSocketChannel;
     private ConcurrentHashMap<String, AsynchronousSocketChannel> connections;
@@ -18,6 +20,12 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
     public Server(InetSocketAddress address, int numberOfThreads) {
         this.address = address;
         this.numberOfThreads = numberOfThreads;
+
+        Thread daemon = new Thread(executor);
+
+        daemon.setDaemon(true);
+
+        daemon.start();
 
         connections = new ConcurrentHashMap<String, AsynchronousSocketChannel>();
 
@@ -53,7 +61,8 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
 
         serverSocketChannel.accept(null, this);
 
-        ServerReceiver receiver = new ServerReceiver(connections, client);
+        ServerReceiver receiver = new ServerReceiver(connections, client, executor);
+
         receiver.start();
     }
 
