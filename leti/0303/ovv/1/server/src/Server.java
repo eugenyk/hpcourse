@@ -3,7 +3,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 
 public class Server implements CompletionHandler<AsynchronousSocketChannel, Void> {
@@ -15,7 +15,7 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
 
     private AsynchronousChannelGroup channelGroup;
     private AsynchronousServerSocketChannel serverSocketChannel;
-    private ConcurrentHashMap<String, AsynchronousSocketChannel> connections;
+    private CopyOnWriteArrayList<AsynchronousSocketChannel> connections;
 
     public Server(InetSocketAddress address, int numberOfThreads) {
         this.address = address;
@@ -27,7 +27,7 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
 
         daemon.start();
 
-        connections = new ConcurrentHashMap<String, AsynchronousSocketChannel>();
+        connections = new CopyOnWriteArrayList<AsynchronousSocketChannel>();
 
         initChanelGroup(address, numberOfThreads);
     }
@@ -54,7 +54,7 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
 
             System.out.format("New connection with client address %s established.\n", clientAddress);
 
-            connections.put(clientAddress, client);
+            connections.add(client);
         } catch(Exception e) {
             e.printStackTrace();
         }

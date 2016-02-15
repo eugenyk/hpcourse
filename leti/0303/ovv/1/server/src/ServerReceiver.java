@@ -2,19 +2,19 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ServerReceiver implements CompletionHandler<Integer, Void> {
 
     private ByteBuffer receivedData;
 
-    private Map<String, AsynchronousSocketChannel> connections;
+    private CopyOnWriteArrayList<AsynchronousSocketChannel> connections;
 
     private AsynchronousSocketChannel client;
 
     private ServerExecutor executor;
 
-    public ServerReceiver(Map<String, AsynchronousSocketChannel> connections, AsynchronousSocketChannel client, ServerExecutor executor) {
+    public ServerReceiver(CopyOnWriteArrayList<AsynchronousSocketChannel> connections, AsynchronousSocketChannel client, ServerExecutor executor) {
         this.connections = connections;
         this.client = client;
         this.executor = executor;
@@ -70,7 +70,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
     }
 
     private void broadcastMessageForAllConnections(byte[] message) {
-        Iterator<AsynchronousSocketChannel> iterator = connections.values().iterator();
+        Iterator<AsynchronousSocketChannel> iterator = connections.iterator();
 
         while (iterator.hasNext()) {
             AsynchronousSocketChannel connection = iterator.next();
