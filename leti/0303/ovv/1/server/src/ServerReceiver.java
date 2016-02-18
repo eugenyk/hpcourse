@@ -1,25 +1,33 @@
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ServerReceiver implements CompletionHandler<Integer, Void> {
 
     private ByteBuffer receivedData;
 
-    private Map<String, AsynchronousSocketChannel> connections;
+    private ByteArrayOutputStream messageStream;
+
+    private CopyOnWriteArrayList<AsynchronousSocketChannel> connections;
 
     private AsynchronousSocketChannel client;
 
     private ServerExecutor executor;
 
-    public ServerReceiver(Map<String, AsynchronousSocketChannel> connections, AsynchronousSocketChannel client, ServerExecutor executor) {
+    public ServerReceiver(CopyOnWriteArrayList<AsynchronousSocketChannel> connections, AsynchronousSocketChannel client, ServerExecutor executor) {
         this.connections = connections;
         this.client = client;
         this.executor = executor;
+        this.messageStream = new ByteArrayOutputStream();
 
-        receivedData = ByteBuffer.allocate(4096);
+        receivedData = ByteBuffer.allocate(1024);
     }
 
     public void start() {
@@ -29,30 +37,49 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
     }
 
     @Override
-    public void completed(Integer result, Void attachment) {
+    public void completed(Integer result,  Void attachment) {
         if (result == -1) {
             removeClientFromConnections();
-        } else {
-            String message = new String(receivedData.array(), 0, receivedData.position());
-
-            processMessage(message);
-
-            start();
+            return;
         }
-    }
 
-    private void processMessage(String message) {
-        String clientAddress;
+        receivedData.flip();
 
         try {
-            clientAddress = client.getRemoteAddress().toString();
+            messageStream.write(Arrays.copyOfRange(receivedData.array(), 0, receivedData.limit()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-            System.out.format("Received message from %s: %s\n", clientAddress, message);
+        if (messageStream.size() >= 4) {
 
-            if (message.matches("^/c [\\s\\S]+")) {
-                executor.addRequest(new ServerExecutorRequest(client, message.substring(3)));
+            int length = ByteBuffer.wrap(messageStream.toByteArray(), 0, 4).getInt();
+
+            if (messageStream.size() - 4 == length) {
+
+                processMessage(messageStream.toByteArray(), length);
+
+                messageStream.reset();
+            }
+        }
+
+        receivedData.clear();
+
+        client.read(receivedData, null, this);
+    }
+
+    private void processMessage(byte[] message, int length) {
+        Message.ClientMessage msg;
+
+        try {
+            msg = Message.ClientMessage.parseFrom(Arrays.copyOfRange(messageStream.toByteArray(), 4, length + 4));
+
+            System.out.format("Received message from %s : %s\n", msg.getSender(), msg.getText());
+
+            if (msg.getText().matches("^/c [\\s\\S]+")) {
+                executor.addRequest(new ServerExecutorRequest(client, msg.getText().substring(3)));
             } else {
-                broadcastMessageForAllConnections((clientAddress + ": " + message) .getBytes());
+                broadcastMessageForAllConnections(message);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -70,7 +97,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
     }
 
     private void broadcastMessageForAllConnections(byte[] message) {
-        Iterator<AsynchronousSocketChannel> iterator = connections.values().iterator();
+        Iterator<AsynchronousSocketChannel> iterator = connections.iterator();
 
         while (iterator.hasNext()) {
             AsynchronousSocketChannel connection = iterator.next();

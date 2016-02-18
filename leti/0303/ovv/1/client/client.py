@@ -1,36 +1,58 @@
-import socket, select, string, sys
- 
+import socket, select, string, sys, struct
+
+import Message_pb2
 
 if __name__ == "__main__":
      
     host = sys.argv[1]
     port = int(sys.argv[2])
-     
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(2)
+    name = sys.argv[3]
+ 
+    serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serverSocket.settimeout(2)
      
     try :
-        s.connect((host, port))
+        serverSocket.connect((host, port))
     except :
         print 'Unable to connect'
         sys.exit()
      
     print 'Connected to remote host'
      
+    response = ''
+
     while 1:
-        socket_list = [sys.stdin, s]
+        socket_list = [sys.stdin, serverSocket]
          
         read_sockets, write_sockets, error_sockets = select.select(socket_list , [], [])
          
-        for sock in read_sockets:
+        for currentSocket in read_sockets:
 
-            if sock == s:
-                data = sock.recv(4096)
+            if currentSocket == serverSocket:
+
+                data = currentSocket.recv(1024)
+
                 if not data :
                     print 'Connection closed'
                     sys.exit()
                 else :
-                    sys.stdout.write(data)
+                    response = response + data
+
+                    size = struct.unpack('!I', response[:4])[0]
+
+                    if size == len(response[4:]):
+                        message = Message_pb2.ClientMessage()
+                        message.ParseFromString(response[4:])
+                        print(message.Sender + " : " + message.Text)
+                        response = ''
             else :
-                msg = sys.stdin.readline()
-                s.send(msg)
+                
+                message = Message_pb2.ClientMessage()
+
+                message.Sender = name
+
+                message.Text = sys.stdin.readline()
+
+                size = struct.pack('!I', len(message.SerializeToString()))
+
+                serverSocket.send(size + message.SerializeToString())
