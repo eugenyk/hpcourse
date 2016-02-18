@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
             if currentSocket == serverSocket:
 
-                data = currentSocket.recv(5)
+                data = currentSocket.recv(1024)
 
                 if not data :
                     print 'Connection closed'
