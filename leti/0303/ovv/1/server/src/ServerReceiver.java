@@ -88,7 +88,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
 
     private void removeClientFromConnections() {
         try {
-            connections.remove(client.getRemoteAddress().toString());
+            connections.remove(client);
 
             System.out.format("Client with address %s was disconnected.\n", client.getRemoteAddress().toString());
         } catch (Exception e) {
