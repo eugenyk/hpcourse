@@ -1,5 +1,4 @@
 import socket, select, string, sys, struct
-
 import Message_pb2
 
 if __name__ == "__main__":
