@@ -1,10 +1,12 @@
-import socket, select, string, sys
- 
+import socket, select, string, sys, struct
+import Message_pb2
+
 
 if __name__ == "__main__":
      
     host = sys.argv[1]
     port = int(sys.argv[2])
+    name = sys.argv[3]
      
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(2)
@@ -32,5 +34,13 @@ if __name__ == "__main__":
                 else :
                     sys.stdout.write(data)
             else :
-                msg = sys.stdin.readline()
-                s.send(msg)
+                
+                message = Message_pb2.ClientMessage()
+
+                message.Sender = 'client(%s)' % str(name)
+
+                message.Text = sys.stdin.readline()
+
+                size = struct.pack('!I', len(message.SerializeToString()))
+
+                s.send(size + message.SerializeToString())
