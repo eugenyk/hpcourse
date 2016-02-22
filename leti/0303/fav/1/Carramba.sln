@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Carramba.Tortuga", "Carramba.Tortuga\Carramba.Tortuga.csproj", "{A2163389-A269-4209-816C-6992ED8CC855}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Carramba.Codex", "Carramba.Codex\Carramba.Codex.csproj", "{31D10A4A-643D-4AEE-AA8D-24951E83D768}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A2163389-A269-4209-816C-6992ED8CC855}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2163389-A269-4209-816C-6992ED8CC855}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2163389-A269-4209-816C-6992ED8CC855}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2163389-A269-4209-816C-6992ED8CC855}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31D10A4A-643D-4AEE-AA8D-24951E83D768}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31D10A4A-643D-4AEE-AA8D-24951E83D768}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31D10A4A-643D-4AEE-AA8D-24951E83D768}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31D10A4A-643D-4AEE-AA8D-24951E83D768}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
