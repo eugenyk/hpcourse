@@ -43,15 +43,24 @@ namespace Carramba.Tortuga
             while (true)
             {
                 Message message = await connection.ReadMessage();
-                foreach (Connection con in clientBase.Values)
+                if (message.Text.StartsWith("/c "))
                 {
-                    try
-                    {
-                        await con.SendMessage(message);
-                    }
-                    catch (Exception ex) { Console.WriteLine("POLUNDRA!!!: {0}", ex); }
+                    string done = await ElCapitano.MakeCommand(message.Text.Substring(3));
+                    Message raport = new Message();
+                    raport.Text = done;
+                    await connection.SendMessage(raport);
                 }
-
+                else
+                {
+                    foreach (Connection con in clientBase.Values)
+                    {
+                        try
+                        {
+                            await con.SendMessage(message);
+                        }
+                        catch (Exception ex) { Console.WriteLine("POLUNDRA!!!: {0}", ex); }
+                    }
+                }
             }
         }
 
@@ -60,5 +69,9 @@ namespace Carramba.Tortuga
             Connection connect;
             clientBase.TryRemove(client, out connect);
         }
+
+
+
+
     }
 }
