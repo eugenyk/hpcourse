@@ -19,7 +19,11 @@ public class ServerResponder implements CompletionHandler<Integer, Void> {
         buffer.put(message);
         buffer.position(0);
 
-        receiver.write(buffer, null, this);
+        try {
+            receiver.write(buffer, null, this);
+        } catch (Exception e) {
+            send();
+        }
     }
 
     @Override
