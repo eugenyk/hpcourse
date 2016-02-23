@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="hpserver:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/hpserver_jar</output-path>
-    <root id="archive" name="hpserver.jar">
-      <element id="module-output" name="hpserver" />
-    </root>
-  </artifact>
-</component>
