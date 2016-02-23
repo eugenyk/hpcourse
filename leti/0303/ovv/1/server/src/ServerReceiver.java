@@ -27,7 +27,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
         this.executor = executor;
         this.messageStream = new ByteArrayOutputStream();
 
-        receivedData = ByteBuffer.allocate(1024);
+        receivedData = ByteBuffer.allocate(128);
     }
 
     public void start() {
@@ -51,16 +51,8 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
             e.printStackTrace();
         }
 
-        if (messageStream.size() >= 4) {
-
-            int length = ByteBuffer.wrap(messageStream.toByteArray(), 0, 4).getInt();
-
-            if (messageStream.size() - 4 == length) {
-
-                processMessage(messageStream.toByteArray(), length);
-
-                messageStream.reset();
-            }
+        while (messageStream.size() >= 4 && hasFullMessage()) {
+            putMessage();
         }
 
         receivedData.clear();
@@ -68,11 +60,37 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
         client.read(receivedData, null, this);
     }
 
+    private boolean hasFullMessage() {
+        int length = ByteBuffer.wrap(messageStream.toByteArray(), 0, 4).getInt();
+
+        return messageStream.size() - 4 >= length;
+    }
+
+    private void putMessage() {
+        int length = ByteBuffer.wrap(messageStream.toByteArray(), 0, 4).getInt();
+
+        if (messageStream.size() - 4 >= length) {
+
+            processMessage(Arrays.copyOfRange(messageStream.toByteArray(), 0, length + 4), length);
+
+            byte[] temp = Arrays.copyOfRange(messageStream.toByteArray(), length + 4, messageStream.size());
+
+            messageStream.reset();
+
+            try {
+                messageStream.write(temp);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
     private void processMessage(byte[] message, int length) {
         Message.ClientMessage msg;
 
         try {
-            msg = Message.ClientMessage.parseFrom(Arrays.copyOfRange(messageStream.toByteArray(), 4, length + 4));
+            msg = Message.ClientMessage.parseFrom(Arrays.copyOfRange(message, 4, length + 4));
 
             System.out.format("Received message from %s : %s\n", msg.getSender(), msg.getText());
 
