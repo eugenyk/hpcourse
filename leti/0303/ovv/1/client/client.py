@@ -38,7 +38,7 @@ if __name__ == "__main__":
     name = sys.argv[3]
  
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSocket.settimeout(2)
+    serverSocket.settimeout(10)
      
     try :
         serverSocket.connect((host, port))
