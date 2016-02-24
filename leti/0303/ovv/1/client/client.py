@@ -2,7 +2,6 @@ import socket, select, string, sys, struct
 import Message_pb2
 import time
 
-
 def has_full_messsage(response):
     size = struct.unpack('!I', response[:4])[0]
 
