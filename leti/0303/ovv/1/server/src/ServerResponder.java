@@ -8,6 +8,8 @@ public class ServerResponder implements CompletionHandler<Integer, Void> {
 
     byte[] message;
 
+    private boolean completeFlag = false;
+
     public ServerResponder(AsynchronousSocketChannel receiver, byte[] message) {
         this.receiver = receiver;
         this.message = message;
@@ -26,9 +28,13 @@ public class ServerResponder implements CompletionHandler<Integer, Void> {
         }
     }
 
+    public boolean isCompleted() {
+        return this.completeFlag;
+    }
+
     @Override
     public void completed(Integer result, Void attachment) {
-
+        this.completeFlag = true;
     }
 
     @Override

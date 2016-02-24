@@ -95,7 +95,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
             System.out.format("Received message from %s : %s\n", msg.getSender(), msg.getText());
 
             if (msg.getText().matches("^/c [\\s\\S]+")) {
-                executor.addRequest(new ServerExecutorRequest(client, msg.getText().substring(3)));
+                executor.addRequest(new ServerExecutorRequest(client, msg.getText().substring(3), message, "command"));
             } else {
                 broadcastMessageForAllConnections(message);
             }
@@ -121,9 +121,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
             AsynchronousSocketChannel connection = iterator.next();
 
             if(connection != client && connection.isOpen()) {
-                ServerResponder responder = new ServerResponder(connection, message);
-
-                responder.send();
+                executor.addRequest(new ServerExecutorRequest(connection, "", message, "message"));
             }
         }
     }
