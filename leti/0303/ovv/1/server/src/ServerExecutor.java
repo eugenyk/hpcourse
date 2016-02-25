@@ -8,10 +8,12 @@ public class ServerExecutor implements Runnable {
 
     private ConcurrentLinkedQueue<ServerExecutorRequest> requests = new ConcurrentLinkedQueue<ServerExecutorRequest>();
 
+    private ServerResponder lastResponder;
+
     @Override
     public void run() {
         while (true) {
-            if(!requests.isEmpty()) {
+            if(!requests.isEmpty() && (lastResponder == null || lastResponder.isCompleted())) {
                 processRequest(requests.poll());
             }
         }
@@ -20,9 +22,17 @@ public class ServerExecutor implements Runnable {
     private void processRequest(ServerExecutorRequest request) {
         AsynchronousSocketChannel user = request.getClient();
 
-        Message.ClientMessage message = Message.ClientMessage.newBuilder().setSender("server").setText(executeRequest(request.getRequest())).build();
+        ServerResponder responder;
 
-        ServerResponder responder = new ServerResponder(user, ByteBuffer.allocate(4 + message.toByteArray().length).putInt(message.toByteArray().length).put(message.toByteArray()).array());
+        if (request.getType().equals("command")) {
+            Message.ClientMessage message = Message.ClientMessage.newBuilder().setSender("server").setText(executeRequest(request.getRequest())).build();
+
+            responder = new ServerResponder(user, ByteBuffer.allocate(4 + message.toByteArray().length).putInt(message.toByteArray().length).put(message.toByteArray()).array());
+        } else {
+            responder = new ServerResponder(user, request.getMessage());
+        }
+
+        lastResponder = responder;
 
         responder.send();
     }
