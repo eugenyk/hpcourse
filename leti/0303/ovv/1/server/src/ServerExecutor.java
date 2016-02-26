@@ -7,12 +7,10 @@ public class ServerExecutor implements Runnable {
 
     private ConcurrentLinkedQueue<ServerExecutorRequest> requests = new ConcurrentLinkedQueue<ServerExecutorRequest>();
 
-    private ServerResponder lastResponder;
-
     @Override
     public void run() {
         while (true) {
-            if(!requests.isEmpty() && (lastResponder == null || lastResponder.isCompleted())) {
+            if(!requests.isEmpty()) {
                 processRequest(requests.poll());
             }
         }
@@ -20,6 +18,8 @@ public class ServerExecutor implements Runnable {
 
     private void processRequest(ServerExecutorRequest request) {
         ServerClient user = request.getClient();
+
+        Message.ClientMessage message = Message.ClientMessage.newBuilder().setSender("server").setText(executeRequest(request.getRequest())).build();
 
         user.responder.addMessage(ByteBuffer.allocate(4 + message.toByteArray().length).putInt(message.toByteArray().length).put(message.toByteArray()).array());
     }

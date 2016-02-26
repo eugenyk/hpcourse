@@ -92,7 +92,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
             System.out.format("Received message from %s : %s\n", msg.getSender(), msg.getText());
 
             if (msg.getText().matches("^/c [\\s\\S]+")) {
-                executor.addRequest(new ServerExecutorRequest(client, msg.getText().substring(3), message, "command"));
+                executor.addRequest(new ServerExecutorRequest(client, msg.getText().substring(3)));
             } else {
                 broadcastMessageForAllConnections(message);
             }
