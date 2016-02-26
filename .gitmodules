@@ -16,3 +16,6 @@
 [submodule "leti/0303/mav/1"]
 	path = leti/0303/mav/1
 	url = https://github.com/AlexeyMz/DevoidTalk.git
+[submodule "aptu/604_15/tdv/1/AsioChat"]
+	path = aptu/604_15/tdv/1/AsioChat
+	url = git://github.com/flire/AsioChat.git

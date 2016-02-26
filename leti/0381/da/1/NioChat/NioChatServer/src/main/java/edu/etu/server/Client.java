@@ -89,7 +89,7 @@ public class Client {
 
                 while (true) {
                     if (msg.size() >= 4 && msgLength == 0) {
-                        msgLength = ByteBuffer.wrap(msg.toByteArray(), 0, 4).getInt();
+                        msgLength = ByteBuffer.wrap(msg.toByteArray(), 0, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
                     }
 
 
