@@ -15,7 +15,7 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
 
     private AsynchronousChannelGroup channelGroup;
     private AsynchronousServerSocketChannel serverSocketChannel;
-    private CopyOnWriteArrayList<AsynchronousSocketChannel> connections;
+    private CopyOnWriteArrayList<ServerClient> clients;
 
     public Server(InetSocketAddress address, int numberOfThreads) {
         this.address = address;
@@ -27,7 +27,7 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
 
         daemon.start();
 
-        connections = new CopyOnWriteArrayList<AsynchronousSocketChannel>();
+        clients = new CopyOnWriteArrayList<ServerClient>();
 
         initChanelGroup(address, numberOfThreads);
     }
@@ -49,19 +49,21 @@ public class Server implements CompletionHandler<AsynchronousSocketChannel, Void
 
     @Override
     public void completed(AsynchronousSocketChannel client, Void attachment) {
+        ServerClient tempClient = new ServerClient(client);
+
         try {
             String clientAddress = client.getRemoteAddress().toString();
 
             System.out.format("New connection with client address %s established.\n", clientAddress);
 
-            connections.add(client);
+            clients.add(tempClient);
         } catch(Exception e) {
             e.printStackTrace();
         }
 
         serverSocketChannel.accept(null, this);
 
-        ServerReceiver receiver = new ServerReceiver(connections, client, executor);
+        ServerReceiver receiver = new ServerReceiver(clients, tempClient, executor);
 
         receiver.start();
     }

@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ServerExecutor implements Runnable {
@@ -20,21 +19,9 @@ public class ServerExecutor implements Runnable {
     }
 
     private void processRequest(ServerExecutorRequest request) {
-        AsynchronousSocketChannel user = request.getClient();
+        ServerClient user = request.getClient();
 
-        ServerResponder responder;
-
-        if (request.getType().equals("command")) {
-            Message.ClientMessage message = Message.ClientMessage.newBuilder().setSender("server").setText(executeRequest(request.getRequest())).build();
-
-            responder = new ServerResponder(user, ByteBuffer.allocate(4 + message.toByteArray().length).putInt(message.toByteArray().length).put(message.toByteArray()).array());
-        } else {
-            responder = new ServerResponder(user, request.getMessage());
-        }
-
-        lastResponder = responder;
-
-        responder.send();
+        user.responder.addMessage(ByteBuffer.allocate(4 + message.toByteArray().length).putInt(message.toByteArray().length).put(message.toByteArray()).array());
     }
 
     private String executeRequest(String request) {
