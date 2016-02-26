@@ -11,8 +11,9 @@ _reactor(reactor)
     _reactor.addEventHandler(_socket, Poco::NObserver<ChatServerHandler, Poco::Net::ShutdownNotification>(*this, &ChatServerHandler::onShutdown));
     
     sendBroadcastMesage("[system]", _socket.peerAddress().toString() + " connected.\n");
-    
+    mymutex.lock();
     clients.push_back(socket);
+    mymutex.unlock();
 }
 
 ChatServerHandler::~ChatServerHandler()

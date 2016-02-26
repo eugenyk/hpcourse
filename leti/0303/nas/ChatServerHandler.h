@@ -13,6 +13,7 @@
 extern Poco::NotificationQueue queue;
 extern CommandExecutor commandExecutor;
 extern std::vector<Poco::Net::StreamSocket> clients;
+extern std::mutex mymutex;
 
 class ChatServerHandler
 {
