@@ -11,8 +11,9 @@ _reactor(reactor)
     _reactor.addEventHandler(_socket, Poco::NObserver<ChatServerHandler, Poco::Net::ShutdownNotification>(*this, &ChatServerHandler::onShutdown));
     
     sendBroadcastMesage("[system]", _socket.peerAddress().toString() + " connected.\n");
-    
+    mymutex.lock();
     clients.push_back(socket);
+    mymutex.unlock();
 }
 
 ChatServerHandler::~ChatServerHandler()
@@ -34,7 +35,9 @@ void ChatServerHandler::onReadable(const Poco::AutoPtr<Poco::Net::ReadableNotifi
 {
     char _pBuffer[1024];// = (void*)::operator new(BUFFER_SIZE);
     /*int n = */
-    _socket.receiveBytes(&_pBuffer, 1024);
+    
+    int symbol = 0; while (1) { symbol += _socket.receiveBytes(&_pBuffer + symbol, 1024);
+        if (_pBuffer[symbol - 1] == '\n') break; }
     
     sendBroadcastMesage(_socket.peerAddress().toString(), _pBuffer);
     

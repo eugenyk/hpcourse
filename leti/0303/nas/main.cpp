@@ -3,6 +3,7 @@
 Poco::NotificationQueue queue;
 CommandExecutor commandExecutor(queue);
 std::vector<Poco::Net::StreamSocket> clients;
+std::mutex mymutex;
 
 int main(int argc, char** argv)
 {
