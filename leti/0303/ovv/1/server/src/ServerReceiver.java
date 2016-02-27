@@ -1,9 +1,6 @@
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -15,14 +12,14 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
 
     private ByteArrayOutputStream messageStream;
 
-    private CopyOnWriteArrayList<AsynchronousSocketChannel> connections;
+    private CopyOnWriteArrayList<ServerClient> clients;
 
-    private AsynchronousSocketChannel client;
+    private ServerClient client;
 
     private ServerExecutor executor;
 
-    public ServerReceiver(CopyOnWriteArrayList<AsynchronousSocketChannel> connections, AsynchronousSocketChannel client, ServerExecutor executor) {
-        this.connections = connections;
+    public ServerReceiver(CopyOnWriteArrayList<ServerClient> clients, ServerClient client, ServerExecutor executor) {
+        this.clients = clients;
         this.client = client;
         this.executor = executor;
         this.messageStream = new ByteArrayOutputStream();
@@ -33,7 +30,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
     public void start() {
         receivedData.position(0);
 
-        client.read(receivedData, null, this);
+        client.connection.read(receivedData, null, this);
     }
 
     @Override
@@ -57,7 +54,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
 
         receivedData.clear();
 
-        client.read(receivedData, null, this);
+        client.connection.read(receivedData, null, this);
     }
 
     private boolean hasFullMessage() {
@@ -95,7 +92,7 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
             System.out.format("Received message from %s : %s\n", msg.getSender(), msg.getText());
 
             if (msg.getText().matches("^/c [\\s\\S]+")) {
-                executor.addRequest(new ServerExecutorRequest(client, msg.getText().substring(3), message, "command"));
+                executor.addRequest(new ServerExecutorRequest(client, msg.getText().substring(3)));
             } else {
                 broadcastMessageForAllConnections(message);
             }
@@ -106,22 +103,22 @@ public class ServerReceiver implements CompletionHandler<Integer, Void> {
 
     private void removeClientFromConnections() {
         try {
-            connections.remove(client);
+            clients.remove(client);
 
-            System.out.format("Client with address %s was disconnected.\n", client.getRemoteAddress().toString());
+            System.out.format("Client with address %s was disconnected.\n", client.connection.getRemoteAddress().toString());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void broadcastMessageForAllConnections(byte[] message) {
-        Iterator<AsynchronousSocketChannel> iterator = connections.iterator();
+    private void broadcastMessageForAllConnections(final byte[] message) {
+        Iterator<ServerClient> iterator = clients.iterator();
 
         while (iterator.hasNext()) {
-            AsynchronousSocketChannel connection = iterator.next();
+            final ServerClient connection = iterator.next();
 
-            if(connection != client && connection.isOpen()) {
-                executor.addRequest(new ServerExecutorRequest(connection, "", message, "message"));
+            if(connection.connection != client.connection && connection.connection.isOpen()) {
+                connection.responder.addMessage(message);
             }
         }
     }

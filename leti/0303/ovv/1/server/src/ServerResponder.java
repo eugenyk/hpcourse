@@ -1,45 +1,49 @@
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Semaphore;
 
-public class ServerResponder implements CompletionHandler<Integer, Void> {
+public class ServerResponder {
 
-    private AsynchronousSocketChannel receiver;
+    private ServerClient receiver;
 
-    byte[] message;
+    private ConcurrentLinkedQueue<byte[]> messages = new ConcurrentLinkedQueue<byte[]>();
 
-    private boolean completeFlag = false;
+    private final Semaphore semaphore;
 
-    public ServerResponder(AsynchronousSocketChannel receiver, byte[] message) {
+    public ServerResponder(ServerClient receiver) {
         this.receiver = receiver;
-        this.message = message;
+        this.semaphore = new Semaphore(1);
     }
 
-    public void send() {
-        ByteBuffer buffer = ByteBuffer.allocate(message.length);
+    public void addMessage(byte[] message) {
 
-        buffer.put(message);
-        buffer.position(0);
+        if (message == null) {
+            return;
+        }
 
         try {
-            receiver.write(buffer, null, this);
-        } catch (Exception e) {
-            send();
+            semaphore.acquire();
+
+            ByteBuffer msg = ByteBuffer.allocate(message.length).put(message);
+
+            msg.position(0);
+
+            receiver.connection.write(msg, null, new CompletionHandler<Integer, Integer>() {
+                @Override
+                public synchronized void completed(Integer result, Integer attachment) {
+                    semaphore.release();
+                    addMessage(messages.poll());
+                }
+
+                @Override
+                public void failed(Throwable exc, Integer attachment) {
+                    semaphore.release();
+                }
+            });
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-    }
-
-    public boolean isCompleted() {
-        return this.completeFlag;
-    }
-
-    @Override
-    public void completed(Integer result, Void attachment) {
-        this.completeFlag = true;
-    }
-
-    @Override
-    public void failed(Throwable e, Void attachment) {
-        e.printStackTrace();
     }
 
 }
