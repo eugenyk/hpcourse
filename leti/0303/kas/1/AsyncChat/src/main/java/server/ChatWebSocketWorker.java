@@ -11,6 +11,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public abstract class ChatWebSocketWorker implements ChatWorker {
@@ -19,6 +20,8 @@ public abstract class ChatWebSocketWorker implements ChatWorker {
     public static final int LENGTH = 4;
     private final AsynchronousSocketChannel socketChannel;
     private BlockingDeque<byte[]> blocks;
+    private ConcurrentLinkedQueue<ByteBuffer> queue;
+    private ReentrantLock lock = new ReentrantLock();
     private ByteBuffer buffer;
     private int messageLength;
     private int appendix;
@@ -26,6 +29,7 @@ public abstract class ChatWebSocketWorker implements ChatWorker {
     public ChatWebSocketWorker(AsynchronousSocketChannel socketChannel) {
         this.socketChannel = socketChannel;
         blocks = new LinkedBlockingDeque<>();
+        queue = new ConcurrentLinkedQueue<>();
         buffer = ByteBuffer.allocate(CAPACITY);
     }
 
@@ -68,19 +72,31 @@ public abstract class ChatWebSocketWorker implements ChatWorker {
         buffer.putInt(message.length);
         buffer.put(message);
         buffer.position(0);
-        socketChannel.write(buffer, null, new CompletionHandler<Integer, Void>() {
-            @Override
-            public void completed(Integer result, Void attachment) {
-                try {
-                    LOG.info("Message write: " + socketChannel.getRemoteAddress());
-                } catch (IOException ignored) {}
-            }
+        queue.offer(ByteBuffer.wrap(message));
+        if (lock.tryLock()) {
+            socketChannel.write(queue.poll(), null, new CompletionHandler<Integer, Void>() {
+                @Override
+                public void completed(Integer result, Void attachment) {
+                    try {
+                        LOG.info("Message write: " + socketChannel.getRemoteAddress());
+                        if (!queue.isEmpty()) {
+                            socketChannel.write(queue.poll(), null, this);
+                        } else {
+                            lock.unlock();
+                        }
+                    } catch (IOException e) {
+                        LOG.error("Failed write message", e);
+                        lock.unlock();
+                    }
+                }
 
-            @Override
-            public void failed(Throwable exc, Void attachment) {
-                LOG.error("Failed write message");
-            }
-        });
+                @Override
+                public void failed(Throwable exc, Void attachment) {
+                    LOG.error("Failed write message");
+                    lock.unlock();
+                }
+            });
+        }
     }
 
     private void handleRead(int result) {

@@ -29,7 +29,8 @@ public class CommandThread implements Runnable {
                     request(command.getWorker(), getRequestText(command.getCommand()));
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOG.error("Error when take command from deque", e);
+                Thread.currentThread().interrupt();
             }
         }
     }

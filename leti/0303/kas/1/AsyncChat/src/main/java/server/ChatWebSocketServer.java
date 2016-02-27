@@ -59,12 +59,12 @@ public class ChatWebSocketServer implements ChatServer {
                 LOG.info(">>Server started.");
             }
         });
-        serverThread.join();
         serverThread.start();
+        serverThread.join();
 
         Thread commandThread = new Thread(CommandThread.getInstance());
-        commandThread.join();
         commandThread.start();
+        commandThread.join();
     }
 
     @Override
