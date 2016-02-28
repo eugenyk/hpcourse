@@ -44,7 +44,7 @@ void chat_client::do_read_header()
 void chat_client::do_read_body()
 {
 	boost::asio::async_read(socket_,
-		boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
+		boost::asio::buffer(read_msg_.body(), read_msg_.body_length()), boost::asio::transfer_all(),
 		[this](boost::system::error_code ec, std::size_t)
 	{
 		if (!ec)
