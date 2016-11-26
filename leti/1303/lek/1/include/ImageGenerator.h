@@ -14,7 +14,7 @@ class ImageGenerator {
     unsigned int maxHeight;
     
     /// Collection of generated images.
-    tbb::concurrent_vector<Image*> imagesCollection;
+    std::vector<Image*> imagesCollection;
 
     /// Add generated image to collection.
     continue_msg addImage(Image* image);
@@ -23,6 +23,6 @@ public:
                    unsigned int maxWidth, unsigned int maxHeight);
 
     /// Generate current number of random images.
-    tbb::concurrent_vector<Image*> generate(unsigned int count);
+    std::vector<Image*> generate(unsigned int count);
 
 };

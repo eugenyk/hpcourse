@@ -16,7 +16,7 @@ continue_msg ImageGenerator::addImage(Image* image) {
     return continue_msg();
 }
 
-tbb::concurrent_vector<Image*> ImageGenerator::generate(unsigned int count) {
+std::vector<Image*> ImageGenerator::generate(unsigned int count) {
     // Remove old generated images.
     imagesCollection.clear();
 

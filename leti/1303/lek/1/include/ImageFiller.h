@@ -1,12 +1,11 @@
-#include <tbb/flow_graph.h>
+#include "ImageLineWorker.h"
 class Image;
 
-using namespace tbb::flow;
 
 /// Class for filling one image with random colors.
-class ImageFiller {
+class ImageFiller : ImageLineWorker<Image*, unsigned char*> {
     /// Fill one line of image.
-    unsigned char* fillImageLine(tuple<unsigned char*, unsigned int> lineInfo);
+    unsigned char* fillImageLine(tuple<unsigned char*, unsigned int, unsigned int> lineInfo);
 public:
     /// Main action - fill image with different colors.
     Image *operator()(Image* image);
