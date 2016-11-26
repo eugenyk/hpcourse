@@ -19,7 +19,7 @@ continue_msg ImageGenerator::addImage(Image* image) {
 std::vector<Image*> ImageGenerator::generate(unsigned int count) {
     // Remove old generated images.
     imagesCollection.clear();
-
+    size_t a = tbb::task_scheduler_init::automatic;
     graph imageGeneratorGraph;
     broadcast_node<Image*> input(imageGeneratorGraph);
     // Limit number of created working nodes.

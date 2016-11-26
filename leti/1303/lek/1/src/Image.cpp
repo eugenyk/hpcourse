@@ -1,10 +1,23 @@
 #include "Image.h"
 #include <iostream>
 
+unsigned long Image::idCounter = 0;
+
 Image::Image(unsigned int width, unsigned int height) : width(width), height(height) {
+    id = idCounter;
+    idCounter++;
     pixelMatrix = new unsigned char *[height];
     for (unsigned int i = 0; i < height; i++) {
         pixelMatrix[i] = new unsigned char[width];
+    }
+}
+
+Image::Image(const Image & image) : Image(image.getWidth(), image.getHeight())
+{
+    for (unsigned int i = 0; i < height; i++) {
+        for (unsigned int j = 0; j < width; j++) {
+            pixelMatrix[i][j] = image.pixelMatrix[i][j];
+        }
     }
 }
 
@@ -15,11 +28,11 @@ Image::~Image() {
     delete[] pixelMatrix;
 }
 
-unsigned int Image::getWidth() {
+unsigned int Image::getWidth() const {
     return width;
 }
 
-unsigned int Image::getHeight()
+unsigned int Image::getHeight() const
 {
     return height;
 }
@@ -30,4 +43,9 @@ unsigned char* Image::getImageLine(unsigned int lineNumber)
         return pixelMatrix[lineNumber];
     }
     return nullptr;
+}
+
+unsigned long Image::getId() const
+{
+    return id;
 }

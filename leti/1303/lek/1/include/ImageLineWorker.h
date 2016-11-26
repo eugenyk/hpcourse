@@ -1,19 +1,15 @@
+#ifndef IMAGE_LINE_WORKER_H
+#define IMAGE_LINE_WORKER_H
+
 #include <tbb/flow_graph.h>
 #include "ThreadsInfo.h"
 #include "Image.h"
 using namespace tbb::flow;
 
-template <typename ResultOutput, typename FunctionOutput>
+template <typename ResultOutput, typename FunctionOutput, typename Input = Image*>
 class ImageLineWorker {
 protected:
-    // Structure for generating sequence for sequencer_buffer.
-    struct Sequencer {
-        size_t operator()(FunctionOutput line) {
-            static unsigned int counter = 0;
-            counter++;
-            return (counter - 1);
-        }
-    };
+    
 
     template<typename FunctionBody, typename OutputBody>
     void runTaskOnGraph(Image* image, FunctionBody functionBody,
@@ -45,5 +41,7 @@ protected:
     }
 
 public:
-    virtual ResultOutput operator()(Image* image) = 0;
+    virtual ResultOutput operator()(Input input) = 0;
 };
+
+#endif

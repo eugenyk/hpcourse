@@ -1,9 +1,8 @@
 #include "ImageGenerator.h"
 #include <iostream>
-#include "getopt.h"
 #include "ThreadsInfo.h"
-#include "FinderOnImage.h"
-#include "Image.h"
+#include "ImageTransformer.h"
+
 
 /*typedef tuple<unsigned char**, unsigned char**,
     unsigned char**, unsigned char**,
@@ -94,6 +93,7 @@ void generateRandomImages(unsigned int imagesCount) {
     limiter_node<Image&> limiter(imageGeneratorGraph, THREADS_INC * theradsNum);
     function_node<Image&, Image&> imageFiller(imageGeneratorGraph, unlimited, fillImage());
 }*/
+
 unsigned char ThreadsInfo::currentBrightness = 0;
 int main(int argc, char **argv)
 {
@@ -147,63 +147,9 @@ int main(int argc, char **argv)
 
     // Generate images.
     ImageGenerator generator(minWidth, minHeight, maxWidth, maxHeight);
-    std::vector<Image*> generatedImages = generator.generate(10);
-
-    std::function<unsigned char(Image*)> maximum = [](Image* image)->unsigned char {
-        unsigned char max;
-        unsigned char *maxInLine = new unsigned char [image->getHeight()];
-        for (unsigned int i = 0; i < image->getHeight(); i++) {
-            maxInLine[i] = *std::max_element(image->getImageLine(i), image->getImageLine(i) + image->getWidth());
-        }
-        max = *std::max_element(maxInLine, maxInLine + image->getHeight());
-        delete[] maxInLine;
-        return max;
-    };
-
-    std::function<unsigned char(Image*)> minimum = [](Image* image)->unsigned char {
-        unsigned char min;
-        unsigned char *minInLine = new unsigned char[image->getHeight()];
-        for (unsigned int i = 0; i < image->getHeight(); i++) {
-            minInLine[i] = *std::min_element(image->getImageLine(i), image->getImageLine(i) + image->getWidth());
-        }
-        min = *std::min_element(minInLine, minInLine + image->getHeight());
-        delete[] minInLine;
-        return min;
-    };
-
-    std::function<unsigned char(Image*)> curVal = [](Image* image)->unsigned char {
-        return ThreadsInfo::currentBrightness;
-    };
-    graph imageTransformGraph;
-    broadcast_node<Image*> input(imageTransformGraph);
-    limiter_node<Image*> limiter(imageTransformGraph, imagesLimit);
-    function_node<Image*, ElementSet> maxBrightnessFinder(imageTransformGraph, unlimited, FinderOnImage(maximum));
-    queue_node<ElementSet> maxSetQueue(imageTransformGraph);
-    function_node<Image*, ElementSet> minBrightnessFinder(imageTransformGraph, unlimited, FinderOnImage(minimum));
-    queue_node<ElementSet> minSetQueue(imageTransformGraph);
-    function_node<Image*, ElementSet> currentBrightnessFinder(imageTransformGraph, unlimited, FinderOnImage(curVal));
-    queue_node<ElementSet> curValSetQueue(imageTransformGraph);
-    queue_node<Image*> imagesQueue(imageTransformGraph);
-    join_node< tuple<ElementSet, ElementSet, ElementSet, Image*>, queueing > join(imageTransformGraph);
-    function_node<tuple<ElementSet, ElementSet, ElementSet, Image*>, continue_msg> output(
-        imageTransformGraph, serial, [](tuple<ElementSet, ElementSet, ElementSet, Image*>)->continue_msg { return continue_msg(); });
-    make_edge(input, limiter);
-    make_edge(limiter, maxBrightnessFinder);
-    make_edge(limiter, minBrightnessFinder);
-    make_edge(limiter, currentBrightnessFinder);
-    make_edge(maxBrightnessFinder, maxSetQueue);
-    make_edge(minBrightnessFinder, minSetQueue);
-    make_edge(currentBrightnessFinder, curValSetQueue);
-    make_edge(limiter, imagesQueue);
-    make_edge(maxSetQueue, input_port<0>(join));
-    make_edge(minSetQueue, input_port<1>(join));
-    make_edge(curValSetQueue, input_port<2>(join));
-    make_edge(imagesQueue, input_port<3>(join));
-    make_edge(join, output);
-    make_edge(output, limiter.decrement);
-    for (auto image : generatedImages) {
-        input.try_put(image);
-    }
-    imageTransformGraph.wait_for_all();
+    std::vector<Image*> generatedImages = generator.generate(100);
+    ImageTransformer transformer;
+    transformer.transform(generatedImages, imagesLimit, brightnessFile);
+    
     return 0;
 }

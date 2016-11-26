@@ -31,9 +31,9 @@ struct ElementsCollector {
 FinderOnImage::FinderOnImage(std::function<unsigned char(Image*)>& featureToFind) :
     featureToFind(featureToFind) {}
 
-ElementSet FinderOnImage::operator()(Image *image) {
+ElementSetTuple FinderOnImage::operator()(Image *image) {
     ElementSet result;
     unsigned int valueToFind = featureToFind(image);
     runTaskOnGraph(image, FinderElementsInLine(valueToFind), ElementsCollector(result));
-    return result;
+    return ElementSetTuple(result, image->getId());
 }
