@@ -18,9 +18,9 @@ public:
 
     unsigned int getWidth() const;
     unsigned int getHeight() const;
+    unsigned long getId() const;
     /// Get separate line of image by its number.
     unsigned char* getImageLine(unsigned int lineNumber);
-    unsigned long getId() const;
 };
 
 #endif

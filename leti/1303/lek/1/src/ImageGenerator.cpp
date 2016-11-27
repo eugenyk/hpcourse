@@ -1,7 +1,7 @@
 #include "ImageGenerator.h"
 #include "ImageFiller.h"
 #include "Image.h"
-#include "ThreadsInfo.h"
+#include "ExtraInfo.h"
 #include <functional>
 #include <iostream>
 
@@ -22,8 +22,9 @@ std::vector<Image*> ImageGenerator::generate(unsigned int count) {
     size_t a = tbb::task_scheduler_init::automatic;
     graph imageGeneratorGraph;
     broadcast_node<Image*> input(imageGeneratorGraph);
+    buffer_node<Image*> imageBuffer(imageGeneratorGraph);
     // Limit number of created working nodes.
-    limiter_node<Image*> limiter(imageGeneratorGraph, ThreadsInfo::THREADS_INC_COEF * ThreadsInfo::THREADS_NUM);
+    limiter_node<Image*> limiter(imageGeneratorGraph, ExtraInfo::THREADS_NUM);
     // Node for filling image.
     function_node<Image*, Image*> imageFiller(imageGeneratorGraph, unlimited, ImageFiller());
     buffer_node<Image*> buffer(imageGeneratorGraph);
@@ -32,7 +33,8 @@ std::vector<Image*> ImageGenerator::generate(unsigned int count) {
         std::bind(&ImageGenerator::addImage, this, std::placeholders::_1));
 
     // Add edges.
-    make_edge(input, limiter);
+    make_edge(input, imageBuffer);
+    make_edge(imageBuffer, limiter);
     make_edge(limiter, imageFiller);
     make_edge(imageFiller, buffer);
     make_edge(buffer, collector);
@@ -41,8 +43,20 @@ std::vector<Image*> ImageGenerator::generate(unsigned int count) {
     // Generate images of different size.
     std::random_device rd;
     for (unsigned int i = 0; i < count; i++) {
-        Image* newImage = new Image(rd() % (maxWidth - minWidth) + minWidth,
-            rd() % (maxHeight - minHeight) + minHeight);
+        unsigned long width;
+        unsigned long height;
+        if (minWidth == maxWidth) {
+            width = minWidth;
+        } else {
+            width = rd() % (maxWidth - minWidth) + minWidth;
+        }
+        if (minHeight == maxHeight) {
+            height = minHeight;
+        }
+        else {
+            height = rd() % (maxHeight - minHeight) + minHeight;
+        }
+        Image* newImage = new Image(width, height);
         input.try_put(newImage);
     }
 

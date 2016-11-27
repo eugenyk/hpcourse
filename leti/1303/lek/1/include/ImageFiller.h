@@ -1,6 +1,6 @@
 #include "ImageLineWorker.h"
-class Image;
 
+class Image;
 
 /// Class for filling one image with random colors.
 class ImageFiller : ImageLineWorker<Image*, unsigned char*> {

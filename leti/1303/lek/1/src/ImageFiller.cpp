@@ -1,6 +1,6 @@
 #include "ImageFiller.h"
 #include "Image.h"
-#include "ThreadsInfo.h"
+#include "ExtraInfo.h"
 #include <functional>
 #include <random>
 #include <iostream>
@@ -16,7 +16,9 @@ unsigned char* ImageFiller::fillImageLine(tuple<unsigned char*, unsigned int, un
 }
 
 Image *ImageFiller::operator()(Image* image) {
-    runTaskOnGraph(image, std::bind(&ImageFiller::fillImageLine, this, std::placeholders::_1), 
+    // Set colors to pixels with graph.
+    runTaskOnGraph(image, std::bind(&ImageFiller::fillImageLine, 
+                                    this, std::placeholders::_1), 
                    [](unsigned char*)->continue_msg { return continue_msg(); });
     return image;
 }
