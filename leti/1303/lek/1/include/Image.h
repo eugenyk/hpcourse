@@ -1,5 +1,6 @@
 #ifndef IMAGE_H
 #define IMAGE_H
+#include<iostream>
 
 /// Class of image.
 class Image {
@@ -15,6 +16,7 @@ public:
     Image(unsigned int width, unsigned int height);
     Image(const Image& image);
     ~Image();
+    void log(std::ostream& out = std::cout) const;
 
     unsigned int getWidth() const;
     unsigned int getHeight() const;

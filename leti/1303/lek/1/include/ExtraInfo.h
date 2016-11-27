@@ -10,5 +10,7 @@ struct ExtraInfo
     static const unsigned int THREADS_NUM = tbb::task_scheduler_init::automatic;
     /// Brightness value choosen by user.
     static unsigned char currentBrightness;
+    static bool debugMode;
+
 };
 #endif

@@ -1,5 +1,6 @@
 #include "ImageInverser.h"
 #include <functional>
+#include <fstream>
 
 unsigned char * ImageInverser::inverseImageLine(tuple<unsigned char*, unsigned int,
                                                       unsigned int> lineInfo) {
@@ -11,7 +12,7 @@ unsigned char * ImageInverser::inverseImageLine(tuple<unsigned char*, unsigned i
     return line;
 }
 
-Image * ImageInverser::operator()(Image * image) {
+tuple<Image *, unsigned long> ImageInverser::operator()(Image * image) {
     // Create new image as copy of getted.
     Image *inverseImage = new Image(*image);
 
@@ -19,5 +20,6 @@ Image * ImageInverser::operator()(Image * image) {
     runTaskOnGraph(inverseImage, std::bind(&ImageInverser::inverseImageLine, 
                                            this, std::placeholders::_1),
                    [](unsigned char*)->continue_msg { return continue_msg(); });
-    return inverseImage;
+    
+    return tuple<Image *, unsigned long>(inverseImage, image->getId());
 }

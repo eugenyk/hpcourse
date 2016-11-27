@@ -30,6 +30,17 @@ Image::~Image() {
     delete[] pixelMatrix;
 }
 
+void Image::log(std::ostream& out) const
+{
+    out << "Image " << getId() << std::endl;
+    for (unsigned int i = 0; i < height; i++) {
+        for (unsigned int j = 0; j < width; j++) {
+            out << (int)pixelMatrix[i][j] << " ";
+        }
+        out << std::endl;
+    }
+}
+
 unsigned int Image::getWidth() const {
     return width;
 }

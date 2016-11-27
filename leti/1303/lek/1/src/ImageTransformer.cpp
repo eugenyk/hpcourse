@@ -3,6 +3,7 @@
 #include "Image.h"
 #include "ImageInverser.h"
 #include "AverageBrightnessCounter.h"
+#include "ImageGenerator.h"
 #include <iostream>
 #include <fstream>
 #include <assert.h>
@@ -15,10 +16,10 @@ public:
     FileWriter(std::ostream& out) : out(out) {}
 
     /// Write image brightness.
-    continue_msg operator()(tuple<Image*, double> imageBrightness) {
+    Image* operator()(tuple<Image*, double> imageBrightness) {
         out << "Image " << get<0>(imageBrightness)->getId() << " : " 
             << get<1>(imageBrightness) << std::endl;
-        return continue_msg();
+        return get<0>(imageBrightness);
     }
 
 };
@@ -86,7 +87,7 @@ tuple<ColorMap, Image*> ImageTransformer::countColor(FoundElementsTuple elements
     // Set borders for each found set.
     setBordersColor(max, 255, pixelColors, image);
     setBordersColor(min, 0, pixelColors, image);
-    setBordersColor(min, 127, pixelColors, image);
+    setBordersColor(current, 127, pixelColors, image);
 
     // Fins result color of pixels as average of all colors.
     for (auto it = pixelColors.begin(), end = pixelColors.end(); it != end;
@@ -106,8 +107,8 @@ unsigned long ImageTransformer::getId(ElementSetTuple setTuple) {
     return get<1>(setTuple);
 }
 
-void ImageTransformer::transform(std::vector<Image*> images, size_t imagesLimit,
-                                 const char* fileName) {
+void ImageTransformer::transform(const ImageGenerator& generator, size_t imagesLimit,
+                                 const char* fileName, unsigned int count) {
     // Set output stream.
     std::ostream& out = std::cout;
     std::ofstream fileStream;
@@ -156,6 +157,13 @@ void ImageTransformer::transform(std::vector<Image*> images, size_t imagesLimit,
     buffer_node<Image*> buffer(imageTransformGraph);
     // Limit number of images.
     limiter_node<Image*> limiter(imageTransformGraph, imagesLimit);
+    function_node<Image*, Image*> logger(imageTransformGraph,
+        serial, [](Image* image)->Image* {
+            std::ofstream out("Image" + std::to_string(image->getId()) + ".log");
+            image->log(out);
+            out.close();
+            return image;
+    });
 
     // Nodes for finding sets of special elements.
     function_node<Image*, ElementSetTuple> maxBrightnessFinder(imageTransformGraph, unlimited,
@@ -180,6 +188,26 @@ void ImageTransformer::transform(std::vector<Image*> images, size_t imagesLimit,
         std::bind(&ImageTransformer::getId, this, std::placeholders::_1),
         [](Image* image)->unsigned long { return image->getId(); });
 
+    function_node<FoundElementsTuple, FoundElementsTuple> findResultLogger(imageTransformGraph,
+        serial, [](FoundElementsTuple setTuple)->FoundElementsTuple {
+            auto id = get<3>(setTuple)->getId();
+            std::cout << "Image " << id << std::endl;
+            
+            std::function<void(ElementSet)> logSet = [](ElementSet set)->void {
+                for (const auto &element : set) {
+                    std::cout << " { " << element.first << " , " << element.second << " } ";
+                }
+                std::cout << "]" << std::endl;
+            };
+            std::cout << "Maximums : [";
+            logSet(get<0>(get<0>(setTuple)));
+            std::cout << "Minimums : [";
+            logSet(get<0>(get<1>(setTuple)));
+            std::cout << "Current value = " << (int) ExtraInfo::currentBrightness << " : [";
+            logSet(get<0>(get<2>(setTuple)));
+            return setTuple;
+    });
+
     // Count result colors for image.
     function_node<FoundElementsTuple, tuple<ColorMap, Image*>> colorCounter(
         imageTransformGraph, unlimited, std::bind(&ImageTransformer::countColor,
@@ -190,10 +218,24 @@ void ImageTransformer::transform(std::vector<Image*> images, size_t imagesLimit,
                                                                unlimited, ImageHighlighter());
 
     // Get inverse image.
-    function_node<Image*, Image*> inverseNode(imageTransformGraph, unlimited, ImageInverser());
-    function_node<Image*, continue_msg> output(imageTransformGraph, serial, 
-        [](Image* image)->continue_msg {
-        delete image; 
+    function_node<Image*, tuple<Image*, unsigned long>> inverseNode(imageTransformGraph, unlimited, ImageInverser());
+
+    join_node<tuple<tuple<Image*, unsigned long>, Image*>, key_matching<unsigned long>> outputJoin(imageTransformGraph,
+        [](tuple<Image*, unsigned long> image)->unsigned long { return get<1>(image); },
+        [](Image* image)->unsigned long { return image->getId(); });
+
+    function_node<tuple<tuple<Image*, unsigned long>, Image*>, continue_msg> output(imageTransformGraph, serial,
+        [](tuple<tuple<Image*, unsigned long>, Image*> image)->continue_msg {
+        if (ExtraInfo::debugMode) {
+            std::ofstream out("ResultImages" + std::to_string(get<1>(image)->getId()) + ".log");
+            out << "Higlight ";
+            get<1>(image)->log(out);
+            out << "Inverse ";
+            get<0>(get<0>(image))->log(out);
+            out.close();
+        }
+        delete get<0>(get<0>(image));
+        delete get<1>(image);
         return continue_msg();
     });
 
@@ -202,13 +244,19 @@ void ImageTransformer::transform(std::vector<Image*> images, size_t imagesLimit,
                                                                    AverageBrightnessCounter());
 
     // Output calculated brightness.
-    function_node<tuple<Image*, double>, continue_msg> fileOutput(imageTransformGraph, serial,
+    function_node<tuple<Image*, double>, Image*> fileOutput(imageTransformGraph, serial,
                                                        FileWriter(fileName ? fileStream : out));
 
     // Create edges.
-    make_edge(input, buffer);
+    if (ExtraInfo::debugMode) {
+        make_edge(input, logger);
+        make_edge(logger, buffer);
+    } else {
+        make_edge(input, buffer);
+    }
+    
     make_edge(buffer, limiter);
-
+    
     make_edge(limiter, maxBrightnessFinder);
     make_edge(limiter, minBrightnessFinder);
     make_edge(limiter, currentBrightnessFinder);
@@ -224,18 +272,23 @@ void ImageTransformer::transform(std::vector<Image*> images, size_t imagesLimit,
     make_edge(imagesQueue, input_port<3>(join));
 
     make_edge(join, colorCounter);
+    if (ExtraInfo::debugMode) {
+        make_edge(join, findResultLogger);
+    }
     make_edge(colorCounter, highlighter);
 
     make_edge(highlighter, inverseNode);
-    make_edge(inverseNode, output);
+    make_edge(inverseNode, input_port<0>(outputJoin));
     make_edge(highlighter, averageBrightness);
 
     make_edge(averageBrightness, fileOutput);
-
-    make_edge(fileOutput, limiter.decrement);
+    make_edge(fileOutput, input_port<1>(outputJoin));
+    make_edge(outputJoin, output);
+    make_edge(output, limiter.decrement);
 
     // Put images to graph.
-    for (auto image : images) {
+    for (unsigned int i = 0; i < count; i++) {
+        Image *image = generator.generate();
         input.try_put(image);
     }
 

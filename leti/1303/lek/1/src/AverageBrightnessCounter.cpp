@@ -32,5 +32,5 @@ tuple<Image*, double> AverageBrightnessCounter::operator()(Image * image)
     runTaskOnGraph(image, std::bind(&AverageBrightnessCounter::summaryBrightness, this, std::placeholders::_1),
         Summator(sum));
 
-    return tuple<Image*, double>(image, sum / (image->getHeight() * image->getWidth()));
+    return tuple<Image*, double>(image, (double)sum / (image->getHeight() * image->getWidth()));
 }

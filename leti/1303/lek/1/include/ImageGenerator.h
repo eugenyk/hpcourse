@@ -12,17 +12,11 @@ class ImageGenerator {
     unsigned int minHeight;
     unsigned int maxWidth;
     unsigned int maxHeight;
-    
-    /// Collection of generated images.
-    std::vector<Image*> imagesCollection;
-
-    /// Add generated image to collection.
-    continue_msg addImage(Image* image);
 public:
     ImageGenerator(unsigned int minWidth, unsigned int minHeight,
                    unsigned int maxWidth, unsigned int maxHeight);
 
-    /// Generate current number of random images.
-    std::vector<Image*> generate(unsigned int count);
+    /// Generate random image.
+    Image* generate() const;
 
 };

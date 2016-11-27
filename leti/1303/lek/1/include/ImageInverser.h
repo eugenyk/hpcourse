@@ -3,8 +3,8 @@
 class Image;
 
 /// Class for getting inverse image.
-class ImageInverser : ImageLineWorker<Image*, unsigned char*> {
+class ImageInverser : ImageLineWorker<tuple<Image *, unsigned long>, unsigned char*> {
     unsigned char* inverseImageLine(tuple<unsigned char*, unsigned int, unsigned int> lineInfo);
 public:
-    Image *operator()(Image* image);
+    tuple<Image *, unsigned long> operator()(Image* image);
 };

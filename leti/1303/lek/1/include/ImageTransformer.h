@@ -5,6 +5,8 @@ typedef tuple<ElementSetTuple, ElementSetTuple, ElementSetTuple, Image*> FoundEl
 typedef std::multimap<std::pair<unsigned int, unsigned int>, unsigned char> ColorMultiMap;
 typedef std::map<std::pair<unsigned int, unsigned int>, unsigned char> ColorMap;
 
+class ImageGenerator;
+
 /// Class for image transformation.
 class ImageTransformer {
     /// Count colors for border pixels.
@@ -16,6 +18,6 @@ class ImageTransformer {
                          ColorMultiMap& pixelColors, const Image* image);
 public:
     /// Transform image.
-    void transform(std::vector<Image*> images, size_t imagesLimit,
-                   const char* fileName);
+    void transform(const ImageGenerator& generator, size_t imagesLimit,
+                   const char* fileName, unsigned int count);
 };
