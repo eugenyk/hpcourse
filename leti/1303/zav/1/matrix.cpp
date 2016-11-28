@@ -57,6 +57,11 @@ void Matrix::setValue(unsigned row, unsigned col, int value)
     m_values[row * m_cols + col] = value;
 }
 
+void Matrix::setValue(int index, unsigned char value)
+{
+    m_values[index] = value;
+}
+
 std::vector<unsigned char> Matrix::data() const
 {
     return m_values;

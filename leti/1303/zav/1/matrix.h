@@ -32,6 +32,7 @@ public:
 
     int getValue(unsigned row, unsigned col) const;
     void setValue(unsigned row, unsigned col, int value);
+    void setValue(int index, unsigned char value);
 
     std::vector<unsigned char> data() const;
 
@@ -41,6 +42,7 @@ public:
 
     std::vector<unsigned char>::const_iterator begin() const;
     std::vector<unsigned char>::const_iterator end() const;
+
 
     friend std::ostream& operator << (std::ostream &, const Matrix&);
 

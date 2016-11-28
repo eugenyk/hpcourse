@@ -129,7 +129,7 @@ void generateMatrix(Matrix* matrix, std::uniform_int_distribution<> &dis, std::m
 {
     for(unsigned i(0); i < matrix->getRows(); ++i) {
         for(unsigned j(0); j < matrix->getCols(); ++j) {
-            matrix->setValue(i, j, dis(gen));
+            matrix->setValue(i, j, 255);
         }
     }
 }

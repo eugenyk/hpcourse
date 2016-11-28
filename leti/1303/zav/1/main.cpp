@@ -5,6 +5,7 @@
 #include <string>
 
 #include "tbb/flow_graph.h"
+#include "tbb/tbb.h"
 #include "matrix.h"
 #include "matrix_algorithm.h"
 #include "test.h"
@@ -15,11 +16,11 @@ using namespace tbb::flow;
 int main(int argc, char *argv[])
 {
     bool testMode = false;
-    int sizeMatrix = 10000;
-    int limitMatrix = 2;
+    int sizeMatrix = 20000;
+    int limitMatrix = 8;
     int searchBrightness = 4;
-    int countMatrix = 4;
-    std::string filename = "1.txt";
+    int countMatrix = 15;
+    std::string filename;
     FindElements::TypeSearch typeSearch = FindElements::TypeSearch::NOTHING;
 
     for (int i(1); i < argc; ++i) {
@@ -58,7 +59,8 @@ int main(int argc, char *argv[])
     }
 
     std::mt19937 generate(time(0));
-    std::uniform_int_distribution<> distribution(0, 255);
+    std::uniform_int_distribution<> distribution_koef1(0, 127);
+    std::uniform_int_distribution<> distribution_koef2(128, 255);
 
     graph g;
     queue_node< tagged_msg<size_t, Matrix*> > queueMatrixNode(g);
@@ -101,18 +103,18 @@ int main(int argc, char *argv[])
             ,
             tuple < tagged_msg<size_t, Matrix*>, tagged_msg<size_t, Matrix*>, tagged_msg<size_t, Matrix*>>
             > formMessageForDeleteMatrix(g, unlimited, [] (tuple <
-                                               tagged_msg<size_t, Matrix*>,
-                                               tagged_msg<size_t, Matrix*>,
-                                               tagged_msg<size_t, Matrix*>,
-                                               tagged_msg<size_t, vector<Index>>,
-                                               tagged_msg<size_t, vector<Index>>,
-                                               tagged_msg<size_t, vector<Index>>,
-                                               tagged_msg<size_t, double>
-                                               > data) ->
+                                         tagged_msg<size_t, Matrix*>,
+                                         tagged_msg<size_t, Matrix*>,
+                                         tagged_msg<size_t, Matrix*>,
+                                         tagged_msg<size_t, vector<Index>>,
+                                         tagged_msg<size_t, vector<Index>>,
+                                         tagged_msg<size_t, vector<Index>>,
+                                         tagged_msg<size_t, double>
+                                         > data) ->
             tuple<tagged_msg<size_t, Matrix*>, tagged_msg<size_t, Matrix*>, tagged_msg<size_t, Matrix*>>
     {
-        return make_tuple(std::get<0>(data), std::get<1>(data), std::get<2>(data));
-    });
+                                                                                                         return make_tuple(std::get<0>(data), std::get<1>(data), std::get<2>(data));
+});
 
     function_node<
             tuple<
@@ -153,7 +155,7 @@ int main(int argc, char *argv[])
             tagged_msg<size_t, double>
             >,
             tag_matching> joinAllInfoNode(g,
-                                                            [](tagged_msg<size_t, Matrix*> data) -> size_t { return data.tag(); },
+                                          [](tagged_msg<size_t, Matrix*> data) -> size_t { return data.tag(); },
     [](tagged_msg<size_t, Matrix*> data) -> size_t { return data.tag(); },
     [](tagged_msg<size_t, Matrix*> data) -> size_t { return data.tag(); },
     [](tagged_msg<size_t, vector<Index>> data) -> size_t { return data.tag(); },
@@ -194,7 +196,13 @@ int main(int argc, char *argv[])
     const clock_t begin_time = clock();
     for(int i(0); i < countMatrix; ++i) {
         Matrix *m = new Matrix(sizeMatrix, sizeMatrix);
-        generateMatrix(m, distribution, generate);
+
+        int koef1 = distribution_koef1(generate);
+        int koef2 = distribution_koef2(generate);
+        tbb::parallel_for(0, (int)m->getSize(), 1, [m, koef1, koef2](int i) {
+            m->setValue(i, ((i * koef1) + koef2)%255);
+        });
+
         queueMatrixNode.try_put(tagged_msg<size_t, Matrix*>(i, m));
     }
     g.wait_for_all();

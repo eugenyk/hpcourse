@@ -7,8 +7,8 @@
 #include <istream>
 #include <sstream>
 
-#include <matrix.h>
-#include <matrix_algorithm.h>
+#include "matrix.h"
+#include "matrix_algorithm.h"
 
 bool testCalculateAverageBrightness(Matrix *matrix, double testValue);
 bool testCalculateInversionMatrix(Matrix *matrix, Matrix *testInversionMatrix, bool testResult);
