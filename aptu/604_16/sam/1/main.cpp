@@ -100,11 +100,11 @@ struct rowMessage {
 
 template <class T>
 struct maxOrMin {
-	int id;
+	int id; /* id of image */
 	std::vector<int> a; /* input vector */
-	calculationResult *result; /* result vector */
-	size_t M;
-	T value;
+	calculationResult *result; /* result target pointer */
+	size_t M; /* count columns */
+	T value; /* max or min */
 	maxOrMin(int id, const std::vector<int> &a, calculationResult* result, size_t M, T value) : id(id), a(a), result(result), M(M), value(value) { };
 	maxOrMin() : id(-1), a(empty_vector), result(nullptr), M(-1), value(-1) {};
 	maxOrMin& operator=(const maxOrMin& right) {
@@ -123,10 +123,10 @@ struct maxOrMin {
 
 template <class T>
 struct maxAndMin {
-	int id;
+	int id; /* id of image */
 	std::vector<int> a; /* input vector */
-	calculationResult* result; /* result vector */
-	size_t M;
+	calculationResult* result; /* result target pointer */
+	size_t M;  /* count columns */
 	T _max;
 	T _min;
 	maxAndMin(int id, const std::vector<int> &a, calculationResult* result, size_t M, T _max, T _min) : id(id), a(a), result(result), M(M), _max(_max), _min(_min) {};
@@ -135,10 +135,10 @@ struct maxAndMin {
 
 template <class T>
 struct arrayQuery {
-	int id;
+	int id; /* id of image */
 	std::vector<int> a; /* input vector */
-	calculationResult* result; /* result vector */
-	size_t M;
+	calculationResult* result; /* result target pointer */
+	size_t M;  /* count columns */
 	arrayQuery(int id, const std::vector<int> &a, calculationResult* result, size_t M) : id(id), a(a),  result(result), M(M) {};
 	arrayQuery() : id(-1), a(empty_vector), result(nullptr), M(-1) {};
 };
@@ -214,8 +214,8 @@ public:
 			mes.a.end(),
 			result.begin(),
 			[](int x) {return 255 - x; });
-		// arrayQuery<int>(mes.id, result, mes.result, mes.M); /* answer */
-		return mes.id;
+		// arrayQuery<int>(mes.id, result, mes.result, mes.M); /* answer not going anywhere */
+		return mes.id; /* id for join tag */
 	}
 };
 
@@ -235,8 +235,8 @@ struct rowMedium {
 			std::plus<T>());
 		double res = ((1.0 * sum) / mes.a.size());
 		mes.result->medium = res;
-		// mediumAnswer(mes.id, res); /* answer */
-		return mes.id;
+		// mediumAnswer(mes.id, res); /* answer already writed to pointer */
+		return mes.id; /* id for join tag */
 	}
 };
 
