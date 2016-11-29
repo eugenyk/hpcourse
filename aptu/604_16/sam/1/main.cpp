@@ -274,7 +274,7 @@ int main(int argc, char * argv[]) {
 	parse_args(argc, argv);
 
 	if (settings.log != nullptr) {
-		assert(freopen("output.txt", "w+", stdout));
+		assert(freopen(settings.log, "w+", stdout));
 	}
 
 
