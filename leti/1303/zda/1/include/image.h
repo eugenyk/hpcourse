@@ -12,7 +12,13 @@ class Image
     void fillRandom();
 public:
     Image();
-    unsigned char at(int x, int y) const;
+    inline unsigned char at(int x, int y) const {
+        if(x < _width && y < _height) {
+            return _data.at(y).at(x);
+        } else {
+            return 0;
+        }
+    }
     int width() const;
     int height() const;
 };

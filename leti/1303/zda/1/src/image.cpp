@@ -3,8 +3,8 @@
 
 Image::Image()
 {
-    _width = 1000;
-    _height = 1000;
+    _width = 100;
+    _height = 100;
     fillRandom();
 }
 
@@ -16,15 +16,6 @@ void Image::fillRandom()
             row.push_back(static_cast<unsigned char>(rand()%256));
         }
         _data.push_back(row);
-    }
-}
-
-unsigned char Image::at(int x, int y) const
-{
-    if(x < _width && y < _height) {
-        return _data.at(y).at(x);
-    } else {
-        return 255;
     }
 }
 
