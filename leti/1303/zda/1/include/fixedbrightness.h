@@ -6,7 +6,7 @@ class FixedBrightness
 {
     unsigned char _brightness;
 public:
-    FixedBrightness(unsigned char value);
+    explicit FixedBrightness(unsigned char value);
     PointsWithImage operator()( Image * img ) const;
 };
 

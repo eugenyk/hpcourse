@@ -1,5 +1,4 @@
 #include "fixedbrightness.h"
-#include <iostream>
 
 FixedBrightness::FixedBrightness(unsigned char value)
 {

@@ -3,8 +3,8 @@
 
 Image::Image()
 {
-    _width = 1000;
-    _height = 1000;
+    _width = 500;
+    _height = 500;
     fillRandom();
 }
 
@@ -13,7 +13,7 @@ void Image::fillRandom()
     for(int i=0; i<_height; i++) {
         std::vector<unsigned char> row;
         for(int j=0; j<_width; j++) {
-            row.push_back(static_cast<unsigned char>(rand()%256));
+            row.push_back(static_cast<unsigned char>(rand()%255));
         }
         _data.push_back(row);
     }
@@ -44,6 +44,30 @@ void Image::highlightPoints(std::vector<std::pair<int, int> > points)
         set(x+1,y,255);
         set(x-1,y,255);
     }
+}
+
+Image * Image::getInvertedImage()
+{
+    Image * img = new Image();
+    for(int i=0; i<_height; i++) {
+        for(int j=0; j<_width; j++) {
+            img->set(j,i,255 - at(j,i));
+        }
+    }
+    return img;
+}
+
+double Image::getMeanBrightness()
+{
+    double mean = 0;
+    int n = 0;
+    for(int i=0; i<_height; i++) {
+        for(int j=0; j<_width; j++) {
+            double delta = at(j,i) - mean;
+            mean += delta/++n;
+        }
+    }
+    return mean;
 }
 
 

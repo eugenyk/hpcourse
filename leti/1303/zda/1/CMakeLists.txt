@@ -15,6 +15,11 @@ set(SOURCES
     include/fixedbrightness.h
     include/pointhighlighter.h
     include/joinkeymatcher.h
+    include/brightnessinverter.h
+    include/meanbrightness.h
+    include/fileoutput.h
+    include/imagegenerator.h
+    include/imagecleanup.h
     include/common.h
     src/image.cpp
     src/maxbrightness.cpp
@@ -22,6 +27,11 @@ set(SOURCES
     src/fixedbrightness.cpp
     src/pointhighlighter.cpp
     src/joinkeymatcher.cpp
+    src/brightnessinverter.cpp
+    src/meanbrightness.cpp
+    src/fileoutput.cpp
+    src/imagegenerator.cpp
+    src/imagecleanup.cpp
     src/main.cpp
     )
 

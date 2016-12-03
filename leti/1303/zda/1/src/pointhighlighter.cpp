@@ -5,7 +5,7 @@ PointHighlighter::PointHighlighter()
 
 }
 
-Image *PointHighlighter::operator()(ThreeMessages input) const
+Image *PointHighlighter::operator()(MinMaxFixedResults input) const
 {
     PointsWithImage maxBrightnessMessage = input.get<0>();
     PointsWithImage minBrightnessMessage = input.get<1>();

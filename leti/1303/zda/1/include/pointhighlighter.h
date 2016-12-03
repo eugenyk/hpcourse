@@ -7,7 +7,7 @@ class PointHighlighter
 {
 public:
     PointHighlighter();
-    Image * operator()( ThreeMessages input ) const;
+    Image * operator()( MinMaxFixedResults input ) const;
 };
 
 #endif // POINTHIGHLIGHTER_H

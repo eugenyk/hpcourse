@@ -29,6 +29,8 @@ public:
     int height() const;
 
     void highlightPoints(std::vector< std::pair<int,int> > points);
+    Image * getInvertedImage();
+    double getMeanBrightness();
 };
 
 #endif // IMAGE_H
