@@ -8,9 +8,9 @@
 
 class FileOutput
 {
-    std::string _filename;
+    std::ofstream & _fs;
 public:
-    explicit FileOutput(std::string filename);
+    explicit FileOutput(std::ofstream &fs);
     void operator()( double value);
 };
 

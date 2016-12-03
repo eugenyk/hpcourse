@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include <image.h>
 #include <iostream>
 #include <vector>
@@ -13,10 +14,50 @@
 #include "imagegenerator.h"
 #include "imagecleanup.h"
 
-int main() {
+int main(int argc, char * argv[])
+{
+    std::cout << "===============================" << std::endl;
+    std::cout << "    Flow graph task (Lab 1)    " << std::endl;
+    std::cout << "===============================" << std::endl;
+    std::cout << "  Author: Zykov D.A. Gr: 1303  " << std::endl;
+    std::cout << "===============================" << std::endl;
+
     unsigned char brightnessSearchValue = 128;
-    std::string filename = "File.txt";
+    std::string filename;
     unsigned int imageLimit = 5;
+
+    int opt = 0;
+
+    while ((opt = getopt (argc, argv, "b:l:f:h")) != -1) {
+        switch(opt) {
+        case 'b':
+            brightnessSearchValue = std::atoi(optarg);
+            break;
+        case 'l':
+            imageLimit = std::atoi(optarg);
+            break;
+        case 'f':
+            filename = optarg;
+            break;
+        case 'h':
+            std::cout << "Usage:" <<std::endl;
+            std::cout << "-b    Brightness value to find" << std::endl;
+            std::cout << "-l    Image flow limit" << std::endl;
+            std::cout << "-f    Brightness output file" << std::endl;
+            std::cout << "===============================" << std::endl;
+            break;
+        }
+    }
+
+    std::cout << "            Settings           " <<std::endl;
+    std::cout << "Brightness value:           " << static_cast<int>(brightnessSearchValue) << std::endl;
+    std::cout << "Image flow limit:           " << imageLimit << std::endl;
+    std::cout << "Output file: " << ((filename.size()>0) ? filename : "none") << std::endl;
+    std::cout << "===============================" << std::endl;
+    std::cout << "Running..." << std::endl;
+
+    std::ofstream fileOutput;
+    fileOutput.open(filename.c_str(), std::ios::out | std::ios::app);
 
     tbb::flow::graph g;
 
@@ -33,7 +74,7 @@ int main() {
 
     // Step 2 nodes
     tbb::flow::join_node< MinMaxFixedResults, tbb::flow::key_matching< Image* > >
-                        minMaxFixedJoinNode(g, JoinKeyMatcher(), JoinKeyMatcher(), JoinKeyMatcher());
+    minMaxFixedJoinNode(g, JoinKeyMatcher(), JoinKeyMatcher(), JoinKeyMatcher());
     tbb::flow::function_node< MinMaxFixedResults, Image * > pointHighlighterNode(g, tbb::flow::unlimited, PointHighlighter());
 
     // Step 3 nodes
@@ -42,11 +83,11 @@ int main() {
 
     // Cleanup
     tbb::flow::join_node< MeanAndInvertedResults, tbb::flow::key_matching< Image* > >
-                        meanAndInvertedJoinNode(g, JoinKeyMatcher(), JoinKeyMatcher());
+    meanAndInvertedJoinNode(g, JoinKeyMatcher(), JoinKeyMatcher());
     tbb::flow::function_node<MeanAndInvertedResults, double> cleanupNode(g, tbb::flow::unlimited, ImageCleanup());
 
     // Output node
-    tbb::flow::function_node<double, tbb::flow::continue_msg> fileOutputNode(g, 1, FileOutput(filename));
+    tbb::flow::function_node<double, tbb::flow::continue_msg> fileOutputNode(g, 1, FileOutput(fileOutput));
 
     // Limiting input flow
     tbb::flow::make_edge(generatorNode, inputLimiter);

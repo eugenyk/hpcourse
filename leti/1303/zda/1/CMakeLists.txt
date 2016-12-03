@@ -35,6 +35,13 @@ set(SOURCES
     src/main.cpp
     )
 
+set(build_dir ${PROJECT_SOURCE_DIR}/build)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${build_dir})
+set(CMAKE_BUILD_FILES_DIRECTORY ${build_dir})
+set(CMAKE_BUILD_DIRECTORY ${build_dir})
+set(CMAKE_BINARY_DIR  ${build_dir})
+
 include_directories(${TBB_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 add_definitions(${TBB_DEFINITIONS})
 add_executable(zda_1 ${SOURCES})

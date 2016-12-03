@@ -1,10 +1,10 @@
 #include "image.h"
 #include <stdlib.h>
 
-Image::Image()
+Image::Image(int width, int height)
 {
-    _width = 500;
-    _height = 500;
+    _width = width;
+    _height = height;
     fillRandom();
 }
 
@@ -48,7 +48,7 @@ void Image::highlightPoints(std::vector<std::pair<int, int> > points)
 
 Image * Image::getInvertedImage()
 {
-    Image * img = new Image();
+    Image * img = new Image(width(),height());
     for(int i=0; i<_height; i++) {
         for(int j=0; j<_width; j++) {
             img->set(j,i,255 - at(j,i));

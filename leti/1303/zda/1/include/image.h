@@ -11,7 +11,7 @@ class Image
 
     void fillRandom();
 public:
-    Image();
+    Image(int width, int height);
     inline unsigned char at(int x, int y) const {
         if(x < _width && y < _height && x >= 0 && y >= 0) {
             return _data[y][x];

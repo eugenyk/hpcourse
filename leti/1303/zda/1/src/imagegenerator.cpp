@@ -1,4 +1,5 @@
 #include "imagegenerator.h"
+#include <cstdlib>
 
 ImageGenerator::ImageGenerator()
 {
@@ -7,6 +8,6 @@ ImageGenerator::ImageGenerator()
 
 bool ImageGenerator::operator()(Image* & output)
 {
-    output = new Image();
+    output = new Image(rand()%1000+10,rand()%1000+10);
     return true;
 }
