@@ -10,8 +10,20 @@ include_directories("src")
 
 set(SOURCES
     include/image.h
+    include/maxbrightness.h
+    include/minbrightness.h
+    include/fixedbrightness.h
+    include/pointhighlighter.h
+    include/joinkeymatcher.h
+    include/common.h
+    src/image.cpp
+    src/maxbrightness.cpp
+    src/minbrightness.cpp
+    src/fixedbrightness.cpp
+    src/pointhighlighter.cpp
+    src/joinkeymatcher.cpp
     src/main.cpp
-    src/image.cpp)
+    )
 
 include_directories(${TBB_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 add_definitions(${TBB_DEFINITIONS})

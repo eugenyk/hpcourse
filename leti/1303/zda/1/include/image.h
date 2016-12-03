@@ -13,14 +13,22 @@ class Image
 public:
     Image();
     inline unsigned char at(int x, int y) const {
-        if(x < _width && y < _height) {
-            return _data.at(y).at(x);
+        if(x < _width && y < _height && x >= 0 && y >= 0) {
+            return _data[y][x];
         } else {
             return 0;
         }
     }
+    inline void set(int x, int y, unsigned char value) {
+        if(x < _width && y < _height && x >= 0 && y >= 0) {
+            _data[y][x] = value;
+        }
+    }
+
     int width() const;
     int height() const;
+
+    void highlightPoints(std::vector< std::pair<int,int> > points);
 };
 
 #endif // IMAGE_H

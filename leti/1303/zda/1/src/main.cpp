@@ -2,63 +2,46 @@
 #include <image.h>
 #include <iostream>
 #include <vector>
-#include "tbb/flow_graph.h"
+#include "maxbrightness.h"
+#include "minbrightness.h"
+#include "fixedbrightness.h"
+#include "pointhighlighter.h"
+#include "joinkeymatcher.h"
 
-using namespace tbb::flow;
-typedef std::pair<int,int> Point;
-
-struct maxBrightness {
-    std::vector< Point > operator()( Image * img ) const {
-        std::vector< Point > maxBrightnessPoints;
-        unsigned char localMax = 0;
-        for(int i=0; i<img->width(); i++) {
-            for(int j=0; j<img->height(); j++) {
-                unsigned char cur = img->at(i,j);
-                if(cur > localMax) {
-                    localMax = cur;
-                    maxBrightnessPoints.clear();
-                    maxBrightnessPoints.push_back(Point(i,j));
-                } else if(cur == localMax) {
-                    maxBrightnessPoints.push_back(Point(i,j));
-                }
-            }
-        }
-        return maxBrightnessPoints;
-    }
-};
-
-struct minBrightness {
-    std::vector< Point > operator()( Image * img ) const {
-        std::vector< Point > minBrightnessPoints;
-        unsigned char localMin = 255;
-        for(int i=0; i<img->width(); i++) {
-            for(int j=0; j<img->height(); j++) {
-                unsigned char cur = img->at(i,j);
-                if(cur < localMin) {
-                    localMin = cur;
-                    minBrightnessPoints.clear();
-                    minBrightnessPoints.push_back(Point(i,j));
-                } else if(cur == localMin) {
-                    minBrightnessPoints.push_back(Point(i,j));
-                }
-            }
-        }
-        return minBrightnessPoints;
-    }
-};
 
 int main() {
-    graph g;
+    unsigned char brightnessSearchValue = 128;
+    tbb::flow::graph g;
 
-    broadcast_node< Image * > start(g);
+    tbb::flow::broadcast_node< Image * > start(g);
 
-    function_node< Image * , std::vector< Point > > maxBrightnessNode(g,1,maxBrightness());
-    function_node< Image * , std::vector< Point > > minBrightnessNode(g,1,minBrightness());
+    // Step 1 nodes
+    tbb::flow::function_node< Image * , PointsWithImage > maxBrightnessNode(g,1,MaxBrightness());
+    tbb::flow::function_node< Image * , PointsWithImage > minBrightnessNode(g,1,MinBrightness());
+    tbb::flow::function_node< Image * , PointsWithImage > fixedBrightnessNode(g,1,FixedBrightness(brightnessSearchValue));
 
-    make_edge( start, maxBrightnessNode );
-    make_edge( start, minBrightnessNode );
+    // Step 2 nodes
+    tbb::flow::join_node< ThreeMessages, tbb::flow::key_matching< Image* > >
+                        myJoinNode(g, JoinKeyMatcher(), JoinKeyMatcher(), JoinKeyMatcher());
+    tbb::flow::function_node< ThreeMessages, Image * > pointHighlighterNode(g,1, PointHighlighter());
 
-    for (int i = 0; i < 3; ++i ) {
+    // Step 3 nodes
+
+
+
+
+
+    tbb::flow::make_edge( start, maxBrightnessNode );
+    tbb::flow::make_edge( start, minBrightnessNode );
+    tbb::flow::make_edge( start, fixedBrightnessNode );
+
+    tbb::flow::make_edge(maxBrightnessNode, tbb::flow::input_port<0>(myJoinNode));
+    tbb::flow::make_edge(minBrightnessNode, tbb::flow::input_port<1>(myJoinNode));
+    tbb::flow::make_edge(fixedBrightnessNode, tbb::flow::input_port<2>(myJoinNode));
+
+    tbb::flow::make_edge(myJoinNode,pointHighlighterNode);
+
+    for (int i = 0; i < 30; ++i ) {
         start.try_put( new Image());
     }
     g.wait_for_all();

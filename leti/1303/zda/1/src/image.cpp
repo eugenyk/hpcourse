@@ -3,8 +3,8 @@
 
 Image::Image()
 {
-    _width = 100;
-    _height = 100;
+    _width = 1000;
+    _height = 1000;
     fillRandom();
 }
 
@@ -28,4 +28,22 @@ int Image::height() const
 {
     return _height;
 }
+
+void Image::highlightPoints(std::vector<std::pair<int, int> > points)
+{
+    for(int i=0; i<points.size(); i++) {
+        std::pair<int, int> cur = points[i];
+        int x = cur.first;
+        int y = cur.second;
+        set(x-1,y+1,255);
+        set(x-1,y-1,255);
+        set(x,y+1,255);
+        set(x,y-1,255);
+        set(x+1,y+1,255);
+        set(x+1,y-1,255);
+        set(x+1,y,255);
+        set(x-1,y,255);
+    }
+}
+
 
