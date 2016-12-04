@@ -12,6 +12,7 @@ public:
 	unsigned char * getMap() const;
 
 	void printMap() const;
+	void updPix(int index, unsigned char value);
 
 private:
 	int id;

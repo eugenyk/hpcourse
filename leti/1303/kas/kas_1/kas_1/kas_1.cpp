@@ -108,12 +108,50 @@ public:
 		vector<int> arr_min_ind = get<2>(v);
 		vector<int> arr_inp_ind = get<3>(v);
 
-		/*printf("array of max index: (size=%d)\n", arr_max_ind.size());
+		//to highlight the adj of max values.
 		for (vector<int>::iterator it = arr_max_ind.begin(); it != arr_max_ind.end(); ++it)
 		{
-			printf("%d ", *it);
-		}*/
+			toHighlight(img, *it);
+		}
+
+		//to highlight the adj of min values.
+		for (vector<int>::iterator it = arr_min_ind.begin(); it != arr_min_ind.end(); ++it)
+		{
+			toHighlight(img, *it);
+		}
+
+		//to highlight the adj of input values.
+		for (vector<int>::iterator it = arr_inp_ind.begin(); it != arr_inp_ind.end(); ++it)
+		{
+			toHighlight(img, *it);
+		}
 		return 0;
+	}
+
+	//to highlight the adj pixels.
+	void toHighlight(Image* img, int pixelIndex)
+	{
+		int w = img->getWidth();
+		int h = img->getHeight();
+		
+		int r = pixelIndex - 1;
+		int l = pixelIndex + 1;
+		int d = pixelIndex + w;
+		int dl = pixelIndex + w - 1;
+		int dr = pixelIndex + w + 1;
+		int u = pixelIndex - w;
+		int ul = pixelIndex - w - 1;
+		int ur = pixelIndex - w + 1;
+
+		vector<int> adj_pixs = { r, l, d, dl, dr, u, ul, ur };
+		for (vector<int>::iterator it = adj_pixs.begin(); it != adj_pixs.end(); ++it)
+		{
+			int cur_pix = *it;
+			if (cur_pix >= 0 && cur_pix < w * h)
+			{
+				img->updPix(cur_pix, 0);
+			}
+		}
 	}
 };
 
@@ -146,6 +184,9 @@ int main() {
 
 	s.try_put(img1);
 	g.wait_for_all();
+
+	printf("\nPrint after update image\n");
+	img1->printMap();
 
 	system("pause");
 	return 0;

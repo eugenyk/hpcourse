@@ -52,6 +52,11 @@ void Image::printMap() const
 	}
 }
 
+void Image::updPix(int index, unsigned char value)
+{
+	map[index] = value;
+}
+
 
 //private methods.
 
