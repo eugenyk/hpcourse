@@ -5,6 +5,7 @@ public:
 	Image();
 	Image(int w, int h);
 	Image(int w, int h, int id);
+	Image(const Image &img);
 	~Image();
 
 	int getWidth() const;

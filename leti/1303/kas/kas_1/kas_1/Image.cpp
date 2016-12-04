@@ -19,6 +19,17 @@ Image::Image(int w, int h, int id) : width(w), height(h), id(id)
 	map = new unsigned char[width * height];
 }
 
+Image::Image(const Image & img)
+{
+	//printf("######## CALL THE CONSTRUCTOR COPY OF IMAGE #############\n");
+	id = img.id;
+	width = img.width;
+	height = img.height;
+	map = new unsigned char[width * height];
+	memcpy(map, img.map, sizeof(unsigned char) * width * height);
+
+}
+
 Image::~Image()
 {
 	delete[] map;

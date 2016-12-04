@@ -3,6 +3,7 @@
 #include "tbb/flow_graph.h"
 #include <windows.h>
 #include "Image.h"
+#include "Utils.h"
 
 using namespace tbb::flow;
 using namespace std;
@@ -174,14 +175,20 @@ public:
 
 struct process_inv {
 	Image* operator()(Image *img) {
-		unsigned char* img_map = img->getMap();
-		int h = img->getHeight();
-		int w = img->getWidth();
+		Image inv_img = *img;
+
+		unsigned char* img_map = inv_img.getMap();
+		int h = inv_img.getHeight();
+		int w = inv_img.getWidth();
 		for (int i = 0; i < h * w; ++i)
 		{
 			img_map[i] = UCHAR_MAX - img_map[i];
 		}
-		return img;
+
+		printf("Print the inversion image\n");
+		inv_img.printMap();
+
+		return &inv_img;
 	}
 };
 
@@ -209,7 +216,9 @@ int main() {
 	unsigned char input_brightness = 100;
 
 	graph g;
-	Image *img1 = new Image(10, 10);
+	vector<Image> imgs = Utils::generateImages2(10, 10, 5);
+	Image *img1 = &imgs.front();
+	//Image *img1 = new Image(10, 10);
 	img1->printMap();
 
 	broadcast_node<Image*> s(g);
@@ -243,7 +252,6 @@ int main() {
 }
 
 //TODO: 1. handled input args
-//TODO: 2. constructor of copy for image
 //TODO: 3. fork task (use composite_node + split_node)
 //TODO: 4. generate set of images
 //TODO: 5. refactoring
