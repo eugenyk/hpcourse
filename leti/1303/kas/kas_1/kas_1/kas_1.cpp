@@ -42,7 +42,7 @@ struct max_brightness {
 struct min_brightness {
 	vector<int> operator()(Image *img) {
 		unsigned char* img_map = img->getMap();
-		unsigned char min = CHAR_MAX;
+		unsigned char min = UCHAR_MAX;
 		vector<int> arr_min_index;
 		int h = img->getHeight();
 		int w = img->getWidth();
@@ -102,7 +102,7 @@ public:
 
 class highlight {
 public:
-	int operator()(tuple<Image*, vector<int>, vector<int>, vector<int>> v) {
+	Image* operator()(tuple<Image*, vector<int>, vector<int>, vector<int>> v) {
 		Image* img = get<0>(v);
 		vector<int> arr_max_ind = get<1>(v);
 		vector<int> arr_min_ind = get<2>(v);
@@ -125,7 +125,7 @@ public:
 		{
 			toHighlight(img, *it);
 		}
-		return 0;
+		return img;
 	}
 
 	//to highlight the adj pixels.
@@ -172,6 +172,35 @@ public:
 	}
 };
 
+struct process_inv {
+	Image* operator()(Image *img) {
+		unsigned char* img_map = img->getMap();
+		int h = img->getHeight();
+		int w = img->getWidth();
+		for (int i = 0; i < h * w; ++i)
+		{
+			img_map[i] = UCHAR_MAX - img_map[i];
+		}
+		return img;
+	}
+};
+
+struct process_avg {
+	long operator()(Image *img) {
+		unsigned char* img_map = img->getMap();
+		int h = img->getHeight();
+		int w = img->getWidth();
+		long sum = 0;
+		for (int i = 0; i < h * w; ++i)
+		{
+			sum += img_map[i];
+		}
+		long avg = sum / (h * w);
+		printf("AVG=%d\n", avg);
+		return avg;
+	}
+};
+
 
 int main() {
 	srand(time(NULL));
@@ -188,7 +217,9 @@ int main() {
 	function_node<Image*, vector<int>> min_brightness_node(g, unlimited, min_brightness());
 	function_node<Image*, vector<int>> cnt_brightness_node(g, unlimited, cnt_brightness(input_brightness));
 	join_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, queueing> join(g);
-	function_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, int> highlight_node(g, unlimited, highlight());
+	function_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, Image*> highlight_node(g, unlimited, highlight());
+	function_node<Image*, Image*> process_inv_node(g, unlimited, process_inv());
+	function_node<Image*, long> process_avg_node(g, unlimited, process_avg());
 
 	make_edge(s, max_brightness_node);
 	make_edge(s, min_brightness_node);
@@ -198,6 +229,8 @@ int main() {
 	make_edge(min_brightness_node, input_port<2>(join));
 	make_edge(cnt_brightness_node, input_port<3>(join));
 	make_edge(join, highlight_node);
+	make_edge(highlight_node, process_inv_node);
+	make_edge(highlight_node, process_avg_node);
 
 	s.try_put(img1);
 	g.wait_for_all();
@@ -208,3 +241,9 @@ int main() {
 	system("pause");
 	return 0;
 }
+
+//TODO: 1. handled input args
+//TODO: 2. constructor of copy for image
+//TODO: 3. fork task (use composite_node + split_node)
+//TODO: 4. generate set of images
+//TODO: 5. refactoring
