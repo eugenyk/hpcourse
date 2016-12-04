@@ -134,8 +134,8 @@ public:
 		int w = img->getWidth();
 		int h = img->getHeight();
 		
-		int r = pixelIndex - 1;
-		int l = pixelIndex + 1;
+		int l = pixelIndex - 1;
+		int r = pixelIndex + 1;
 		int d = pixelIndex + w;
 		int dl = pixelIndex + w - 1;
 		int dr = pixelIndex + w + 1;
@@ -143,12 +143,29 @@ public:
 		int ul = pixelIndex - w - 1;
 		int ur = pixelIndex - w + 1;
 
-		vector<int> adj_pixs = { r, l, d, dl, dr, u, ul, ur };
+		vector<int> adj_pixs = { u, d };
+		//left border.
+		if (pixelIndex % w != 0)
+		{
+			adj_pixs.push_back(ul);
+			adj_pixs.push_back(l);
+			adj_pixs.push_back(dl);
+		}
+
+		//right border.
+		if ((pixelIndex + 1) % w != 0)
+		{
+			adj_pixs.push_back(ur);
+			adj_pixs.push_back(r);
+			adj_pixs.push_back(dr);
+		}
+
 		for (vector<int>::iterator it = adj_pixs.begin(); it != adj_pixs.end(); ++it)
 		{
 			int cur_pix = *it;
 			if (cur_pix >= 0 && cur_pix < w * h)
 			{
+
 				img->updPix(cur_pix, 0);
 			}
 		}
