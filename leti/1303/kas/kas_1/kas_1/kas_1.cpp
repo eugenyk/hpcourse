@@ -209,14 +209,16 @@ struct process_avg {
 };
 
 
-int main() {
+int main(int argc, char* argv[]) {
+	tuple<int, int, int, string> params = Utils::argsProcessing(argc, argv);
+	int n = get<0>(params);
 	srand(time(NULL));
 
 	//todo: get from args
 	unsigned char input_brightness = 100;
 
 	graph g;
-	vector<Image> imgs = Utils::generateImages2(10, 10, 5);
+	vector<Image> imgs = Utils::generateImages(10, 10, n);
 	Image *img1 = &imgs.front();
 	//Image *img1 = new Image(10, 10);
 	img1->printMap();
@@ -251,7 +253,5 @@ int main() {
 	return 0;
 }
 
-//TODO: 1. handled input args
 //TODO: 3. fork task (use composite_node + split_node)
-//TODO: 4. generate set of images
 //TODO: 5. refactoring
