@@ -6,7 +6,6 @@
 #include <iostream>
 #include "ImageGenerator.h"
 #include "ImageAlgorithms.h"
-#include "UnitTests.h"
 #include <fstream>
 #include "ParmParser.h"
 

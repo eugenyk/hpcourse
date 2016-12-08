@@ -126,7 +126,6 @@
     <ClCompile Include="src\ImageGenerator.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\ParmParser.cpp" />
-    <ClCompile Include="src\UnitTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\BodyObjects.h" />
@@ -134,7 +133,6 @@
     <ClInclude Include="src\ImageAlgorithms.h" />
     <ClInclude Include="src\ImageGenerator.h" />
     <ClInclude Include="src\ParmParser.h" />
-    <ClInclude Include="src\UnitTests.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
