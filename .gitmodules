@@ -19,3 +19,6 @@
 [submodule "aptu/604_15/tdv/1/AsioChat"]
 	path = aptu/604_15/tdv/1/AsioChat
 	url = git://github.com/flire/AsioChat.git
+[submodule "aptu/604_16/zea"]
+	path = aptu/604_16/zea
+	url = https://github.com/edgarzhavoronkov/au-hp-fall-2016.git
