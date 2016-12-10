@@ -32,11 +32,11 @@
     <Text Include="log.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="random_image.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="nodes.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="random_image.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
