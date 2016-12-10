@@ -15,6 +15,11 @@ using namespace std;
 
 const size_t max_image_value = 255;
 
+// The size for all images.
+
+const size_t M = 256;
+const size_t N = 256;
+
 // Pixel positions are returned from a handful of functions.
 
 using pixel_positions = vector<pair<size_t, size_t>>;
@@ -41,6 +46,10 @@ public:
             }
         }
     }
+
+    // TBB wants this class to have a default constructor for some reason.
+
+    rnd_image() : rnd_image(M, N) {}
 
     // Can't use reduce_values_ here because pixels' positions are memorized.
 
@@ -141,6 +150,70 @@ int main(int argc, char *argv[]) {
     cout << " Brightness value: " << brightness << '\n';
     cout << " Concurrency limit: " << limit << '\n';
     cout << " Log file path: " << args["-f"] << '\n';
+
+    /// Construct a graph.
+
+    graph g;
+
+    // Total number of images to create and pass into the graph.
+
+    size_t nb_images = 10;
+
+    // Source node calls its body until false is returned, define it to generate nb_images images.
+    // Make this instance not active until explicitly activated.
+
+    source_node<rnd_image> source_nd(g, [&](rnd_image &image_to_send) {
+        static size_t nb_calls = 0;
+
+        if (nb_calls > nb_images) {
+            return false;
+        }
+
+        nb_calls += 1;
+        image_to_send = rnd_image();
+        return true;
+    }, false);
+
+    /// Create wrappers for the first batch of rnd_image methods.
+
+    auto with_fn = [brightness](const rnd_image &image) {
+        return image.pixels_with_value(brightness);
+    };
+
+    auto min_fn = [](const rnd_image &image) {
+        return image.pixels_with_min_value();
+    };
+
+    auto max_fn = [](const rnd_image &image) {
+        return image.pixels_with_max_value();
+    };
+
+    function_node<rnd_image, pixel_positions> with_nd(g, unlimited, with_fn);
+    function_node<rnd_image, pixel_positions> min_nd(g, unlimited, min_fn);
+    function_node<rnd_image, pixel_positions> max_nd(g, unlimited, max_fn);
+
+    // Connect them to the source_nd.
+
+    make_edge(source_nd, with_nd);
+    make_edge(source_nd, max_nd);
+    make_edge(source_nd, min_nd);
+
+    // Create a join node that awaits for all three results (and the image) to perform a sequential operation.
+
+    // NOTE: If at least one successor accepts the tuple, the head of each input port's queue is removed. Does
+    // it mean that some slow successors don't get their tuples?
+
+    join_node<tuple<rnd_image, pixel_positions, pixel_positions, pixel_positions>> join_nd(g);
+
+    // Connect wrappers to the join_nd.
+
+    make_edge(source_nd, input_port<0>(join_nd));
+    make_edge(with_nd, input_port<1>(join_nd));
+    make_edge(min_nd, input_port<2>(join_nd));
+    make_edge(max_nd, input_port<3>(join_nd));
+
+    source_nd.activate();
+    g.wait_for_all();
 
     return 0;
 }
