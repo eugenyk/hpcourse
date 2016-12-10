@@ -238,6 +238,46 @@ int main(int argc, char *argv[]) {
     make_edge(min_nd, input_port<2>(join_nd));
     make_edge(max_nd, input_port<3>(join_nd));
 
+    /// Create wrappers for the second batch of rnd_image methods.
+
+    auto highlight_fn = [](tuple<rnd_image, pixel_positions, pixel_positions, pixel_positions> data) {
+        rnd_image cp_image = get<0>(data);
+        cp_image.highlight_positions(get<1>(data));
+        cp_image.highlight_positions(get<2>(data));
+        cp_image.highlight_positions(get<3>(data));
+        return cp_image;
+    };
+
+    auto mean_fn = [](const rnd_image &image) {
+        return image.mean_value();
+    };
+
+    auto invert_fn = [](const rnd_image &image) {
+        rnd_image cp_image(image);
+        cp_image.invert();
+        return cp_image;
+    };
+
+    auto log_fn = [&log_file](float mean_value) {
+        log_file << "Mean pixel value across the image is " << mean_value << '\n';
+        return continue_msg();
+    };
+
+    // Function node broadcasts return value to all its successors.
+
+    function_node<tuple<rnd_image, pixel_positions, pixel_positions, pixel_positions>, rnd_image> highlight_nd(
+            g, unlimited, highlight_fn);
+    function_node<rnd_image, float> mean_nd(g, unlimited, mean_fn);
+    function_node<rnd_image, rnd_image> invert_nd(g, unlimited, invert_fn);
+    function_node<float, continue_msg> log_nd(g, unlimited, log_fn);
+
+    // Connect everything that is left to connect.
+
+    make_edge(join_nd, highlight_nd);
+    make_edge(highlight_nd, mean_nd);
+    make_edge(highlight_nd, invert_nd);
+    make_edge(mean_nd, log_nd);
+
     source_nd.activate();
     g.wait_for_all();
 
