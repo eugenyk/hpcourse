@@ -45,7 +45,8 @@ public:
 
     rnd_image(size_t height, size_t width) : height_(height),
                                              width_(width),
-                                             pixels_(height, vector<size_t>(width)) {
+                                             pixels_(height, vector<size_t>(width)),
+                                             id_(instances_created++) {
         for (size_t i = 0; i < height_; ++i) {
             for (size_t k = 0; k < width_; ++k) {
                 pixels_[i][k] = uni(rng);
@@ -131,10 +132,17 @@ public:
         return *this;
     }
 
+    size_t id() const {
+        return id_;
+    }
+
 private:
     size_t height_;
     size_t width_;
+    size_t id_;
     vector<vector<size_t>> pixels_;
+
+    static size_t instances_created;
 
     size_t reduce_values_(size_t start, function<size_t(size_t, size_t)> fn) const {
         size_t reduced_value = start;
@@ -146,6 +154,8 @@ private:
         return reduced_value;
     }
 };
+
+size_t rnd_image::instances_created = 0;
 
 int main(int argc, char *argv[]) {
 
@@ -224,21 +234,25 @@ int main(int argc, char *argv[]) {
     /// Create wrappers for the first batch of rnd_image methods.
     ///
 
+    // To correctly join results of these wrappers later we need to attach the same key to corresponding results.
+
+    using keyed_pixel_positions = pair<size_t, pixel_positions>;
+
     auto with_fn = [brightness](const rnd_image &image) {
-        return image.pixels_with_value(brightness);
+        return make_pair(image.id(), image.pixels_with_value(brightness));
     };
 
     auto min_fn = [](const rnd_image &image) {
-        return image.pixels_with_min_value();
+        return make_pair(image.id(), image.pixels_with_min_value());
     };
 
     auto max_fn = [](const rnd_image &image) {
-        return image.pixels_with_max_value();
+        return make_pair(image.id(), image.pixels_with_max_value());
     };
 
-    function_node<rnd_image, pixel_positions> with_nd(g, unlimited, with_fn);
-    function_node<rnd_image, pixel_positions> min_nd(g, unlimited, min_fn);
-    function_node<rnd_image, pixel_positions> max_nd(g, unlimited, max_fn);
+    function_node<rnd_image, keyed_pixel_positions> with_nd(g, unlimited, with_fn);
+    function_node<rnd_image, keyed_pixel_positions> min_nd(g, unlimited, min_fn);
+    function_node<rnd_image, keyed_pixel_positions> max_nd(g, unlimited, max_fn);
 
     // Connect them to the source_nd through a limiter node that prevents new images to go into the graph until
     // some of the old ones go out of it.
@@ -262,7 +276,21 @@ int main(int argc, char *argv[]) {
     // NOTE: If at least one successor accepts the tuple, the head of each input port's queue is removed. Does
     // it mean that some slow successors don't get their tuples?
 
-    join_node<tuple<rnd_image, pixel_positions, pixel_positions, pixel_positions>> join_nd(g);
+    auto img_key = [](const rnd_image &image) {
+        return image.id();
+    };
+
+    auto pixel_pos_key = [](pair<size_t, pixel_positions> p) {
+        return p.first;
+    };
+
+    using join_nd_input = tuple<rnd_image, keyed_pixel_positions, keyed_pixel_positions, keyed_pixel_positions>;
+
+    join_node<join_nd_input, key_matching<size_t>> join_nd(g,
+                                                           img_key,
+                                                           pixel_pos_key,
+                                                           pixel_pos_key,
+                                                           pixel_pos_key);
 
     // Connect wrappers to the join_nd.
 
@@ -275,11 +303,11 @@ int main(int argc, char *argv[]) {
     /// Create wrappers for the second batch of rnd_image methods.
     ///
 
-    auto highlight_fn = [](tuple<rnd_image, pixel_positions, pixel_positions, pixel_positions> data) {
+    auto highlight_fn = [](join_nd_input data) {
         rnd_image cp_image = get<0>(data);
-        cp_image.highlight_positions(get<1>(data));
-        cp_image.highlight_positions(get<2>(data));
-        cp_image.highlight_positions(get<3>(data));
+        cp_image.highlight_positions(get<1>(data).second);
+        cp_image.highlight_positions(get<2>(data).second);
+        cp_image.highlight_positions(get<3>(data).second);
         return cp_image;
     };
 
@@ -302,7 +330,7 @@ int main(int argc, char *argv[]) {
 
     // Function node broadcasts return value to all its successors.
 
-    function_node<tuple<rnd_image, pixel_positions, pixel_positions, pixel_positions>, rnd_image> highlight_nd(
+    function_node<join_nd_input, rnd_image> highlight_nd(
             g, unlimited, highlight_fn);
     function_node<rnd_image, float> mean_nd(g, unlimited, mean_fn);
     function_node<rnd_image, rnd_image> invert_nd(g, unlimited, invert_fn);
