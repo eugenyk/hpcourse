@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
     source_node<rnd_image> source_nd(g, [&](rnd_image &image_to_send) {
         static size_t nb_calls = 0;
 
-        if (nb_calls > nb_images) {
+        if (nb_calls >= nb_images) {
             return false;
         }
 
