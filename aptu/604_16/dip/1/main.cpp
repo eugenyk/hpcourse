@@ -32,8 +32,8 @@ public:
 
     // Fill random image with random values (duh).
 
-    rnd_image(size_t width, size_t height) : width_(width),
-                                             height_(height),
+    rnd_image(size_t height, size_t width) : height_(height),
+                                             width_(width),
                                              pixels_(height, vector<size_t>(width)) {
         for (size_t i = 0; i < height_; ++i) {
             for (size_t k = 0; k < width_; ++k) {
@@ -93,8 +93,8 @@ public:
     }
 
 private:
-    size_t width_;
     size_t height_;
+    size_t width_;
     vector<vector<size_t>> pixels_;
 
     size_t reduce_values_(size_t start, function<size_t(size_t, size_t)> fn) const {
