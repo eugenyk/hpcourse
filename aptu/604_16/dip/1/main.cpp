@@ -101,6 +101,29 @@ public:
         }
     }
 
+    rnd_image &highlight_positions(const pixel_positions &positions) {
+        auto outline = [this](const pair<size_t, size_t> &pos) {
+            long r = pos.first, c = pos.second;
+            pixel_positions outline_positions;
+
+            for (long i = r - 1; i <= r + 1; ++i) {
+                for (long k = c - 1; k <= c + 1; ++k) {
+                    if (i >= 0 && i < height_ && k >= 0 && k < width_ && (i != r || k != c)) {
+                        outline_positions.push_back(make_pair(static_cast<size_t >(i), static_cast<size_t >(k)));
+                    }
+                }
+            }
+            return outline_positions;
+        };
+
+        for (auto &pos : positions) {
+            for (auto &out_pos :outline(pos)) {
+                pixels_[out_pos.first][out_pos.second] = max_image_value;
+            }
+        }
+        return *this;
+    }
+
 private:
     size_t height_;
     size_t width_;
