@@ -1,6 +1,8 @@
 #include <cassert>
+#include <cmath>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <random>
@@ -93,9 +95,10 @@ public:
     }
 
     void println() const {
+        int pixel_width = static_cast<int>(floor(log10(max_image_value))) + 1;
         for (size_t i = 0; i < height_; ++i) {
             for (size_t k = 0; k < width_; ++k) {
-                cout << pixels_[i][k] << ' ';
+                cout << setw(pixel_width) << pixels_[i][k] << ' ';
             }
             cout << '\n';
         }
