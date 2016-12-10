@@ -3,6 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <random>
 #include <vector>
 
 #include <tbb/flow_graph.h>
@@ -10,18 +11,35 @@
 using namespace tbb::flow;
 using namespace std;
 
-/// Image class that couples data representation and functions specified in the task.
+// The maximum value that must be stored in an image.
 
-class image {
+const size_t max_image_value = 255;
+
+/// Create a random generator for integers.
+
+std::random_device rd;
+std::mt19937 rng(rd());
+std::uniform_int_distribution<size_t> uni(0, max_image_value);
+
+/// rnd_image class that couples data representation and functions specified in the task.
+
+class rnd_image {
 public:
 
     // Pixel positions are returned from a handful of functions.
 
     using pixel_positions = vector<pair<size_t, size_t>>;
 
-    image(size_t width, size_t height) : width_(width),
-                                         height_(height),
-                                         pixels_(height, vector<size_t>(width)) {
+    // Fill random image with random values (duh).
+
+    rnd_image(size_t width, size_t height) : width_(width),
+                                             height_(height),
+                                             pixels_(height, vector<size_t>(width)) {
+        for (size_t i = 0; i < height_; ++i) {
+            for (size_t k = 0; k < width_; ++k) {
+                pixels_[i][k] = uni(rng);
+            }
+        }
     }
 
     // Can't use reduce_values_ here because pixels' positions are memorized.
@@ -50,7 +68,7 @@ public:
         }));
     }
 
-    image &invert() {
+    rnd_image &invert() {
         for (size_t i = 0; i < height_; ++i) {
             for (size_t k = 0; k < width_; ++k) {
                 pixels_[i][k] = max_image_value - pixels_[i][k];
@@ -79,8 +97,6 @@ private:
     size_t height_;
     vector<vector<size_t>> pixels_;
 
-    const static size_t max_image_value;
-
     size_t reduce_values_(size_t start, function<size_t(size_t, size_t)> fn) const {
         size_t reduced_value = start;
         for (size_t i = 0; i < height_; ++i) {
@@ -91,8 +107,6 @@ private:
         return reduced_value;
     }
 };
-
-const size_t image::max_image_value = 255;
 
 int main(int argc, char *argv[]) {
 
