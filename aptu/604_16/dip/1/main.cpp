@@ -235,6 +235,8 @@ int main(int argc, char *argv[]) {
 
     // Create a join node that awaits for all three results (and the image) to perform a sequential operation.
 
+    // NOTE: Tutorials contain buffers before join slots, but they don't seem to be necessary according to the docs.
+
     // NOTE: If at least one successor accepts the tuple, the head of each input port's queue is removed. Does
     // it mean that some slow successors don't get their tuples?
 
