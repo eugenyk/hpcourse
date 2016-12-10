@@ -276,6 +276,10 @@ int main(int argc, char *argv[]) {
     // NOTE: If at least one successor accepts the tuple, the head of each input port's queue is removed. Does
     // it mean that some slow successors don't get their tuples?
 
+    // NOTE: Results are added to a map with a corresponding key. Join node continues when all results
+    // corresponding to a particular key are ready. Otherwise results that originate from different images
+    // can sometimes get mixed up together in join.
+
     auto img_key = [](const rnd_image &image) {
         return image.id();
     };
