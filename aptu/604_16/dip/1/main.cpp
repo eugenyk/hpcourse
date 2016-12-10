@@ -124,8 +124,8 @@ int main(int argc, char *argv[]) {
         args[argv[(i * 2) + 1]] = argv[(i * 2) + 1 + 1];
     }
 
-    int brightness = stoi(args["-b"]);
-    int limit = stoi(args["-l"]);
+    size_t brightness = stoul(args["-b"]);
+    size_t limit = stoul(args["-l"]);
     ofstream log_file;
 
     log_file.open(args["-f"]);
