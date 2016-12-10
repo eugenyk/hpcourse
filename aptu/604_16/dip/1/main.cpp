@@ -176,15 +176,18 @@ int main(int argc, char *argv[]) {
 
     size_t brightness = stoul(args["-b"]);
     size_t limit = stoul(args["-l"]);
+
     ofstream log_file;
 
-    log_file.open(args["-f"]);
+    if (args.count("-f")) {
+        log_file.open(args["-f"]);
 
-    // Program can't recover if the log file can't be opened.
+        // Program can't recover if the log file can't be opened.
 
-    if (!log_file.is_open()) {
-        cout << "Failed to open the log file." << endl;
-        return 3;
+        if (!log_file.is_open()) {
+            cout << "Failed to open the log file." << endl;
+            return 3;
+        }
     }
 
     cout << "Received arguments:" << endl;
@@ -291,7 +294,9 @@ int main(int argc, char *argv[]) {
     };
 
     auto log_fn = [&log_file](float mean_value) {
-        log_file << "Mean pixel value across the image is " << mean_value << endl;
+        if (log_file.is_open()) {
+            log_file << "Mean pixel value across the image is " << mean_value << endl;
+        }
         return continue_msg();
     };
 
