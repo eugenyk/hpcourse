@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
             g, unlimited, highlight_fn);
     function_node<rnd_image, float> mean_nd(g, unlimited, mean_fn);
     function_node<rnd_image, rnd_image> invert_nd(g, unlimited, invert_fn);
-    function_node<float, continue_msg> log_nd(g, unlimited, log_fn);
+    function_node<float, continue_msg> log_nd(g, 1, log_fn);
 
     // Connect everything that is left to connect.
 
