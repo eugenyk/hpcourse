@@ -100,7 +100,7 @@ public:
             for (size_t k = 0; k < width_; ++k) {
                 cout << setw(pixel_width) << pixels_[i][k] << ' ';
             }
-            cout << '\n';
+            cout << endl;
         }
     }
 
@@ -168,14 +168,14 @@ int main(int argc, char *argv[]) {
     // Program can't recover if the log file can't be opened.
 
     if (!log_file.is_open()) {
-        cout << "Failed to open the log file.\n";
+        cout << "Failed to open the log file." << endl;
         return 1;
     }
 
-    cout << "Received arguments:\n";
-    cout << " Brightness value: " << brightness << '\n';
-    cout << " Concurrency limit: " << limit << '\n';
-    cout << " Log file path: " << args["-f"] << '\n';
+    cout << "Received arguments:" << endl;
+    cout << " Brightness value: " << brightness << endl;
+    cout << " Concurrency limit: " << limit << endl;
+    cout << " Log file path: " << args["-f"] << endl;
 
     /// Construct a graph.
 
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
     };
 
     auto log_fn = [&log_file](float mean_value) {
-        log_file << "Mean pixel value across the image is " << mean_value << '\n';
+        log_file << "Mean pixel value across the image is " << mean_value << endl;
         return continue_msg();
     };
 
