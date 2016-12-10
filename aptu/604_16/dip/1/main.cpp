@@ -218,11 +218,20 @@ int main(int argc, char *argv[]) {
     function_node<rnd_image, pixel_positions> min_nd(g, unlimited, min_fn);
     function_node<rnd_image, pixel_positions> max_nd(g, unlimited, max_fn);
 
-    // Connect them to the source_nd.
+    // Connect them to the source_nd through a limiter node that prevents new images to go into the graph until
+    // some of the old ones go out of it.
+    // Limiter node doesn't buffer so in order to not lose messages from the source while the graph is busy
+    // add a buffer node.
 
-    make_edge(source_nd, with_nd);
-    make_edge(source_nd, max_nd);
-    make_edge(source_nd, min_nd);
+    buffer_node<rnd_image> source_buffer_nd(g);
+    limiter_node<rnd_image> limit_nd(g, limit);
+
+    make_edge(source_nd, source_buffer_nd);
+    make_edge(source_buffer_nd, limit_nd);
+
+    make_edge(limit_nd, with_nd);
+    make_edge(limit_nd, max_nd);
+    make_edge(limit_nd, min_nd);
 
     // Create a join node that awaits for all three results (and the image) to perform a sequential operation.
 
@@ -271,12 +280,27 @@ int main(int argc, char *argv[]) {
     function_node<rnd_image, rnd_image> invert_nd(g, unlimited, invert_fn);
     function_node<float, continue_msg> log_nd(g, 1, log_fn);
 
-    // Connect everything that is left to connect.
+    // Connect everything that is left to connect including decrement for the limiter node.
+    // This decrement must happen after everything is done, so introduce a final join node.
 
     make_edge(join_nd, highlight_nd);
     make_edge(highlight_nd, mean_nd);
     make_edge(highlight_nd, invert_nd);
     make_edge(mean_nd, log_nd);
+
+    join_node<tuple<rnd_image, continue_msg>> final_join_nd(g);
+    auto pre_decrement_fn = [](tuple<rnd_image, continue_msg> const &t) {
+        return continue_msg();
+    };
+    function_node<tuple<rnd_image, continue_msg>, continue_msg> pre_decrement_nd(g, unlimited, pre_decrement_fn);
+
+    make_edge(invert_nd, input_port<0>(final_join_nd));
+    make_edge(log_nd, input_port<1>(final_join_nd));
+
+    make_edge(final_join_nd, pre_decrement_nd);
+    make_edge(pre_decrement_nd, limit_nd.decrement);
+
+    /// Activate source and wait for completion.
 
     source_nd.activate();
     g.wait_for_all();
