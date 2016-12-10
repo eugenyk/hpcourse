@@ -163,6 +163,17 @@ int main(int argc, char *argv[]) {
         args[argv[(i * 2) + 1]] = argv[(i * 2) + 1 + 1];
     }
 
+    if (!args.count("-b")) {
+        cout << "You didn't provide a brightness value to highlight. Use -b option to do so." << endl;
+        return 1;
+    }
+
+    if (!args.count("-l")) {
+        cout << "You didn't provide a limit for number of images going through the graph." << endl;
+        cout << "Use -l option to do so." << endl;
+        return 2;
+    }
+
     size_t brightness = stoul(args["-b"]);
     size_t limit = stoul(args["-l"]);
     ofstream log_file;
@@ -173,7 +184,7 @@ int main(int argc, char *argv[]) {
 
     if (!log_file.is_open()) {
         cout << "Failed to open the log file." << endl;
-        return 1;
+        return 3;
     }
 
     cout << "Received arguments:" << endl;
