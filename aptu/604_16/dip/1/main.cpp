@@ -26,13 +26,17 @@ const size_t N = 256;
 
 using pixel_positions = vector<pair<size_t, size_t>>;
 
+///
 /// Create a random generator for integers.
+///
 
 std::random_device rd;
 std::mt19937 rng(rd());
 std::uniform_int_distribution<size_t> uni(0, max_image_value);
 
+///
 /// rnd_image class that couples data representation and functions specified in the task.
+///
 
 class rnd_image {
 public:
@@ -177,7 +181,9 @@ int main(int argc, char *argv[]) {
     cout << " Concurrency limit: " << limit << endl;
     cout << " Log file path: " << args["-f"] << endl;
 
+    ///
     /// Construct a graph.
+    ///
 
     graph g;
 
@@ -200,7 +206,9 @@ int main(int argc, char *argv[]) {
         return true;
     }, false);
 
+    ///
     /// Create wrappers for the first batch of rnd_image methods.
+    ///
 
     auto with_fn = [brightness](const rnd_image &image) {
         return image.pixels_with_value(brightness);
@@ -249,7 +257,9 @@ int main(int argc, char *argv[]) {
     make_edge(min_nd, input_port<2>(join_nd));
     make_edge(max_nd, input_port<3>(join_nd));
 
+    ///
     /// Create wrappers for the second batch of rnd_image methods.
+    ///
 
     auto highlight_fn = [](tuple<rnd_image, pixel_positions, pixel_positions, pixel_positions> data) {
         rnd_image cp_image = get<0>(data);
@@ -302,7 +312,9 @@ int main(int argc, char *argv[]) {
     make_edge(final_join_nd, pre_decrement_nd);
     make_edge(pre_decrement_nd, limit_nd.decrement);
 
+    ///
     /// Activate source and wait for completion.
+    ///
 
     source_nd.activate();
     g.wait_for_all();
