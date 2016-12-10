@@ -15,6 +15,10 @@ using namespace std;
 
 const size_t max_image_value = 255;
 
+// Pixel positions are returned from a handful of functions.
+
+using pixel_positions = vector<pair<size_t, size_t>>;
+
 /// Create a random generator for integers.
 
 std::random_device rd;
@@ -25,10 +29,6 @@ std::uniform_int_distribution<size_t> uni(0, max_image_value);
 
 class rnd_image {
 public:
-
-    // Pixel positions are returned from a handful of functions.
-
-    using pixel_positions = vector<pair<size_t, size_t>>;
 
     // Fill random image with random values (duh).
 
