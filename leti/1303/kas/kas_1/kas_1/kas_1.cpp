@@ -2,6 +2,8 @@
 #include <process.h>
 #include "tbb/flow_graph.h"
 #include <windows.h>
+#include <iostream>
+#include <fstream>
 #include "Image.h"
 #include "Utils.h"
 
@@ -192,8 +194,13 @@ struct process_inv {
 	}
 };
 
-struct process_avg {
-	long operator()(Image *img) {
+class process_avg {
+	string file;
+
+public:
+	process_avg(string file) : file(file) {}
+
+	int operator()(Image *img) {
 		unsigned char* img_map = img->getMap();
 		int h = img->getHeight();
 		int w = img->getWidth();
@@ -204,56 +211,114 @@ struct process_avg {
 		}
 		long avg = sum / (h * w);
 		printf("AVG=%d\n", avg);
+
+		if (!file.empty()) printFile(img->getId(), avg);
 		return avg;
+	}
+
+	void printFile(int idImage, long avg)
+	{
+		ofstream myfile(file, std::ios_base::app);
+		if (myfile.is_open())
+		{
+			myfile << "Id image: #" << idImage << ". Average brightness: " << avg << ".\n";
+			myfile.close();
+		}
+		else cout << "Unable to open file";
 	}
 };
 
 
+class source_body {
+	int n;
+	int cur_n;
+public:
+
+	source_body(int n) : n(n) 
+	{
+		cur_n = 0;
+	}
+
+	bool operator()(Image * &img) {
+		if (cur_n < n)
+		{
+			img = new Image(10, 10);
+			cur_n++;
+			return true;
+		}
+		else return false;
+	}
+};
+
+struct eop_body {
+	continue_msg operator()(const tuple<Image*, int> &input) {
+		return continue_msg();
+	}
+};
+
 int main(int argc, char* argv[]) {
-	tuple<int, int, int, string> params = Utils::argsProcessing(argc, argv);
-	int n = get<0>(params);
 	srand(time(NULL));
 
+	tuple<int, int, int, string> params = Utils::argsProcessing(argc, argv);
+	int n = get<0>(params);
+	int l = get<1>(params);
+	int b = get<2>(params);
+	string f = get<3>(params);
+
 	//todo: get from args
-	unsigned char input_brightness = 100;
+	//unsigned char input_brightness = 100;
 
 	graph g;
-	vector<Image> imgs = Utils::generateImages(10, 10, n);
-	Image *img1 = &imgs.front();
-	img1->printMap();
-
-	broadcast_node<Image*> s(g);
+	
+	source_node<Image*> src_node(g, source_body(n), false);
+	limiter_node<Image*> lim_node(g, l);
 	function_node<Image*, vector<int>> max_brightness_node(g, unlimited, max_brightness());
 	function_node<Image*, vector<int>> min_brightness_node(g, unlimited, min_brightness());
-	function_node<Image*, vector<int>> cnt_brightness_node(g, unlimited, cnt_brightness(input_brightness));
+	function_node<Image*, vector<int>> cnt_brightness_node(g, unlimited, cnt_brightness(b));
 	join_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, queueing> join(g);
 	function_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, Image*> highlight_node(g, unlimited, highlight());
 	function_node<Image*, Image*> process_inv_node(g, unlimited, process_inv());
-	function_node<Image*, long> process_avg_node(g, unlimited, process_avg());
+	function_node<Image*, int> process_avg_node(g, unlimited, process_avg(f));
+	join_node<tuple<Image*, int>> eop_join(g);
+	function_node<tuple<Image*, int>, continue_msg, rejecting> eop_node(g, unlimited, eop_body());
 
-	make_edge(s, max_brightness_node);
-	make_edge(s, min_brightness_node);
-	make_edge(s, cnt_brightness_node);
-	make_edge(s, input_port<0>(join));
+	make_edge(src_node, lim_node);
+	make_edge(lim_node, max_brightness_node);
+	make_edge(lim_node, min_brightness_node);
+	make_edge(lim_node, cnt_brightness_node);
+	make_edge(lim_node, input_port<0>(join));
 	make_edge(max_brightness_node, input_port<1>(join));
 	make_edge(min_brightness_node, input_port<2>(join));
 	make_edge(cnt_brightness_node, input_port<3>(join));
 	make_edge(join, highlight_node);
 	make_edge(highlight_node, process_inv_node);
 	make_edge(highlight_node, process_avg_node);
+	make_edge(process_inv_node, input_port<0>(eop_join));
+	make_edge(process_avg_node, input_port<1>(eop_join));
+	make_edge(eop_join, eop_node);
+	make_edge(eop_node, lim_node.decrement);
 
-	s.try_put(img1);
+	//vector<Image> imgs = Utils::generateImages(10, 10, n);
+
+	src_node.activate();
 	g.wait_for_all();
+	
+	//for (int i = 0; i < imgs.size(); i++)
+	//{
+	//	Image* img = &imgs[i];
+	//	printf("\nPrint image #%d\n", img->getId());
+	//	img->printMap();
 
-	printf("\nPrint after update image\n");
-	img1->printMap();
+	//	s.try_put(img);
+	//	g.wait_for_all();
 
+	//	printf("\nPrint after update image #%d\n", img->getId());
+	//	img->printMap();
+	//}
+	
 	system("pause");
 	return 0;
 }
 
-//TODO: 3. fork task (use composite_node + split_node)
 //TODO: 5. refactoring
-//TODO: 6. output in file
-//TODO: 7. add source node
 //TODO: 8. message buffer

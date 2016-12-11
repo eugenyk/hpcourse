@@ -24,12 +24,12 @@ std::vector<Image > Utils::generateImages(int width, int height, int num)
 	return imgs;
 }
 
-//-n 10 -b 123 -l 5 -f log.txt
+//-n 10 -l 5 -b 123 -f log.txt
 std::tuple<int, int, int, std::string> Utils::argsProcessing(int argc, char * argv[])
 {
 	//default values.
 	int n = 10, b = 123, l = 5;
-	std::string f = "log.txt";
+	std::string f = "";
 
 	std::vector<std::string> args(argv, argv + argc);
 	for (size_t i = 1; i < args.size(); i++)

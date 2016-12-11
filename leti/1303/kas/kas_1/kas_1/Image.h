@@ -9,6 +9,7 @@ public:
 	Image(const Image &img);
 	~Image();
 
+	int getId() const;
 	int getWidth() const;
 	int getHeight() const;
 	unsigned char * getMap() const;
@@ -16,9 +17,8 @@ public:
 	void printMap() const;
 	void updPix(int index, unsigned char value);
 
-	std::vector<Image*> divByParts(int numParts);
-
 private:
+	static int counter;
 	int id;
 
 	int width;

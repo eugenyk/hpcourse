@@ -2,15 +2,18 @@
 #include "Image.h"
 #include <vector>
 
+int Image::counter = 0;
 //public methods.
 
 Image::Image()
 {
+	counter++;
 }
 
 Image::Image(int w, int h) : width(w), height(h)
 {
-	id = 0;
+	counter++;
+	id = counter;
 	map = new unsigned char[width * height];
 	fillPixels();
 }
@@ -38,6 +41,11 @@ Image::Image(const Image & img)
 Image::~Image()
 {
 	delete[] map;
+}
+
+int Image::getId() const
+{
+	return id;
 }
 
 int Image::getWidth() const
@@ -71,29 +79,6 @@ void Image::printMap() const
 void Image::updPix(int index, unsigned char value)
 {
 	map[index] = value;
-}
-
-std::vector<Image*> Image::divByParts(int numParts)
-{
-	std::vector<Image*> imgParts;
-
-	int rows = height / numParts;
-
-	//TODO: check that the last part include all pixs!
-	for (int i = 0; i < numParts; i++)
-	{
-		unsigned char *partMap;
-		int begin = i * rows * width;
-		int end = (i + 1) * rows * width;
-		for (int j = begin; j < end; j++)
-		{
-			partMap[j - begin] = map[j];
-		}
-		Image* img = new Image(width, rows, i + 1, partMap);
-		imgParts.push_back(img);
-	}
-
-	return imgParts;
 }
 
 
