@@ -3,7 +3,6 @@
 #include <string>
 #include <iostream>
 #include <tuple>
-//#include <vector>
 
 Utils::Utils()
 {
@@ -12,16 +11,6 @@ Utils::Utils()
 
 Utils::~Utils()
 {
-}
-
-std::vector<Image > Utils::generateImages(int width, int height, int num)
-{
-	std::vector<Image> imgs;
-	for (int i = 0; i < num; i++)
-	{
-		imgs.push_back(Image(width, height));
-	}
-	return imgs;
 }
 
 //-n 10 -l 5 -b 123 -f log.txt

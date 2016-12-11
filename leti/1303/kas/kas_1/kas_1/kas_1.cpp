@@ -4,6 +4,8 @@
 #include <windows.h>
 #include <iostream>
 #include <fstream>
+#include <chrono>
+#include <ctime>
 #include "Image.h"
 #include "Utils.h"
 
@@ -195,10 +197,10 @@ struct process_inv {
 };
 
 class process_avg {
-	string file;
+	ofstream &file;
 
 public:
-	process_avg(string file) : file(file) {}
+	process_avg(ofstream &file) : file(file) {}
 
 	int operator()(Image *img) {
 		unsigned char* img_map = img->getMap();
@@ -212,19 +214,15 @@ public:
 		long avg = sum / (h * w);
 		printf("AVG=%d\n", avg);
 
-		if (!file.empty()) printFile(img->getId(), avg);
+		//if (file != nullptr) 
+			printFile(img->getId(), avg);
 		return avg;
 	}
 
 	void printFile(int idImage, long avg)
 	{
-		ofstream myfile(file, std::ios_base::app);
-		if (myfile.is_open())
-		{
-			myfile << "Id image: #" << idImage << ". Average brightness: " << avg << ".\n";
-			myfile.close();
-		}
-		else cout << "Unable to open file";
+		cout << "*** write to file ***" << endl;
+		file << "Id image: #" << idImage << ". Average brightness: " << avg << ".\n";
 	}
 };
 
@@ -256,6 +254,7 @@ struct eop_body {
 	}
 };
 
+
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
 
@@ -265,9 +264,13 @@ int main(int argc, char* argv[]) {
 	int b = get<2>(params);
 	string f = get<3>(params);
 
-	//todo: get from args
-	//unsigned char input_brightness = 100;
-
+	ofstream file;
+	if (!f.empty())
+	{
+		file = ofstream(f, std::ios_base::app);
+		file << "---------------------\n";
+	}
+	
 	graph g;
 	
 	source_node<Image*> src_node(g, source_body(n), false);
@@ -278,9 +281,9 @@ int main(int argc, char* argv[]) {
 	join_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, queueing> join(g);
 	function_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, Image*> highlight_node(g, unlimited, highlight());
 	function_node<Image*, Image*> process_inv_node(g, unlimited, process_inv());
-	function_node<Image*, int> process_avg_node(g, unlimited, process_avg(f));
+	function_node<Image*, int> process_avg_node(g, serial, process_avg(file));
 	join_node<tuple<Image*, int>> eop_join(g);
-	function_node<tuple<Image*, int>, continue_msg, rejecting> eop_node(g, unlimited, eop_body());
+	function_node<tuple<Image*, int>, continue_msg> eop_node(g, unlimited, eop_body());
 
 	make_edge(src_node, lim_node);
 	make_edge(lim_node, max_brightness_node);
@@ -298,27 +301,11 @@ int main(int argc, char* argv[]) {
 	make_edge(eop_join, eop_node);
 	make_edge(eop_node, lim_node.decrement);
 
-	//vector<Image> imgs = Utils::generateImages(10, 10, n);
-
 	src_node.activate();
 	g.wait_for_all();
-	
-	//for (int i = 0; i < imgs.size(); i++)
-	//{
-	//	Image* img = &imgs[i];
-	//	printf("\nPrint image #%d\n", img->getId());
-	//	img->printMap();
 
-	//	s.try_put(img);
-	//	g.wait_for_all();
-
-	//	printf("\nPrint after update image #%d\n", img->getId());
-	//	img->printMap();
-	//}
+	if (!f.empty()) file.close();
 	
 	system("pause");
 	return 0;
 }
-
-//TODO: 5. refactoring
-//TODO: 8. message buffer

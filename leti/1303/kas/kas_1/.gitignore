@@ -278,4 +278,4 @@ __pycache__/
 # Custom configuration
 *.sln
 *.vcxproj
-ReadMe.txt
+*.txt
