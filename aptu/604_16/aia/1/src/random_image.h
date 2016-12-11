@@ -9,7 +9,9 @@
 
 namespace random_image
 {
-    const int MAX_VALUE = 255;
+    const int MAX_VALUE         = 255;
+    const size_t DEFAULT_WIDTH  = 50;
+    const size_t DEFAULT_HEIGHT = 50;
     
     struct Point
     {
@@ -21,7 +23,7 @@ namespace random_image
     {
 
     public:
-        RandomImage(size_t width, size_t height);
+        RandomImage(size_t width = DEFAULT_WIDTH, size_t height = DEFAULT_HEIGHT);
         RandomImage(const RandomImage& other);
         virtual ~RandomImage();
         

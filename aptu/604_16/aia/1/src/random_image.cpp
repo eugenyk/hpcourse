@@ -72,13 +72,16 @@ void RandomImage::identifyPoints(const std::vector<Point>& points)
 {
     for (const auto& point : points)
     {
-        int start_row = std::max(point.m_row - 1, 0);
-        int start_col = std::max(point.m_col - 1, 0);
-        for (int i = start_row; i < point.m_row + 1; ++i)
+        for (int i = point.m_row - 1; i < point.m_row + 1; ++i)
         {
-            for (int j = start_col; i < point.m_col + 1; ++j)
+            for (int j = point.m_col - 1; j < point.m_col + 1; ++j)
             {
-                m_source[i][j] = MAX_VALUE;
+                int maxCol = (int) m_width;
+                int maxRow = (int) m_height;
+                if (i > 0 && j > 0 && i <= maxRow && j <= maxCol)
+                {
+                    m_source[i][j] = MAX_VALUE;
+                }
             }
         }
     }
@@ -88,7 +91,7 @@ double RandomImage::getMeanBrightness() const
 {
     std::function<int(int,int)> sum = [](int acc, int value) { return acc + value; };
     int globalSum = getBrightness(sum, 0);
-    int itemAmount = m_width * m_height;
+    double itemAmount = m_width * m_height;
     
     return itemAmount > 0 ? globalSum / itemAmount : 0.0;
 }
