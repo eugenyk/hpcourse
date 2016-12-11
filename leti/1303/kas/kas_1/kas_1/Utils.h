@@ -1,14 +1,16 @@
-#include "Image.h"
-#include "stdafx.h"
+#ifndef UTILS_H
+#define UTILS_H
+
+#include <string>
 #include <vector>
 
-#pragma once
 class Utils
 {
 public:
-	Utils();
-	~Utils();
+    Utils();
+    ~Utils();
 
-	static std::tuple<int, int, int, std::string > argsProcessing(int argc, char* argv[]);
+    static std::tuple<int, int, int, std::string > argsProcessing(int argc, char* argv[]);
 };
 
+#endif // UTILS_H

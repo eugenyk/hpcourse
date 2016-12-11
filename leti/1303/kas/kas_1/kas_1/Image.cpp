@@ -1,26 +1,29 @@
-#include "stdafx.h"
 #include "Image.h"
+
 #include <vector>
+#include <cstdlib>
+#include <cstring>
+#include <stdio.h>
 
 int Image::counter = 0;
-//public methods.
 
+//public methods.
 Image::Image()
 {
-	counter++;
+    counter++;
 }
 
 Image::Image(int w, int h) : width(w), height(h)
 {
-	counter++;
-	id = counter;
-	map = new unsigned char[width * height];
-	fillPixels();
+    counter++;
+    id = counter;
+    map = new unsigned char[width * height];
+    fillPixels();
 }
 
 Image::Image(int w, int h, int id) : width(w), height(h), id(id)
 {
-	map = new unsigned char[width * height];
+    map = new unsigned char[width * height];
 }
 
 Image::Image(int w, int h, int id, unsigned char * map) : width(w), height(h), id(id), map(map)
@@ -29,56 +32,55 @@ Image::Image(int w, int h, int id, unsigned char * map) : width(w), height(h), i
 
 Image::Image(const Image & img)
 {
-	//printf("######## CALL THE CONSTRUCTOR COPY OF IMAGE #############\n");
-	id = img.id;
-	width = img.width;
-	height = img.height;
-	map = new unsigned char[width * height];
-	memcpy(map, img.map, sizeof(unsigned char) * width * height);
+    id = img.id;
+    width = img.width;
+    height = img.height;
+    map = new unsigned char[width * height];
+    std::memcpy(map, img.map, sizeof(unsigned char) * width * height);
 
 }
 
 Image::~Image()
 {
-	delete[] map;
+    delete[] map;
 }
 
 int Image::getId() const
 {
-	return id;
+    return id;
 }
 
 int Image::getWidth() const
 {
-	return width;
+    return width;
 }
 
 int Image::getHeight() const
 {
-	return height;
+    return height;
 }
 
 unsigned char * Image::getMap() const
 {
-	return map;
+    return map;
 }
 
 void Image::printMap() const
 {
-	printf("*** Print image map *** \n");
-	for (int i = 0; i < height; ++i)
-	{
-		for (int j = 0; j < width; ++j)
-		{
-			printf("%03d ", map[i * height + j]);
-		}
-		printf("\n");
-	}
+    printf("*** Print image map *** \n");
+    for (int i = 0; i < height; ++i)
+    {
+        for (int j = 0; j < width; ++j)
+        {
+            printf("%03d ", map[i * height + j]);
+        }
+        printf("\n");
+    }
 }
 
 void Image::updPix(int index, unsigned char value)
 {
-	map[index] = value;
+    map[index] = value;
 }
 
 
@@ -86,8 +88,8 @@ void Image::updPix(int index, unsigned char value)
 
 void Image::fillPixels()
 {
-	for (int i = 0; i < width * height; ++i)
-	{
-		map[i] = rand() % 256;
-	}
+    for (int i = 0; i < width * height; ++i)
+    {
+        map[i] = rand() % 256;
+    }
 }
