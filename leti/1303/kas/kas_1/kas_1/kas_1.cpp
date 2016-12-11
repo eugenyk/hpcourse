@@ -220,7 +220,6 @@ int main(int argc, char* argv[]) {
 	graph g;
 	vector<Image> imgs = Utils::generateImages(10, 10, n);
 	Image *img1 = &imgs.front();
-	//Image *img1 = new Image(10, 10);
 	img1->printMap();
 
 	broadcast_node<Image*> s(g);
@@ -255,3 +254,6 @@ int main(int argc, char* argv[]) {
 
 //TODO: 3. fork task (use composite_node + split_node)
 //TODO: 5. refactoring
+//TODO: 6. output in file
+//TODO: 7. add source node
+//TODO: 8. message buffer

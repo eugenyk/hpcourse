@@ -5,6 +5,7 @@ public:
 	Image();
 	Image(int w, int h);
 	Image(int w, int h, int id);
+	Image(int w, int h, int id, unsigned char *map);
 	Image(const Image &img);
 	~Image();
 
@@ -14,6 +15,8 @@ public:
 
 	void printMap() const;
 	void updPix(int index, unsigned char value);
+
+	std::vector<Image*> divByParts(int numParts);
 
 private:
 	int id;

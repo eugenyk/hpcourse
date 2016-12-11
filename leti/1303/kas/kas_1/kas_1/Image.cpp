@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Image.h"
+#include <vector>
 
 //public methods.
 
@@ -17,6 +18,10 @@ Image::Image(int w, int h) : width(w), height(h)
 Image::Image(int w, int h, int id) : width(w), height(h), id(id)
 {
 	map = new unsigned char[width * height];
+}
+
+Image::Image(int w, int h, int id, unsigned char * map) : width(w), height(h), id(id), map(map)
+{
 }
 
 Image::Image(const Image & img)
@@ -66,6 +71,29 @@ void Image::printMap() const
 void Image::updPix(int index, unsigned char value)
 {
 	map[index] = value;
+}
+
+std::vector<Image*> Image::divByParts(int numParts)
+{
+	std::vector<Image*> imgParts;
+
+	int rows = height / numParts;
+
+	//TODO: check that the last part include all pixs!
+	for (int i = 0; i < numParts; i++)
+	{
+		unsigned char *partMap;
+		int begin = i * rows * width;
+		int end = (i + 1) * rows * width;
+		for (int j = begin; j < end; j++)
+		{
+			partMap[j - begin] = map[j];
+		}
+		Image* img = new Image(width, rows, i + 1, partMap);
+		imgParts.push_back(img);
+	}
+
+	return imgParts;
 }
 
 
