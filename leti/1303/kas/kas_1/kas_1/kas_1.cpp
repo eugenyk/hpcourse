@@ -202,7 +202,7 @@ class process_avg {
 public:
 	process_avg(ofstream &file) : file(file) {}
 
-	int operator()(Image *img) {
+	tuple<int, int> operator()(Image *img) {
 		unsigned char* img_map = img->getMap();
 		int h = img->getHeight();
 		int w = img->getWidth();
@@ -215,8 +215,8 @@ public:
 		printf("AVG=%d\n", avg);
 
 		//if (file != nullptr) 
-			printFile(img->getId(), avg);
-		return avg;
+			//printFile(img->getId(), avg);
+		return make_tuple(img->getId(), avg);
 	}
 
 	void printFile(int idImage, long avg)
@@ -225,6 +225,22 @@ public:
 		file << "Id image: #" << idImage << ". Average brightness: " << avg << ".\n";
 	}
 };
+
+class write_avg {
+	ofstream &file;
+
+public:
+	write_avg(ofstream &file) : file(file) {}
+
+	int operator()(tuple<int, int> input) {
+		int id = get<0>(input);
+		int avg = get<1>(input);
+		cout << "*** write to file ***" << endl;
+		file << "Id image: #" << id << ". Average brightness: " << avg << ".\n";
+		return 0;
+	}
+};
+
 
 
 class source_body {
@@ -281,7 +297,8 @@ int main(int argc, char* argv[]) {
 	join_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, queueing> join(g);
 	function_node<tuple<Image*, vector<int>, vector<int>, vector<int>>, Image*> highlight_node(g, unlimited, highlight());
 	function_node<Image*, Image*> process_inv_node(g, unlimited, process_inv());
-	function_node<Image*, int> process_avg_node(g, serial, process_avg(file));
+	function_node<Image*, tuple<int, int>> process_avg_node(g, unlimited, process_avg(file));
+	function_node<tuple<int, int>, int> write_avg_node(g, serial, write_avg(file));
 	join_node<tuple<Image*, int>> eop_join(g);
 	function_node<tuple<Image*, int>, continue_msg> eop_node(g, unlimited, eop_body());
 
@@ -296,8 +313,9 @@ int main(int argc, char* argv[]) {
 	make_edge(join, highlight_node);
 	make_edge(highlight_node, process_inv_node);
 	make_edge(highlight_node, process_avg_node);
+	make_edge(process_avg_node, write_avg_node);
 	make_edge(process_inv_node, input_port<0>(eop_join));
-	make_edge(process_avg_node, input_port<1>(eop_join));
+	make_edge(write_avg_node, input_port<1>(eop_join));
 	make_edge(eop_join, eop_node);
 	make_edge(eop_node, lim_node.decrement);
 
