@@ -2,12 +2,15 @@
 
 #include <iostream>
 
-image::image(size_t height, size_t width, std::unique_ptr<int[]> data)
+image::image(size_t height, size_t width, std::unique_ptr<int[]> data, size_t id)
         : height_(height)
         , width_(width)
         , data_(std::move(data)) {
-    static size_t static_id = 0;
-    id = static_id++;
+    static size_t static_id = 1;
+    if (id == 0)
+        id_ = static_id++;
+    else
+        id_ = id;
 }
 
 int image::at(size_t i, size_t j) const {
@@ -83,10 +86,14 @@ float image::mean() const {
     return sum * 1.0f / height_ / width_;
 }
 
+size_t image::get_id() const {
+    return id_;
+}
+
 std::shared_ptr<image> image::inverse() const {
     std::unique_ptr<int[]> inverse_data(new int[height_ * width_]);
     for (size_t i = 0; i < height_ * width_; ++i) {
         inverse_data[i] = 255 - data_[i];
     }
-    return std::shared_ptr<image>(new image(height_, width_, std::move(inverse_data)));
+    return std::shared_ptr<image>(new image(height_, width_, std::move(inverse_data), id_));
 }

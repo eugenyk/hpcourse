@@ -25,7 +25,7 @@ std::unique_ptr<int[]> generate_image(size_t height, size_t width) {
 }
 
 bool source_fn(std::shared_ptr<image> &p) {
-    static size_t image_count = 100;
+    static size_t image_count = 1000;
     size_t height = 1000;
     size_t width = 1000;
 
@@ -38,16 +38,26 @@ bool source_fn(std::shared_ptr<image> &p) {
 }
 
 using pair_vec = std::vector<std::pair<size_t, size_t>>;
+using pair_vec_id = std::pair<pair_vec, size_t>;
 
-std::shared_ptr<image> add_squares(std::tuple<pair_vec, pair_vec, pair_vec, std::shared_ptr<image>> tup) {
+template<class T, class U>
+U get_second(std::pair<T, U> const& p) {
+    return p.second;
+}
+
+size_t get_id(std::shared_ptr<image> const& im) {
+    return im->get_id();
+}
+
+std::shared_ptr<image> add_squares(std::tuple<pair_vec_id, pair_vec_id, pair_vec_id, std::shared_ptr<image>> tup) {
     std::shared_ptr<image> im = std::get<3>(tup);
-    for (auto const& ij : std::get<0>(tup)) {
+    for (auto const& ij : std::get<0>(tup).first) {
         im->square_around(ij.first, ij.second, 255);
     }
-    for (auto const& ij : std::get<1>(tup)) {
+    for (auto const& ij : std::get<1>(tup).first) {
         im->square_around(ij.first, ij.second, 255);
     }
-    for (auto const& ij : std::get<2>(tup)) {
+    for (auto const& ij : std::get<2>(tup).first) {
         im->square_around(ij.first, ij.second, 255);
     }
 
@@ -74,34 +84,44 @@ int main(int argc, char* argv[]) {
     make_edge(source, limiter);
     make_edge(limiter, broadcast);
 
-    using image_fn_node = function_node<std::shared_ptr<image>, pair_vec>;
-    image_fn_node min_fn(g, unlimited, [](std::shared_ptr<image> im) { return im->min_positions(); });
-    image_fn_node max_fn(g, unlimited, [](std::shared_ptr<image> im) { return im->max_positions(); });
-    image_fn_node given_fn(g, unlimited, [given](std::shared_ptr<image> im) { return im->positions(given); });
+    using image_fn_node = function_node<std::shared_ptr<image>, pair_vec_id>;
+    image_fn_node min_fn(g, unlimited, [](std::shared_ptr<image> im) {
+        return std::make_pair(im->min_positions(), im->get_id());
+    });
+    image_fn_node max_fn(g, unlimited, [](std::shared_ptr<image> im) {
+        return std::make_pair(im->max_positions(), im->get_id());
+    });
+    image_fn_node given_fn(g, unlimited, [given](std::shared_ptr<image> im) {
+        return std::make_pair(im->positions(given), im->get_id());
+    });
     make_edge(broadcast, min_fn);
     make_edge(broadcast, max_fn);
     make_edge(broadcast, given_fn);
 
-    join_node<std::tuple<pair_vec, pair_vec, pair_vec, std::shared_ptr<image>>, queueing> join(g);
+    join_node<std::tuple<pair_vec_id, pair_vec_id, pair_vec_id, std::shared_ptr<image>>,
+              key_matching<size_t>> join(g, get_second<pair_vec, size_t>, get_second<pair_vec, size_t>,
+                                         get_second<pair_vec, size_t>, get_id);
     make_edge(min_fn, std::get<0>(join.input_ports()));
     make_edge(max_fn, std::get<1>(join.input_ports()));
     make_edge(given_fn, std::get<2>(join.input_ports()));
     make_edge(broadcast, std::get<3>(join.input_ports()));
 
-    function_node<std::tuple<pair_vec, pair_vec, pair_vec, std::shared_ptr<image>>, std::shared_ptr<image>>
+    function_node<std::tuple<pair_vec_id, pair_vec_id, pair_vec_id, std::shared_ptr<image>>, std::shared_ptr<image>>
         squares_node(g, unlimited, add_squares);
     make_edge(join, squares_node);
     broadcast_node<std::shared_ptr<image>> broadcast2(g);
     make_edge(squares_node, broadcast2);
 
-    function_node<std::shared_ptr<image>, float> mean_node(g, unlimited,
-        [](std::shared_ptr<image> im) { return im->mean(); });
+    using float_sizet = std::pair<float, size_t>;
+    function_node<std::shared_ptr<image>, float_sizet> mean_node(g, unlimited,
+        [](std::shared_ptr<image> im) { return std::make_pair(im->mean(), im->get_id()); });
     make_edge(broadcast2, mean_node);
 
-    join_node<std::tuple<float, std::shared_ptr<image>, std::shared_ptr<image>>, queueing> join2(g);
-    function_node<float, float> journal_node(g, 1,
-        [journal](float mean) {
-            (*journal) << mean << std::endl;
+    join_node<std::tuple<float_sizet, std::shared_ptr<image>, std::shared_ptr<image>>, key_matching<size_t>> join2(g,
+        get_second<float, size_t>, get_id, get_id);
+    function_node<float_sizet, float_sizet> journal_node(g, 1,
+        [journal](float_sizet mean) {
+            (*journal) << mean.first << std::endl;
             return mean;
         });
     if (journal) {
@@ -117,9 +137,9 @@ int main(int argc, char* argv[]) {
     make_edge(inverse_node, std::get<1>(join2.input_ports()));
     make_edge(broadcast2, std::get<2>(join2.input_ports()));
 
-    function_node<std::tuple<float, std::shared_ptr<image>, std::shared_ptr<image>>, continue_msg>
+    function_node<std::tuple<float_sizet, std::shared_ptr<image>, std::shared_ptr<image>>, continue_msg>
         deleter(g, unlimited,
-        [](std::tuple<float, std::shared_ptr<image>, std::shared_ptr<image>> tup) {
+        [](std::tuple<float_sizet, std::shared_ptr<image>, std::shared_ptr<image>> tup) {
             return continue_msg();
         });
     make_edge(join2, deleter);
