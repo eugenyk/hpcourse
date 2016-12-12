@@ -10,7 +10,7 @@ using namespace tbb::flow;
 
 const int HEIGHT = 5;
 const int WIDTH = 5;
-const int IMG_COUNT = 10;
+const int IMG_COUNT = 1;
 const int MAX_BRIGHT = 255;
 
 int cnt = 0;
@@ -57,7 +57,7 @@ struct min_elems {
     elems operator()(const image& img) {
         int min = MAX_BRIGHT;
         for (auto row : img)
-            min = std::min(min, *std::max_element(row.begin(), row.end()));
+            min = std::min(min, *std::min_element(row.begin(), row.end()));
         return find(img, min);
     }
 };
@@ -75,8 +75,7 @@ public:
 struct mark {
     auto operator()(tuple<image, elems, elems, elems> input) {
         image img = get<0>(input);
-        elems max = get<1>(input);
-        frame_elems(img, max);
+        frame_elems(img, get<1>(input));
         frame_elems(img, get<2>(input));
         frame_elems(img, get<3>(input));
         return img;
@@ -91,7 +90,7 @@ private:
                     if (i == row && j == col)
                         continue;
                     try {
-                        img.at(row).at(col) = MAX_BRIGHT;
+                        img.at(i).at(j) = MAX_BRIGHT;
                     } catch (const std::out_of_range &e) {}
                 }
         }
