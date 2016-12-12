@@ -10,7 +10,7 @@ using namespace tbb::flow;
 
 const int HEIGHT = 5;
 const int WIDTH = 5;
-const int IMG_COUNT = 1;
+const int IMG_COUNT = 10;
 const int MAX_BRIGHT = 255;
 
 int cnt = 0;
