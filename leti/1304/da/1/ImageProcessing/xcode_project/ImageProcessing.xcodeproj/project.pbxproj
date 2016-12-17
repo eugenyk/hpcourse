@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		27009F4D1E043526004F39DF /* libMagick++-6.Q16.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27009F4C1E043526004F39DF /* libMagick++-6.Q16.dylib */; };
 		27009F4F1E04352E004F39DF /* libMagick++-6.Q16.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 27009F4E1E04352E004F39DF /* libMagick++-6.Q16.dylib */; };
+		27009F551E05597E004F39DF /* utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27009F531E05597E004F39DF /* utils.cpp */; };
+		27009F5B1E0561A4004F39DF /* flow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27009F5A1E0561A4004F39DF /* flow.cpp */; };
 		276E87F31DEA02120075E393 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 276E87F21DEA02120075E393 /* main.cpp */; };
 		276E87F61DEA02930075E393 /* libtbb.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 276E87F51DEA02930075E393 /* libtbb.dylib */; };
 		276E87F71DEA02A40075E393 /* libtbb.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 276E87F51DEA02930075E393 /* libtbb.dylib */; };
@@ -31,6 +33,10 @@
 /* Begin PBXFileReference section */
 		27009F4C1E043526004F39DF /* libMagick++-6.Q16.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libMagick++-6.Q16.dylib"; path = "../../../../../../../../../../usr/local/lib/libMagick++-6.Q16.dylib"; sourceTree = "<group>"; };
 		27009F4E1E04352E004F39DF /* libMagick++-6.Q16.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libMagick++-6.Q16.dylib"; path = "../../../../../../../../../../usr/local/lib/libMagick++-6.Q16.dylib"; sourceTree = "<group>"; };
+		27009F531E05597E004F39DF /* utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cpp; path = ../src/utils.cpp; sourceTree = "<group>"; };
+		27009F561E055998004F39DF /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
+		27009F5A1E0561A4004F39DF /* flow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = flow.cpp; path = ../src/flow.cpp; sourceTree = "<group>"; };
+		27009F5C1E0561B0004F39DF /* flow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = flow.h; path = ../src/flow.h; sourceTree = "<group>"; };
 		276E87F21DEA02120075E393 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../src/main.cpp; sourceTree = "<group>"; };
 		276E87F51DEA02930075E393 /* libtbb.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbb.dylib; path = ../../../../../../../../../../usr/local/lib/libtbb.dylib; sourceTree = "<group>"; };
 		8DD76F6C0486A84900D96B5E /* parallel_preorder */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = parallel_preorder; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -64,6 +70,10 @@
 			isa = PBXGroup;
 			children = (
 				276E87F21DEA02120075E393 /* main.cpp */,
+				27009F531E05597E004F39DF /* utils.cpp */,
+				27009F561E055998004F39DF /* utils.h */,
+				27009F5A1E0561A4004F39DF /* flow.cpp */,
+				27009F5C1E0561B0004F39DF /* flow.h */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -136,6 +146,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				276E87F31DEA02120075E393 /* main.cpp in Sources */,
+				27009F551E05597E004F39DF /* utils.cpp in Sources */,
+				27009F5B1E0561A4004F39DF /* flow.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
