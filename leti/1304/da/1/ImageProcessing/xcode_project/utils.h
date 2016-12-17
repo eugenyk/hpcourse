@@ -10,6 +10,7 @@
 #define utils_h
 #include <vector>
 #include <string>
+#include "ImageMagick-6/Magick++.h"
 using namespace std;
 
 typedef unsigned int BrightnessType;
@@ -41,6 +42,8 @@ struct Output {
 class Utils {
 public:
     static ConsoleInput parseArgs(int argc, const char * argv[]);
+    
+    static BrightnessType brightnessOfPixelColor(const Magick::Color& color);
 };
 
 #endif /* utils_h */
