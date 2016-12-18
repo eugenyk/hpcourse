@@ -10,6 +10,6 @@
 #define flow_h
 #include "utils.h"
 
-Output startFlow(ConsoleInput input);
+void startFlow(CommandLineInput input);
 
 #endif /* flow_h */

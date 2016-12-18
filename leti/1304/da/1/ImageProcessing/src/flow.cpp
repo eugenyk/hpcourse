@@ -22,13 +22,16 @@ using namespace Magick;
 typedef const function <void (BrightnessType&, BrightnessType&, PixelType pixel, PixelsType&)> BrightnessOperation;
 typedef const function <void (BrightnessType&, BrightnessType&, PixelsType&, PixelsType&)> ReduceOperation;
 class BrightnessNode {
+protected:
+    CommandLineInput& args;
 public:
     PixelsType pixels;
     BrightnessType &result;
     BrightnessOperation& brightnessOperation;
     ReduceOperation& reduceOperation;
-    BrightnessNode(BrightnessType &result, BrightnessOperation &operation, ReduceOperation& reduceOperation):
-                                    result(result), brightnessOperation(operation), reduceOperation(reduceOperation) { }
+    BrightnessNode(CommandLineInput& args, BrightnessType &result,
+                   BrightnessOperation &operation, ReduceOperation& reduceOperation):
+                        args(args), result(result), brightnessOperation(operation), reduceOperation(reduceOperation) { }
     
     PixelsType operator()(Image* im) {
         spin_mutex mutex;
@@ -55,6 +58,9 @@ public:
                 this->reduceOperation(localResult, this->result, localPixels, pixels);
             }
         });
+        
+        if (args.verbose)
+            cout<<"Pixels with brightness " << (int)result << " for image \"" << Utils::imageName(im) << "\""<<endl;
     
         return pixels;
     }
@@ -62,7 +68,12 @@ public:
 
 typedef tuple<Image*, PixelsType,PixelsType,PixelsType> HighlightInputType;
 class HighlightNode {
+protected:
+    CommandLineInput& args;
 public:
+    
+    HighlightNode(CommandLineInput& args) : args(args) {}
+    
     Image* operator()(HighlightInputType input) {
         int n = task_scheduler_init::default_num_threads();
         auto image = new Image(*get<0>(input));
@@ -70,33 +81,51 @@ public:
         PixelsType minBrightPixels = get<2>(input);
         PixelsType givenBrightPixels = get<3>(input);
         
+        
+        image->strokeWidth(2);
+        auto fillColor = Color("white");
+        fillColor.alpha(1.0);
+        image->fillColor(fillColor);
+        
+        image->strokeColor("red");
         parallel_for(blocked_range<size_t>(0, maxBrightPixels.size(), maxBrightPixels.size()/n), [&image, &maxBrightPixels](const blocked_range<size_t> &r) {
             for (size_t i = r.begin(); i != r.end(); ++i) {
-                Utils::highlightPixel(image, maxBrightPixels[i], "red");
+                Utils::highlightPixel(image, maxBrightPixels[i]);
             }
         });
         
+        image->strokeColor("green");
         parallel_for(blocked_range<size_t>(0, minBrightPixels.size(), minBrightPixels.size()/n), [&image, &minBrightPixels](const blocked_range<size_t> &r) {
             for (size_t i = r.begin(); i != r.end(); ++i) {
-                Utils::highlightPixel(image, minBrightPixels[i], "green");
+                Utils::highlightPixel(image, minBrightPixels[i]);
             }
         });
         
+        image->strokeColor("blue");
         parallel_for(blocked_range<size_t>(0, givenBrightPixels.size(), givenBrightPixels.size()/n), [&image, &givenBrightPixels](const blocked_range<size_t> &r) {
             for (size_t i = r.begin(); i != r.end(); ++i) {
-                Utils::highlightPixel(image, givenBrightPixels[i], "blue");
+                Utils::highlightPixel(image, givenBrightPixels[i]);
             }
         });
         
-        image->write("/Volumes/FlashDrive/Projects/hpcourse/leti/1304/da/1/ImageProcessing/src/5.jpg");
+        auto fileName = "highlight_" + Utils::imageName(image);
+        image->write(args.output + fileName);
         delete image;
+        
+        if (args.verbose)
+            cout<<"Image " << fileName << " has been written to output dir" <<endl;
+        
         
         return get<0>(input);
     }
 };
 
 class InverseBrightnessNode {
+protected:
+    CommandLineInput& args;
 public:
+    InverseBrightnessNode(CommandLineInput& args): args(args) {}
+    
     Image* operator()(Image *im) {
         
         // TODO: Default imp "im->negate();"
@@ -116,15 +145,23 @@ public:
         });
         
         view.sync();
-        im->write("/Volumes/FlashDrive/Projects/hpcourse/leti/1304/da/1/ImageProcessing/src/6.jpg");
+        auto fileName = "inverse_" + Utils::imageName(im);
+        im->write(args.output + fileName);
+        
+        if (args.verbose)
+            cout<<"Image " << fileName << " has been written to output dir" <<endl;
         
         return im;
     }
 };
 
 class AverageBrightnessNode {
+protected:
+    CommandLineInput& args;
 public:
-    BrightnessType operator()(Image *im) {
+    AverageBrightnessNode(CommandLineInput& args): args(args) {}
+    
+    Image* operator()(Image *im) {
         int n = task_scheduler_init::default_num_threads();
         int rows = im->rows();
         int columns = im->columns();
@@ -146,12 +183,17 @@ public:
             }
         });
         
-        return result;
+        if (args.verbose)
+            cout<<"Average brightness of \"" << Utils::imageName(im) << "\" = "<< (int)result <<endl;
+        
+        return im;
     }
 };
 
-Output startFlow(ConsoleInput input) {
+void startFlow(CommandLineInput input) {
     
+    if (input.verbose)
+        cout<<"Start"<<endl;
     graph g;
     auto sourceIter = input.images.begin();
     
@@ -159,26 +201,28 @@ Output startFlow(ConsoleInput input) {
     BrightnessType minBright = 255;
     
     source_node<Image*> readNode( g, [&]( Image* &v ) -> bool {
-        if (sourceIter != input.images.end()) {
+        while (sourceIter != input.images.end()) {
             try {
                 auto image = new Image();
-                image->read(*sourceIter);
+                auto fileName = *sourceIter;
+                image->read(fileName);
                 v = image;
-                cout<<image->rows()<<endl;
+                sourceIter++;
+                
+                if (input.verbose)
+                    cout<<"Image " + Utils::imageName(image) + " has been read from input dir" <<endl;
+                
+                return true;
             } catch (Exception &e)  {
-                cout<<&e<<endl;
+                sourceIter++;
             }
-            sourceIter++;
-            
-            return true;
-        } else {
-            return false;
         }
+        return false;
     });
     
     limiter_node<Image*> l(g, 1);
     
-    auto maxBrigNode = BrightnessNode(maxBright,
+    auto maxBrigNode = BrightnessNode(input, maxBright,
                                      [](BrightnessType& l, BrightnessType& r, PixelType p, PixelsType& ps) {
                                          if (l > r) { r = l; ps.clear(); ps.push_back(p); }
                                          else if (l == r) { ps.push_back(p); }
@@ -187,7 +231,7 @@ Output startFlow(ConsoleInput input) {
                                          if (l > r) { r = l; r_p.clear(); r_p.insert(end(r_p), begin(l_p), end(l_p)); }
                                          else if (l == r) { r_p.insert(end(r_p), begin(l_p), end(l_p)); }
                                      });
-    auto minBrigNode = BrightnessNode(minBright,
+    auto minBrigNode = BrightnessNode(input, minBright,
                                       [](BrightnessType& l, BrightnessType& r, PixelType p, PixelsType& ps) {
                                           if (l < r) { r = l; ps.clear(); ps.push_back(p); }
                                           else if (l == r) { ps.push_back(p); }
@@ -197,7 +241,7 @@ Output startFlow(ConsoleInput input) {
                                           else if (l == r) { r_p.insert(end(r_p), begin(l_p), end(l_p)); }
                                       });
     
-    auto brigByGivenNode = BrightnessNode(input.inputBrightness,
+    auto brigByGivenNode = BrightnessNode(input, input.inputBrightness,
                                           [](BrightnessType& l, BrightnessType& r, PixelType p, PixelsType& ps) {
                                               if (l == r) { ps.push_back(p); }
                                           },
@@ -207,9 +251,12 @@ Output startFlow(ConsoleInput input) {
     function_node<Image*, PixelsType> maxBrightnessNode( g, 1, maxBrigNode);
     function_node<Image*, PixelsType> minBrightnessNode( g, 1, minBrigNode);
     function_node<Image*, PixelsType> givenBrightnessNode( g, 1, brigByGivenNode);
-    function_node<HighlightInputType, Image*> highlightNode( g, 1, HighlightNode());
-    function_node<Image*, Image*> inverseNode( g, 1, InverseBrightnessNode());
-    function_node<Image*, BrightnessType> averageNode( g, 1, AverageBrightnessNode());
+    function_node<HighlightInputType, Image*> highlightNode( g, 1, HighlightNode(input));
+    function_node<Image*, Image*> inverseNode( g, 1, InverseBrightnessNode(input));
+    function_node<Image*, Image*> averageNode( g, 1, AverageBrightnessNode(input));
+    function_node<tuple<Image*,Image*>, continue_msg> garbageCollectorNode( g, 1, [](tuple<Image*,Image*> im){ delete get<0>(im); });
+    join_node<tuple<Image*, Image*>> joinNode( g);
+    
     broadcast_node<Image*> broabcastImage( g );
     join_node<HighlightInputType> j(g);
     
@@ -225,13 +272,14 @@ Output startFlow(ConsoleInput input) {
     make_edge(highlightNode, broabcastImage);
     make_edge(broabcastImage, inverseNode);
     make_edge(broabcastImage, averageNode);
-//    make_edge(highlightNode, l.decrement);
+    make_edge(inverseNode, input_port<0>(joinNode));
+    make_edge(averageNode, input_port<1>(joinNode));
+    make_edge(joinNode, garbageCollectorNode);
+    make_edge(garbageCollectorNode, l.decrement);
     
     readNode.activate();
+    
     g.wait_for_all();
-    cout<<"wait stopped"<<endl;
-    
-    cout << maxBrigNode.result << " " << minBrigNode.result << " " << brigByGivenNode.result <<endl;
-    
-    return Output();
+    if (input.verbose)
+        cout<<"Finish"<<endl;
 }

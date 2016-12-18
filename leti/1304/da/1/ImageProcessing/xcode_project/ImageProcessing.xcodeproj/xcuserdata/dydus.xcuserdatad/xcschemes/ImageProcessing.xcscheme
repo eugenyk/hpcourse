@@ -61,6 +61,24 @@
             ReferencedContainer = "container:ImageProcessing.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "--input &quot;/Volumes/FlashDrive/Projects/hpcourse/leti/1304/da/1/ImageProcessing/rsc/&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--verbose"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--brightness 100"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--output &quot;/Volumes/FlashDrive/Projects/hpcourse/leti/1304/da/1/ImageProcessing/output/&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>

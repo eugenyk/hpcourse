@@ -17,39 +17,32 @@ typedef uint8_t BrightnessType;
 typedef tuple<int, int> PixelType;
 typedef vector<PixelType> PixelsType;
 
-struct ConsoleInput {
+struct CommandLineInput {
     // Mandatory fields
     vector<string> images;
     BrightnessType inputBrightness;
-    
-    // Optional fields
     string output;
     
-    ConsoleInput();
-    ConsoleInput(vector<string> images, BrightnessType inputBrightness, string output);
-};
-
-struct Output {
-    BrightnessType maxBrightness;
-    //vector<> maxBrightnessPixels;
+    // Optional fields
+    bool verbose;
     
-    BrightnessType minBrightness;
-    //vector<> minBrightnessPixels;
-    
-    //vector<> PixelsWithGivenBrightness;
-    
-    Output();
+    CommandLineInput();
+    CommandLineInput(vector<string> images, BrightnessType inputBrightness, string output);
 };
 
 class Utils {
 public:
-    static ConsoleInput parseArgs(int argc, const char * argv[]);
+    static vector<string> readDirectory(const string&) throw(string);
+    
+    static CommandLineInput parseArgs(int argc, const char * argv[]) throw(string);
     
     static BrightnessType brightnessOfPixelColor(const Magick::Color& color);
     
-    static void highlightPixel(Magick::Image*, PixelType, Magick::Color);
+    static void highlightPixel(Magick::Image*, PixelType);
     
     static void inverseBrightnessOfPixel(Magick::PixelPacket*, int);
+    
+    static string imageName(Magick::Image*);
 };
 
 #endif /* utils_h */

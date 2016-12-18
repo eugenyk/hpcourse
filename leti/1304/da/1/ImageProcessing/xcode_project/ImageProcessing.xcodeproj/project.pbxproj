@@ -34,11 +34,12 @@
 		27009F4C1E043526004F39DF /* libMagick++-6.Q16.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libMagick++-6.Q16.dylib"; path = "../../../../../../../../../../usr/local/lib/libMagick++-6.Q16.dylib"; sourceTree = "<group>"; };
 		27009F4E1E04352E004F39DF /* libMagick++-6.Q16.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libMagick++-6.Q16.dylib"; path = "../../../../../../../../../../usr/local/lib/libMagick++-6.Q16.dylib"; sourceTree = "<group>"; };
 		27009F531E05597E004F39DF /* utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cpp; path = ../src/utils.cpp; sourceTree = "<group>"; };
-		27009F561E055998004F39DF /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		27009F5A1E0561A4004F39DF /* flow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = flow.cpp; path = ../src/flow.cpp; sourceTree = "<group>"; };
 		27009F5C1E0561B0004F39DF /* flow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = flow.h; path = ../src/flow.h; sourceTree = "<group>"; };
 		276E87F21DEA02120075E393 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../src/main.cpp; sourceTree = "<group>"; };
 		276E87F51DEA02930075E393 /* libtbb.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbb.dylib; path = ../../../../../../../../../../usr/local/lib/libtbb.dylib; sourceTree = "<group>"; };
+		27873E931E06B0CB007CF8D8 /* commandline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = commandline.h; path = ../src/commandline.h; sourceTree = "<group>"; };
+		27873E941E06B0CB007CF8D8 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../src/utils.h; sourceTree = "<group>"; };
 		8DD76F6C0486A84900D96B5E /* parallel_preorder */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = parallel_preorder; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -69,11 +70,12 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				276E87F21DEA02120075E393 /* main.cpp */,
+				27873E931E06B0CB007CF8D8 /* commandline.h */,
 				27009F531E05597E004F39DF /* utils.cpp */,
-				27009F561E055998004F39DF /* utils.h */,
+				27873E941E06B0CB007CF8D8 /* utils.h */,
 				27009F5A1E0561A4004F39DF /* flow.cpp */,
 				27009F5C1E0561B0004F39DF /* flow.h */,
+				276E87F21DEA02120075E393 /* main.cpp */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -172,6 +174,7 @@
 					/usr/local/lib,
 				);
 				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
 				ZERO_LINK = NO;
 			};
 			name = Debug;
@@ -192,6 +195,7 @@
 					/usr/local/lib,
 				);
 				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -244,6 +248,7 @@
 					/usr/local/lib,
 				);
 				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
 				ZERO_LINK = NO;
 			};
 			name = Debug64;
@@ -264,6 +269,7 @@
 					/usr/local/lib,
 				);
 				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
 				ZERO_LINK = NO;
 			};
 			name = Release64;

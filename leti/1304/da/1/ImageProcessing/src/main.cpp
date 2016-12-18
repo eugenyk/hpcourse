@@ -11,8 +11,11 @@
 using namespace std;
 
 int main(int argc, const char * argv[]) {
-    cout<<"Start"<<endl;
-    startFlow(Utils::parseArgs(argc, argv));
-    cout<<"Finish"<<endl;
+    try {
+        auto input = Utils::parseArgs(argc, argv);
+        startFlow(input);
+    } catch (string ex) {
+        cerr<<ex<<endl;
+    }
     return 0;
 }
