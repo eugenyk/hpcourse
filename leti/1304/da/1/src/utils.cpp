@@ -25,10 +25,6 @@ CommandLineInput::CommandLineInput(vector<string> images, BrightnessType inputBr
     this->output = output;
 }
 
-/**
- * Read a directory listing into a vector of strings, filtered by file extension.
- * Throws std::exception on error.
- **/
 vector<string> Utils::readDirectory(const string &directoryLocation) throw(string)
 {
     vector<string> result;
