@@ -17,6 +17,9 @@ typedef uint8_t BrightnessType;
 typedef tuple<int, int> PixelType;
 typedef vector<PixelType> PixelsType;
 
+/**
+ CLI model with given arguments.
+ */
 struct CommandLineInput {
     // Mandatory fields
     vector<string> images;
@@ -30,6 +33,9 @@ struct CommandLineInput {
     CommandLineInput(vector<string> images, BrightnessType inputBrightness, string output);
 };
 
+/**
+ Contains list of helpful common methods.
+ */
 class Utils {
 public:
     static vector<string> readDirectory(const string&) throw(string);

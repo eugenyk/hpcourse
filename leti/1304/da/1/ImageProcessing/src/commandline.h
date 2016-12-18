@@ -14,6 +14,11 @@
 #include <iostream>
 using namespace std;
 
+/**
+ CommandLineParser allows to define list of expected and optional parameters of CLI.
+ It validates by given parameters and returns template argument as output object.
+ Can throw a stringified error if validation fails.
+ */
 template<typename T>
 class CommandLineParser {
 protected:
@@ -25,8 +30,15 @@ protected:
     
 public:
     
+    /**
+     Add a mandatory field with value to stored list. Return self.
+     Parameters:
+        @key - CLI key, for example --input.
+        @parsing - a closure to parse expected value by given CLI arg. Can throw an error if parsing fails.
+        @binding - use to bind a parsed argument to your CLI model.
+     */
     template<typename R>
-    CommandLineParser<T>& mandatory(string key, R(*parsing)(string)  throw(string) , void(*binding)(T&, const R&) ) {
+    CommandLineParser<T>& mandatory(string key, R(*parsing)(string) throw(string), void(*binding)(T&, const R&) ) {
         
         this->mandatoryRules[key] = [parsing, binding](T& r, string value) throw(string) {
             auto parsed = parsing(value);
@@ -36,6 +48,13 @@ public:
         return *this;
     }
     
+    /**
+     Add an optional field if needed. Return self.
+     Parameters:
+        @key - CLI key, for example --input.
+        @parsing - a closure to parse expected value by given CLI arg. Can throw an error if parsing fails.
+        @binding - use to bind a parsed argument to your CLI model.
+     */
     template<typename R>
     CommandLineParser<T>& optional(string key, R(*parsing)(string v) throw(string), void(*binding)(T&, R)) {
         
@@ -46,19 +65,35 @@ public:
         return *this;
     }
 
-    
+    /**
+     Add a mandatory flag to stored list. Return self.
+     Parameters:
+        @key - CLI key, for example --verbose.
+        @binding - use to bind a parsed argument to your CLI model.
+     */
     CommandLineParser<T>& mandatoryFlag(string key, void(*binding)(T&)) {
         this->mandatoryFlagRules[key] = binding;
     
         return *this;
     }
-
+    
+    /**
+     Add an optional flag to stored list. Return self.
+     Parameters:
+        @key - CLI key, for example --verbose.
+        @binding - use to bind a parsed argument to your CLI model.
+     */
     CommandLineParser<T>& optionalFlag(string key, void(*binding)(T&)) {
         this->optionalFlagRules[key] = binding;
         
         return *this;
     }
     
+    /**
+     Check and parse CLI arguments.
+     Bind all parameters to defined CLI model.
+     Return CLI model if parsind/binding finishes successfully. Throw an error if it fails.
+     */
     T validate(int argc, const char * argv[]) throw(string) {
         auto result = T();
 

@@ -78,7 +78,7 @@ BrightnessType Utils::brightnessOfPixelColor(const Color& color) {
 }
 
 void Utils::highlightPixel(Image* image, PixelType p) {
-    auto edge = 10 / 2;
+    auto edge = 6 / 2;
     auto upX = get<0>(p)-edge;
     auto upY = get<1>(p)-edge;
     auto downX = get<0>(p)+edge;

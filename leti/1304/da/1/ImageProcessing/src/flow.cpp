@@ -21,6 +21,10 @@ using namespace Magick;
 
 typedef const function <void (BrightnessType&, BrightnessType&, PixelType pixel, PixelsType&)> BrightnessOperation;
 typedef const function <void (BrightnessType&, BrightnessType&, PixelsType&, PixelsType&)> ReduceOperation;
+/**
+ Base node to calculate brightness of image.
+ Takes compare and reduce operators and find list of pixels with found value.
+ */
 class BrightnessNode {
 protected:
     CommandLineInput& args;
@@ -67,6 +71,10 @@ public:
 };
 
 typedef tuple<Image*, PixelsType,PixelsType,PixelsType> HighlightInputType;
+/**
+ Allows to draw rectangles on a given image.
+ red rect for pixel with maximum brightness; green - with minimum brightness; blue - according to given value from command line.
+ */
 class HighlightNode {
 protected:
     CommandLineInput& args;
@@ -120,6 +128,9 @@ public:
     }
 };
 
+/**
+ Inverses colors/brightness of pixels and write to output dir.
+ */
 class InverseBrightnessNode {
 protected:
     CommandLineInput& args;
@@ -155,6 +166,9 @@ public:
     }
 };
 
+/**
+ Allows to find average value of brightness and print it if verbose mode.
+ */
 class AverageBrightnessNode {
 protected:
     CommandLineInput& args;
