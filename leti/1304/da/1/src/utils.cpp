@@ -17,12 +17,7 @@ CommandLineInput::CommandLineInput() {
     this->inputBrightness = 0;
     this->output = "";
     this->verbose = false;
-}
-
-CommandLineInput::CommandLineInput(vector<string> images, BrightnessType inputBrightness, string output) {
-    this->images = images;
-    this->inputBrightness = inputBrightness;
-    this->output = output;
+    this->limit = 1;
 }
 
 vector<string> Utils::readDirectory(const string &directoryLocation) throw(string)
@@ -59,6 +54,11 @@ CommandLineInput Utils::parseArgs(int argc, const char * argv[]) throw(string) {
                            if (r>255||r<0) throw string("--brightness should be [0; 255]"); return r;
                        },
                        [](auto i, auto r){ i.inputBrightness = r; })
+        .optional<int>("--limit",
+                       [](auto value) throw(string) { auto r = stoi(value);
+                           if (r<=0) throw string("--limit should be positive"); return r;
+                       },
+                       [](auto i, auto r){ i.limit = r; })
         .mandatory<vector<string>>("--input",
                            [](auto value) throw(string) { return Utils::readDirectory(value); },
                            [](auto i, auto r){ i.images = r; })

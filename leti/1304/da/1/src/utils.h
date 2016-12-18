@@ -25,12 +25,12 @@ struct CommandLineInput {
     vector<string> images;
     BrightnessType inputBrightness;
     string output;
+    int limit;
     
     // Optional fields
     bool verbose;
     
     CommandLineInput();
-    CommandLineInput(vector<string> images, BrightnessType inputBrightness, string output);
 };
 
 /**

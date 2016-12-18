@@ -234,7 +234,7 @@ void startFlow(CommandLineInput input) {
         return false;
     });
     
-    limiter_node<Image*> l(g, 1);
+    limiter_node<Image*> l(g, input.limit);
     
     auto maxBrigNode = BrightnessNode(input, maxBright,
                                      [](BrightnessType& l, BrightnessType& r, PixelType p, PixelsType& ps) {
