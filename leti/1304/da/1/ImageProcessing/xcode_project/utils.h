@@ -13,7 +13,9 @@
 #include "ImageMagick-6/Magick++.h"
 using namespace std;
 
-typedef unsigned int BrightnessType;
+typedef uint8_t BrightnessType;
+typedef tuple<int, int> PixelType;
+typedef vector<PixelType> PixelsType;
 
 struct ConsoleInput {
     // Mandatory fields
@@ -44,6 +46,10 @@ public:
     static ConsoleInput parseArgs(int argc, const char * argv[]);
     
     static BrightnessType brightnessOfPixelColor(const Magick::Color& color);
+    
+    static void highlightPixel(Magick::Image*, PixelType, Magick::Color);
+    
+    static void inverseBrightnessOfPixel(Magick::PixelPacket*, int);
 };
 
 #endif /* utils_h */

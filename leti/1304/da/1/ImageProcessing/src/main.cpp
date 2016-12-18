@@ -10,7 +10,6 @@
 #include "flow.h"
 using namespace std;
 
-
 int main(int argc, const char * argv[]) {
     cout<<"Start"<<endl;
     startFlow(Utils::parseArgs(argc, argv));
