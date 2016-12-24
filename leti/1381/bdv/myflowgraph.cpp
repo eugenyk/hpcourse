@@ -200,16 +200,22 @@ image MyFlowGraph::extend_br(selected_pixels pixs)
 double MyFlowGraph::inverse_and_avgbr(image img)
 {
     double avg_br = 0;
+    double* buffer = new double[img.height];
     tbb::parallel_for(size_t(0), size_t(img.height), size_t(1),
-        [&avg_br, &img](size_t i) {
+        [buffer, &img](size_t i) {
+            buffer[i] = 0;
             for(int j = 0; j < img.width; j++)
             {
                 uchar value = img.data[i*img.width + j];
                 img.data[i*img.width + j] = 255 - value;
-                avg_br += value;
+                buffer[i] += value;
             }
+            buffer[i] /= img.width;
     });
-    return avg_br / (img.height*img.width);
+    for(int i = 0; i < img.height; i++)
+        avg_br += buffer[i];
+    delete[] buffer;
+    return avg_br / img.height;
 }
 
 void MyFlowGraph::write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node)
