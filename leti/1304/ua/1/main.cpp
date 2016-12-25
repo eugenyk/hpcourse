@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <fstream>
 #include <chrono>
+#include <memory>
+#include <algorithm>
 #include "tbb/task_group.h"
 #include "tbb/flow_graph.h"
 
@@ -44,7 +46,7 @@ CommandLineArguments parseCommandLineArguments(int argc, const char** argv) {
         std::terminate();
     }
 
-    return {searchedValue, parallelism, matrixCount, logFilePath};
+    return CommandLineArguments{searchedValue, parallelism, matrixCount, logFilePath};
 }
 
 class Matrix {
