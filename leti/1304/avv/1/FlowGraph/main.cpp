@@ -1,8 +1,3 @@
-/*#include "ImageProcessor.h"
-#include "DummyImageInputStream.h"
-#include "Image.h"
-#include "Parameters.h"
-#include "ParmParser.h"*/
 #include "Arguments.h"
 #include "Image.h"
 #include "tbb/task_group.h"
