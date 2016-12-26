@@ -67,6 +67,9 @@ int main(int argc, char * argv[])
     // Limiter node
     tbb::flow::limiter_node< Image * > inputLimiter(g, imageLimit);
 
+    // Broadcaster node
+    tbb::flow::broadcast_node< Image * > inputBroadcaster(g);
+
     // Step 1 nodes
     tbb::flow::function_node< Image * , PointsWithImage > maxBrightnessNode(g, tbb::flow::unlimited, MaxBrightness());
     tbb::flow::function_node< Image * , PointsWithImage > minBrightnessNode(g, tbb::flow::unlimited, MinBrightness());
@@ -76,6 +79,7 @@ int main(int argc, char * argv[])
     tbb::flow::join_node< MinMaxFixedResults, tbb::flow::key_matching< Image* > >
     minMaxFixedJoinNode(g, JoinKeyMatcher(), JoinKeyMatcher(), JoinKeyMatcher());
     tbb::flow::function_node< MinMaxFixedResults, Image * > pointHighlighterNode(g, tbb::flow::unlimited, PointHighlighter());
+    tbb::flow::broadcast_node< Image * > highlitedBroadcaster(g);
 
     // Step 3 nodes
     tbb::flow::function_node< Image * , ImageWithInverted> brightnessInverterNode(g, tbb::flow::unlimited, BrightnessInverter());
@@ -91,11 +95,12 @@ int main(int argc, char * argv[])
 
     // Limiting input flow
     tbb::flow::make_edge(generatorNode, inputLimiter);
+    tbb::flow::make_edge(inputLimiter, inputBroadcaster);
 
     // Broadcasting images to 3 nodes
-    tbb::flow::make_edge(inputLimiter, maxBrightnessNode );
-    tbb::flow::make_edge(inputLimiter, minBrightnessNode );
-    tbb::flow::make_edge(inputLimiter, fixedBrightnessNode );
+    tbb::flow::make_edge(inputBroadcaster, maxBrightnessNode );
+    tbb::flow::make_edge(inputBroadcaster, minBrightnessNode );
+    tbb::flow::make_edge(inputBroadcaster, fixedBrightnessNode );
 
     // Joining results
     tbb::flow::make_edge(maxBrightnessNode, tbb::flow::input_port<0>(minMaxFixedJoinNode));
@@ -104,10 +109,11 @@ int main(int argc, char * argv[])
 
     // Passing joined results to highlighter
     tbb::flow::make_edge(minMaxFixedJoinNode, pointHighlighterNode);
+    tbb::flow::make_edge(pointHighlighterNode, highlitedBroadcaster);
 
     // Broadcasting modified images
-    tbb::flow::make_edge(pointHighlighterNode, brightnessInverterNode);
-    tbb::flow::make_edge(pointHighlighterNode, meanBrightnessNode);
+    tbb::flow::make_edge(highlitedBroadcaster, brightnessInverterNode);
+    tbb::flow::make_edge(highlitedBroadcaster, meanBrightnessNode);
 
     // Joining results
     tbb::flow::make_edge(meanBrightnessNode, tbb::flow::input_port<0>(meanAndInvertedJoinNode));
