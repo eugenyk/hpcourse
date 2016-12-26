@@ -30,28 +30,55 @@ void MyFlowGraph::run()
     tbb::flow::function_node<image, minmax>
             find_min_max(g, images_limit, [](image img)
     {
-        return find_minmax_value(img);
+        minmax res;
+        res.img = img;
+        res.minmax_ = find_minmax_value(img);
+        return res;
     });
-    int br_ = br;
-    tbb::flow::function_node<minmax, selected_pixels>
-            select_elements(g, images_limit, [br_](minmax val)
+    int bri = br;
+    tbb::flow::function_node<image, selected_pixels>
+            select_elements(g, images_limit, [bri](image img)
     {
-       return find_elements(val, br_);
+        selected_pixels res;
+        res.img = img;
+        res.pixels = find_elements(img, bri);
+        return res;
+    });
+    tbb::flow::function_node<minmax, selected_pixels>
+            select_min_elements(g, images_limit, [](minmax val)
+    {
+        selected_pixels res;
+        res.img = val.img;
+        uchar min = val.minmax_.first;
+        res.pixels = find_elements(res.img, min);
+        return res;
+    });
+    tbb::flow::function_node<minmax, selected_pixels>
+            select_max_elements(g, images_limit, [](minmax val)
+    {
+        selected_pixels res;
+        res.img = val.img;
+        uchar max = val.minmax_.second;
+        res.pixels = find_elements(res.img, max);
+        return res;
     });
     tbb::flow::function_node<selected_pixels, image>
             ext_min(g, images_limit, [](selected_pixels pixs)
     {
-        return extend_min(pixs);
+        extend_pixels(pixs.img, pixs.pixels);
+        return pixs.img;
     });
     tbb::flow::function_node<selected_pixels, image>
             ext_max(g, images_limit, [](selected_pixels pixs)
     {
-       return extend_max(pixs);
+        extend_pixels(pixs.img, pixs.pixels);
+        return pixs.img;
     });
     tbb::flow::function_node<selected_pixels, image>
             ext_br(g, images_limit, [](selected_pixels pixs)
     {
-       return extend_br(pixs);
+        extend_pixels(pixs.img, pixs.pixels);
+        return pixs.img;
     });
     tbb::flow::join_node<std::tuple<image, image, image>, tbb::flow::queueing >
             join(g);
@@ -66,9 +93,11 @@ void MyFlowGraph::run()
     tbb::flow::buffer_node<img_avgbr> avg_br(g);
 
     tbb::flow::make_edge(input_img, find_min_max);
-    tbb::flow::make_edge(find_min_max, select_elements);
-    tbb::flow::make_edge(select_elements, ext_min);
-    tbb::flow::make_edge(select_elements, ext_max);
+    tbb::flow::make_edge(input_img, select_elements);
+    tbb::flow::make_edge(find_min_max, select_min_elements);
+    tbb::flow::make_edge(find_min_max, select_max_elements);
+    tbb::flow::make_edge(select_min_elements, ext_min);
+    tbb::flow::make_edge(select_max_elements, ext_max);
     tbb::flow::make_edge(select_elements, ext_br);
     tbb::flow::make_edge(ext_min, tbb::flow::input_port<0>(join));
     tbb::flow::make_edge(ext_max, tbb::flow::input_port<1>(join));
@@ -85,7 +114,7 @@ void MyFlowGraph::run()
         write_avgs_to_file(avg_br);
 }
 
-minmax MyFlowGraph::find_minmax_value(image img)
+std::pair<uchar, uchar> MyFlowGraph::find_minmax_value(image img)
 {
     uchar* min_buffer = new uchar[img.height];
     uchar* max_buffer = new uchar[img.height];
@@ -115,48 +144,39 @@ minmax MyFlowGraph::find_minmax_value(image img)
     }
     delete[] min_buffer;
     delete[] max_buffer;
-    minmax res;
-    res.minmax_.first = min;
-    res.minmax_.second = max;
-    res.img = img;
+    std::pair<uchar, uchar> res;
+    res.first = min;
+    res.second = max;
     return res;
 }
 
-selected_pixels MyFlowGraph::find_elements(minmax val, int br)
+tbb::concurrent_vector<pixel> MyFlowGraph::find_elements(image img, int value)
 {
-    selected_pixels result;
-    uchar min = val.minmax_.first;
-    uchar max = val.minmax_.second;
-
-    result.img = val.img;
-    tbb::parallel_for(size_t(0), size_t(result.img.height), size_t(1),
-        [min, max, br, &result](size_t i) {
+    tbb::concurrent_vector<pixel> result;
+    tbb::parallel_for(size_t(0), size_t(img.height), size_t(1),
+        [&img, value ,&result](size_t i) {
             pixel p;
             p.h_index = i;
-            uchar* arr = result.img.data + i*result.img.width;
-            for(int j = 0; j < result.img.width; j++)
+            uchar* arr = img.data + i*img.width;
+            for(int j = 0; j < img.width; j++)
             {
-                if(arr[j] == min)
+                if(arr[j] == value)
                 {
-                    p.value = min;
+                    p.value = value;
                     p.w_index = j;
-                    result.min.push_back(p);
-                }
-                if(arr[j] == max)
-                {
-                    p.value = max;
-                    p.w_index = j;
-                    result.max.push_back(p);
-                }
-                if(arr[j] == br)
-                {
-                    p.value = br;
-                    p.w_index = j;
-                    result.br.push_back(p);
+                    result.push_back(p);
                 }
             }
     });
     return result;
+}
+void MyFlowGraph::extend_pixels(image img, tbb::concurrent_vector<pixel> pixels)
+{
+    tbb::parallel_for(size_t(0), size_t(pixels.size()), size_t(1),
+                      [img, &pixels](size_t i)
+    {
+        extend_pix(img, pixels[i]);
+    });
 }
 
 void MyFlowGraph::extend_pix(image img, pixel p)
@@ -169,34 +189,6 @@ void MyFlowGraph::extend_pix(image img, pixel p)
                 pix_ptr[0] = p.value;
         }
 }
-
-image MyFlowGraph::extend_min(selected_pixels pixs)
-{
-    tbb::parallel_for(size_t(0), size_t(pixs.min.size()), size_t(1),
-        [&pixs](size_t i) {
-            extend_pix(pixs.img, pixs.min[i]);
-    });
-    return pixs.img;
-}
-
-image MyFlowGraph::extend_max(selected_pixels pixs)
-{
-    tbb::parallel_for(size_t(0), size_t(pixs.max.size()), size_t(1),
-        [&pixs](size_t i) {
-            extend_pix(pixs.img, pixs.max[i]);
-    });
-    return pixs.img;
-}
-
-image MyFlowGraph::extend_br(selected_pixels pixs)
-{
-    tbb::parallel_for(size_t(0), size_t(pixs.br.size()), size_t(1),
-        [&pixs](size_t i) {
-            extend_pix(pixs.img, pixs.br[i]);
-    });
-    return pixs.img;
-}
-
 double MyFlowGraph::inverse_and_avgbr(image img)
 {
     double avg_br = 0;

@@ -10,9 +10,7 @@ typedef tbb::flow::graph tbb_graph;
 
 struct selected_pixels
 {
-    tbb::concurrent_vector<pixel> min;
-    tbb::concurrent_vector<pixel> max;
-    tbb::concurrent_vector<pixel> br;
+    tbb::concurrent_vector<pixel> pixels;
     image img;
 };
 

@@ -14,11 +14,9 @@ private:
     bool logging;
     std::string log_file;
 
-    static minmax find_minmax_value(image img);
-    static selected_pixels find_elements(minmax val, int br);
-    static image extend_min(selected_pixels pixs);
-    static image extend_max(selected_pixels pixs);
-    static image extend_br(selected_pixels pixs);
+    static std::pair<uchar, uchar> find_minmax_value(image img);
+    static tbb::concurrent_vector<pixel> find_elements(image img, int value);
+    static void extend_pixels(image img, tbb::concurrent_vector<pixel> pixels);
     static void extend_pix(image img, pixel p);
     static double inverse_and_avgbr(image img);
     void write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node);
