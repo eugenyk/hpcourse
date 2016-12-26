@@ -9,9 +9,6 @@ Arguments::Arguments(int bright, int countParaleImg, std::string LogFileName, in
 	this->LogFileName = LogFileName;
 	this->countImg = countImg;
 
-	//reqImageCount = reqBrightness = -1;
-	//parallelLimit = 1;
-	//good = false;
 }
 
 Arguments::Arguments()

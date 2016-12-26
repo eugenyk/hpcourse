@@ -18,15 +18,7 @@ Image::Image(const int size)
 
 void  Image::highliting(int index)
 {
-	/*for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; j++)
-		{
-			std::cout << img[getI(i, j)] << " ";
-		}
-		std::cout << std::endl;
-	}
-	std::cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"<<std::endl;*/
+	
 	img[index] = 0;
 	if(index+size<=size*size) img[index + size] = 0;
 	if (index  > size) img[index - size] = 0;
@@ -36,15 +28,7 @@ void  Image::highliting(int index)
 	if ((index + size <= size*size) && (index%size != 1)) img[index + size - 1] = 0;
 	if ((index  > size) && (index%size != 0)) img[index -size + 1] = 0;
 	if ((index  > size) && (index%size != 1)) img[index - size - 1] = 0;
-	/*for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; j++)
-		{
-			std::cout << img[getI(i, j)] << " ";
-		}
-		std::cout << std::endl;
-	}
-	std::cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD" << std::endl;*/
+	
 }
 int Image::getV(int i, int j)
 {
