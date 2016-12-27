@@ -35,6 +35,6 @@ private:
 	unsigned wight;
 	unsigned size;
 
-	static const auto M_size = 5;
-	static const auto N_size = 5;
+	static const auto M_size = 1000;
+	static const auto N_size = 1000;
 };

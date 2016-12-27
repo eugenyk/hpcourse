@@ -19,30 +19,25 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 	Arg_parser parser(argc, argv);
-	cout << (int)parser.get_brightness();
-	int result = 0;
-	byte bright_val = 100;
-	int image_limit = 5;
 	srand(time(NULL));
 	graph g;
-	ofstream out_file("output.txt");
-	
-	auto source = [&](Image& result)
+		
+	auto source = [&parser](Image& result)
 	{
 		static int counter = 0;
-		if (counter >= 10)return false;
+		if (counter >= parser.get_number_image())return false;
 		result = Image();
 		++counter;
 		return true;
 	};
 	source_node<Image> input(g, source);
-	limiter_node<Image> limit_node(g, image_limit);
+	limiter_node<Image> limit_node(g, parser.get_image_limit());
 	broadcast_node<Image> broad_node(g);
 	auto find_max_pixel = [](const Image& input){return input.max_pixel();};
 	function_node<Image, Pixels> f_find_max(g, unlimited, find_max_pixel);
 	auto find_min_pixel = [](const Image& input){return input.min_pixel();};
 	function_node<Image, Pixels> f_find_min(g, unlimited, find_min_pixel);
-	auto find_equil_pixel = [&bright_val](const Image& input){return input.find_pixel(bright_val);};
+	auto find_equil_pixel = [&parser](const Image& input){return input.find_pixel(parser.get_brightness()); };
 	function_node<Image, Pixels> f_find_equil(g, unlimited, find_equil_pixel);
 	join_node<tuple<Image, Pixels, Pixels, Pixels>> join_vector(g);
 	auto distinguish_pixels = [](tuple<Image, Pixels, Pixels, Pixels> in){
@@ -62,7 +57,8 @@ int main(int argc, char *argv[]) {
 	function_node<Image> f_invers_image(g, unlimited, inverse_image);
 	auto find_mean_brightness = [](const Image& input){	return input.mean_brightness();};
 	function_node<Image, double> f_find_mean(g, unlimited, find_mean_brightness);
-	auto file_output = [&out_file](double b){out_file << b << endl;	return continue_msg();};
+	ofstream out_file(parser.get_file_name());
+	auto file_output = [&out_file, &parser](double b){if (parser.get_file_name() != "") out_file << b << endl;return continue_msg(); };
 	function_node<double> f_file_output(g, serial, file_output);
 	join_node<tuple<continue_msg, continue_msg>> finish_join(g);
 	function_node<tuple<continue_msg, continue_msg>> finish_image(g, serial, [](tuple<continue_msg, continue_msg>){cout << "finish_image" << endl; });
