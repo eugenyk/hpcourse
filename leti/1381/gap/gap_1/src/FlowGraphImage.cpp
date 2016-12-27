@@ -5,111 +5,22 @@
 #include <tbb/flow_graph.h>
 #include "tbb/tbb.h"
 #include "tbb/blocked_range2d.h"
+#include "image.h"
 #include <windows.h>
 #include <iostream>
 #include <fstream>
+#include <time.h>
+
 using namespace tbb::flow;
 using namespace std;
 
-const unsigned M_size = 100;
-const unsigned N_size = 100;
-const unsigned Im_number = 5;
-struct Pixel
-{
-	Pixel(unsigned _x, unsigned _y){ x = _x; y = _y; }
-	unsigned x;
-	unsigned y;
 
-};
-typedef std::vector<Pixel> Pixels;
-class Image
-{
-public :
-	Image(unsigned m = M_size, unsigned n = N_size)
-	{
-		height = m;
-		wight = n;
-		size = n*m;
-		if (m == 0 || n == 0)
-			throw exception("Matrix constructor has 0 size");
-		matrix.reserve(m * n);
-		for (int i = 0; i < size; i++)
-			matrix.push_back(rand() % 256);
-	}
-	Image(const Image& im){
-		height  = im.height;
-		wight = im.wight; 
-		size = im.size;
-		matrix = im.matrix;
-	}
-	void inverse_image(){ return; }
-	double mean_brightness() const{
-		return 2;
-	}
-	void lead_point(Pixels p) const{ return; }
-	Pixels min_pixel() const
-	{
-		Pixels min_arr;
-		byte min = 255;
-		//tbb::parallel_for(0, size, 1, [=](int i, byte &min, std::vector<unsigned> &min_arr)
-		for (unsigned i = 0; i < size; i++)
-		{if (matrix[i] < min){
-			min_arr.clear();
-			min_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
-			min = matrix[i];
-		}
-		else if (matrix[i] == min)
-			min_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
-		}
-		
-		return min_arr;
-	}
-	Pixels max_pixel() const
-	{
-		Pixels max_arr;
-		byte max = 0;
-		//tbb::parallel_for(0, size, 1, [=](int i, byte &max, std::vector<unsigned> &max_arr)
-		for (int i = 0; i < size; i++)
-		{if (matrix[i] > max){
-			max_arr.clear();
-			max_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
-			max = matrix[i];
-		}
-		else if (matrix[i] == max)
-			max_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
-		}
-		return max_arr;
-	}
-	Pixels find_pixel(byte val) const
-	{
-		Pixels find;
-		for (int i = 0; i < size; i++)
-			if (matrix[i] == val) find.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
-		return find;
-	}
-	~Image()
-	{
-	}
-	byte Image::operator() (unsigned row, unsigned col) const
-	{
-		if (row >= height || col >= wight)
-			throw exception("const Matrix subscript out of bounds");
-		return matrix[wight*row + col];
-	}
-private:
-	Pixel get_pixel(unsigned i){ return Pixel((unsigned)(i % wight), (unsigned)(i / height)); }
-	vector<byte> matrix;
-	unsigned height;
-	unsigned wight;
-	unsigned size;
-	
-};
 
 int main(int argc, char *argv[]) {
 	int result = 0;
 	byte bright_val = 100;
 	int image_limit = 5;
-
+	srand(time(NULL));
 	graph g;
 
 	
@@ -134,8 +45,9 @@ int main(int argc, char *argv[]) {
 	auto source = [&](Image& result)
 		{
 		static int counter = 0;
-		if (counter >= Im_number)return false;
+		if (counter >= 5)return false;
 		result = Image();
+		result.print_image();
 		++counter;
 		return true;
 		};
