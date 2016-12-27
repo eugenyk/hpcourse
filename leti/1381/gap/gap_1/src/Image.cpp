@@ -73,12 +73,25 @@ unsigned char Image::operator() (unsigned row, unsigned col) const
 	return matrix[wight*row + col];
 }
 void Image::inverse_image(){ 
+	for (auto i = 0; i < size; i++)
+		matrix[i] = 255 - matrix[i];
 	return; 
 }
 double Image::mean_brightness() const{
-	return 2;
+	double mean = 0;
+	for (auto i = 0; i < size; i++)
+		mean += matrix[i];
+	mean = mean / size;
+	return mean;
 }
-void Image::lead_point(Pixels p) const{ 
+void Image::lead_point(Pixels p){ 
+	for (auto i = 0; i < p.size(); i++)
+	{
+		for (auto x = p[i].x - 1; x <= p[i].x; x++)
+		for (auto y = p[i].y - 1; y <= p[i].y; y++)
+		if ((x>0) && (x<wight) && (y > 0) && (y < height) && ((x != p[i].x) || (y != p[i].y)))
+			matrix[y*wight + x] = 255;
+	}
 	return; 
 }
 void Image::print_image() const{

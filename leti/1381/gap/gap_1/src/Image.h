@@ -22,7 +22,7 @@ public:
 
 	void inverse_image();
 	double mean_brightness() const;
-	void lead_point(Pixels p) const;
+	void lead_point(Pixels p);
 	Pixels min_pixel() const;
 	Pixels max_pixel() const;
 	Pixels find_pixel(unsigned char val) const;
