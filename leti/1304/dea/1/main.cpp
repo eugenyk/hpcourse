@@ -76,15 +76,14 @@ int main(int argc, const char** argv)
 
     tbb::flow::graph graph;
 
-    size_t taskId = -1;
-    tbb::flow::source_node<int> task_generate_node(graph, [&taskId, &settings](int&) mutable {
-        return ++taskId < settings.image_count;
+    int image_number = -1;
+    tbb::flow::source_node<std::shared_ptr<Image>> generate_image_node(graph, [&image_number, &settings](std::shared_ptr<Image>& image_ptr) mutable {
+        Image* image = new Image(settings.image_width, settings.image_height);
+        image->generateBrightness();
+        image_ptr = std::shared_ptr<Image>(image);
+        return ++image_number < settings.image_count;
     });
-    tbb::flow::limiter_node<int> limit_node(graph, settings.flow_limit);
-
-    tbb::flow::function_node<int, std::shared_ptr<Image>> generate_image_node(graph, tbb::flow::unlimited, [&settings](const int&) {
-        return std::shared_ptr<Image>(new Image(settings.image_width, settings.image_height));
-    });
+    tbb::flow::limiter_node<std::shared_ptr<Image>> limit_node(graph, settings.flow_limit);
 
     tbb::flow::broadcast_node<std::shared_ptr<Image>> broadcast_origin_image_node(graph);
 
@@ -200,9 +199,8 @@ int main(int argc, const char** argv)
 
     tbb::flow::function_node<std::shared_ptr<Image>> decrement_node(graph, tbb::flow::serial, [](std::shared_ptr<Image>) {});
 
-    tbb::flow::make_edge(task_generate_node, limit_node);
-    tbb::flow::make_edge(limit_node, generate_image_node);
-    tbb::flow::make_edge(generate_image_node, broadcast_origin_image_node);
+    tbb::flow::make_edge(generate_image_node, limit_node);
+    tbb::flow::make_edge(limit_node, broadcast_origin_image_node);
     tbb::flow::make_edge(broadcast_origin_image_node, find_min_brightness_node);
     tbb::flow::make_edge(broadcast_origin_image_node, find_max_brightness_node);
     tbb::flow::make_edge(broadcast_origin_image_node, find_certain_brightness_node);

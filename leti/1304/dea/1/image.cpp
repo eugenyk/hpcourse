@@ -5,11 +5,6 @@
 
 Image::Image(size_t w, size_t h) : _width(w), _height(h), _matrix(w * h, 0)
 {
-    generateBrightness();
-}
-
-Image::~Image()
-{
 }
 
 void Image::setBrightness(size_t row, size_t col, uint8_t value)

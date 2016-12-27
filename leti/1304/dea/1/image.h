@@ -8,7 +8,6 @@ class Image
 {
 public:
     Image(size_t w = 0, size_t h = 0);
-    ~Image();
     void setBrightness(size_t row, size_t col, uint8_t value);
     uint8_t getBrightness(size_t row, size_t col) const;
     size_t getWidth() const;
