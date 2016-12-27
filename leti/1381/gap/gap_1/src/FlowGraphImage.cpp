@@ -2,40 +2,14 @@
 //
 
 #include "stdafx.h"
-
 #include <tbb/flow_graph.h>
 #include "tbb/tbb.h"
 #include "tbb/blocked_range2d.h"
 #include <windows.h>
 #include <iostream>
+#include <fstream>
 using namespace tbb::flow;
 using namespace std;
-struct square {
-	int operator()(int v) {
-		printf("squaring %d\n", v);
-		Sleep(1000);
-		return v*v;
-	}
-};
-
-struct cube {
-	int operator()(int v) {
-		printf("cubing %d\n", v);
-		Sleep(1000);
-		return v*v*v;
-	}
-};
-
-class sum {
-	int &my_sum;
-public:
-	sum(int &s) : my_sum(s) {}
-	int operator()(std::tuple<int, int> v) {
-		printf("adding %d and %d to %d\n", std::get<0>(v), std::get<1>(v), my_sum);
-		my_sum += std::get<0>(v) +std::get<1>(v);
-		return my_sum;
-	}
-};
 
 const unsigned M_size = 100;
 const unsigned N_size = 100;
@@ -66,12 +40,12 @@ public :
 		height  = im.height;
 		wight = im.wight; 
 		size = im.size;
-		matrix.reserve(im.size);
-		for (int i = 0; i < size; i++)
-			matrix.push_back(im.matrix[i]);
+		matrix = im.matrix;
 	}
-	int get_height(){ return height; }
-	int get_wight(){ return wight; }
+	void inverse_image(){ return; }
+	double mean_brightness() const{
+		return 2;
+	}
 	void lead_point(Pixels p) const{ return; }
 	Pixels min_pixel() const
 	{
@@ -123,8 +97,6 @@ public :
 		return matrix[wight*row + col];
 	}
 private:
-	void set_height(unsigned m){ height = m; }
-	void set_wight(unsigned n){ wight = n; }
 	Pixel get_pixel(unsigned i){ return Pixel((unsigned)(i % wight), (unsigned)(i / height)); }
 	vector<byte> matrix;
 	unsigned height;
@@ -167,6 +139,34 @@ int main(int argc, char *argv[]) {
 		++counter;
 		return true;
 		};
+	auto distinguish_pixels = [](tuple<Image, Pixels, Pixels, Pixels> in){
+		auto im = tbb::flow::get<0>(in);
+		im.lead_point(tbb::flow::get<1>(in));
+		im.lead_point(tbb::flow::get<2>(in));
+		im.lead_point(tbb::flow::get<3>(in));
+		cout << "dist" << endl;
+		Sleep(1000);
+		return im;
+	};
+	auto inverse_image = [](const Image& input)
+	{
+		Image new_im(input);
+		new_im.inverse_image();
+		cout << "inverse" << endl;
+		Sleep(1000);
+		return new_im;
+	};
+	auto find_mean_brightness = [](const Image& input)
+	{
+		cout << "brightness" << endl;
+		return input.mean_brightness();
+	};
+	ofstream out_file("output.txt");
+	auto file_output = [&out_file](double b)
+	{
+		out_file << b << endl;
+		return continue_msg();
+	};
 
 	source_node<Image> input(g, source);
 	limiter_node<Image> limit_node(g, image_limit);
@@ -175,13 +175,10 @@ int main(int argc, char *argv[]) {
 	function_node<Image, Pixels> f_find_min(g, unlimited, find_min_pixel);
 	function_node<Image, Pixels> f_find_equil(g, unlimited, find_equil_pixel);
 	join_node<tuple<Image, Pixels, Pixels, Pixels>> join_node(g);
-	function_node<tuple<Image, Pixels, Pixels, Pixels>, Image> dist_pixel(g, unlimited, [](tuple<Image, Pixels, Pixels, Pixels> in){
-		auto im = tbb::flow::get<0>(in);
-		im.lead_point(tbb::flow::get<1>(in));
-		im.lead_point(tbb::flow::get<2>(in));
-		im.lead_point(tbb::flow::get<3>(in));
-		return im;
-	});
+	function_node<tuple<Image, Pixels, Pixels, Pixels>, Image> f_dist_pixel(g, unlimited, distinguish_pixels);
+	function_node<Image> f_invers_image(g, unlimited, inverse_image);
+	function_node<Image, double> f_find_mean(g, unlimited, find_mean_brightness);
+	function_node<double> f_file_output(g, unlimited, file_output);
 	make_edge(input, limit_node);
 	make_edge(limit_node, broad_node);
 	make_edge(broad_node, f_find_max);
@@ -191,11 +188,13 @@ int main(int argc, char *argv[]) {
 	make_edge(f_find_min, input_port<2>(join_node));
 	make_edge(f_find_equil, input_port<3>(join_node));
 	make_edge(broad_node, input_port<0>(join_node));
+	make_edge(join_node, f_dist_pixel);
+	make_edge(f_dist_pixel, f_invers_image);
+	make_edge(f_dist_pixel, f_find_mean);
+	make_edge(f_find_mean, f_file_output);
 	input.activate();
 	g.wait_for_all();
 
-	printf("Final result is");
-	int a;
-	cin >> a;
+
 	return 0;
 }
