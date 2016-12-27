@@ -1,0 +1,14 @@
+Parallel Programing: Laboratory work #1 - Flow Graph
+
+Usage:
+  kas_1 [options]
+
+Options:
+  -b <brightness>          = Find brightness [128]
+  -l <max_parallel_flow>   = Max of parallel flow [4]
+  -f <path_log_file>       = Path to log file with brightness [brightness.log]
+  -n <amount_images>       = Amount of images [10]
+  -h <height_images>       = Height of images [64]
+  -w <width_images>        = Width of images [64]
+  -d                       = Print debug information
+  --help                   = Help
