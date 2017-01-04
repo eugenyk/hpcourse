@@ -16,9 +16,6 @@ protected:
     void runTaskOnGraph(Image* image, FunctionBody functionBody,
                         OutputBody outputBody) {
         graph imageGraph;
-
-        broadcast_node<tuple<unsigned char*, unsigned int, unsigned int>> input(imageGraph);
-        buffer_node<tuple<unsigned char*, unsigned int, unsigned int>> imageBuffer(imageGraph);
         // Limit number of created working nodes.
         limiter_node<tuple<unsigned char*, unsigned int, unsigned int>> limiter(imageGraph,
                                                                                 ExtraInfo::THREADS_NUM);
@@ -30,8 +27,6 @@ protected:
         function_node<FunctionOutput, continue_msg> output(imageGraph, serial, outputBody);
 
         // Add edges to graph.
-        make_edge(input, imageBuffer);
-        make_edge(imageBuffer, limiter);
         make_edge(limiter, taskNode);
         make_edge(taskNode, buffer);
         make_edge(buffer, output);
@@ -39,8 +34,8 @@ protected:
 
         // Put image lines to graph input.
         for (unsigned int i = 0; i < image->getHeight(); i++) {
-            input.try_put(tuple<unsigned char*, unsigned int, unsigned int>(
-                image->getImageLine(i), image->getWidth(), i));
+            while(!limiter.try_put(tuple<unsigned char*, unsigned int, unsigned int>(
+                image->getImageLine(i), image->getWidth(), i)));
         }
         imageGraph.wait_for_all();
     }

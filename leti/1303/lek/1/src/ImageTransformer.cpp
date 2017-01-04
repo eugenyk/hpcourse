@@ -152,9 +152,6 @@ void ImageTransformer::transform(const ImageGenerator& generator, size_t imagesL
 
     // Create flow graph.
     graph imageTransformGraph;
-
-    broadcast_node<Image*> input(imageTransformGraph);
-    buffer_node<Image*> buffer(imageTransformGraph);
     // Limit number of images.
     limiter_node<Image*> limiter(imageTransformGraph, imagesLimit);
     function_node<Image*, Image*> logger(imageTransformGraph,
@@ -248,14 +245,6 @@ void ImageTransformer::transform(const ImageGenerator& generator, size_t imagesL
                                                        FileWriter(fileName ? fileStream : out));
 
     // Create edges.
-    if (ExtraInfo::debugMode) {
-        make_edge(input, logger);
-        make_edge(logger, buffer);
-    } else {
-        make_edge(input, buffer);
-    }
-    
-    make_edge(buffer, limiter);
     
     make_edge(limiter, maxBrightnessFinder);
     make_edge(limiter, minBrightnessFinder);
@@ -289,7 +278,7 @@ void ImageTransformer::transform(const ImageGenerator& generator, size_t imagesL
     // Put images to graph.
     for (unsigned int i = 0; i < count; i++) {
         Image *image = generator.generate();
-        input.try_put(image);
+        while(!limiter.try_put(image));
     }
 
     imageTransformGraph.wait_for_all();
