@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
             m->setValue(i, ((i * koef1) + koef2)%255);
         });
 
-        queueMatrixNode.try_put(tagged_msg<size_t, Matrix*>(i, m));
+        while(!limitMatrixNode.try_put(tagged_msg<size_t, Matrix*>(i, m)));
     }
     g.wait_for_all();
     cout << "time = " << (double(clock() - begin_time) / CLOCKS_PER_SEC) << endl;
