@@ -1,0 +1,29 @@
+Build Requirements:
+1. Intel TBB interface_version 9000 or higher
+2. CMake 2.8 or higher
+
+To build program:
+1. Create directory 
+mkdir directory
+2. Go to this directory 
+cd directory
+3. Run cmake tool
+cmake path-to-lek/1
+4. Start building
+make
+
+These steps will create tbb_images file
+Command line options:
+-l [value] - limit of images in graph
+-b [value] -brightness value to find
+-f [filepath] -file for logging average brightness
+-n [value] -number of generated images
+-minW [value] -minimum width of generated images
+-minH [value] -minimum height of generated images
+-maxW [value] -maximum width of generated images
+-maxH [value] -maximum height of generated images
+-d [on/off] - for turning debug mode.
+
+In debug mode:
+1. Generated images are in files "Image[image_id].log"
+2. Highligted and inverse images in files "ResultImage[image_id].log"
