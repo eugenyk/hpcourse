@@ -1,16 +1,16 @@
-+#ifndef OPER_H
-+#define OPER_H
-+#include <string>
-+
-+struct oper {
-+    int height;
-+    int width;
-+    int spec; //заданная яркость
-+    int imagesLimit;
-+    bool logging;
-+    std::string filename;
-+};
-+
-+bool parse(int argc, char** argv, oper& args);
-+
-+#endif // OPER_H
+#ifndef OPER_H
+#define OPER_H
+#include <string>
+
+struct oper {
+    int height;
+    int width;
+    int spec; //Г§Г Г¤Г Г­Г­Г Гї ГїГ°ГЄГ®Г±ГІГј
+    int imagesLimit;
+    bool logging;
+    std::string filename;
+};
+
+bool parse(int argc, char** argv, oper& args);
+
+#endif // OPER_H
