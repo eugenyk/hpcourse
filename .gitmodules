@@ -19,3 +19,6 @@
 [submodule "aptu/604_15/tdv/1/AsioChat"]
 	path = aptu/604_15/tdv/1/AsioChat
 	url = git://github.com/flire/AsioChat.git
+[submodule "aptu/604_16/bfa"]
+	path = aptu/604_16/bfa
+	url = https://github.com/fbocharov/au-parallelka.git
