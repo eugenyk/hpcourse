@@ -1,0 +1,18 @@
+Сompile
+1.change path tbb libraries and .h in CMakeList.txt
+2.cmake CMakeList.txt
+3.make
+
+Launch arguments:
+-b number -l number -c number -s number -f file_name -test
+where
+-b -  the desired brightness
+-l  -  the limit of simultaneously processed matrices
+-c  - the number of matrices
+-s  - the size of the matrices
+-f  -  file for output brightness
+-test  - debug output on the screen
+
+Example
+-b 4 -l 2 -c 5 -s 5 -f 1.txt -test
+-b 4 -l 2 -c 5 -s 10000 -f 1.txt
