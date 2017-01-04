@@ -5,14 +5,30 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string>
 #include <ctime>
+#include <mutex>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <tbb/flow_graph.h>
 
-const size_t IMAGE_WIDTH = 100;
-const size_t IMAGE_HEIGHT = 100;
+std::mutex g_mutex;
 
-int num_images = 5;
+void log(const char* format, ...)
+{
+    std::lock_guard<std::mutex> lock(g_mutex);
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+}
+
+const size_t IMAGE_WIDTH = 30;
+const size_t IMAGE_HEIGHT = 30;
+
+int num_images = 1;
 int img_number = 0;
 
 // Точка
@@ -39,33 +55,71 @@ public:
     Image()
     {
         width = height = 0;
-        img = nullptr;
+        img = r_img = g_img = b_img = nullptr;
     }
     Image(size_t w, size_t h)
     {
         width = w;
         height = h;
         img = new unsigned char* [width];
+        r_img = new unsigned char* [width];
+        g_img = new unsigned char* [width];
+        b_img = new unsigned char* [width];
         for (size_t i = 0; i < width; i++)
         {
             img[i] = new unsigned char [height];
+            r_img[i] = new unsigned char [height];
+            g_img[i] = new unsigned char [height];
+            b_img[i] = new unsigned char [height];
             for (size_t j = 0; j < height; j++)
             {
                 img[i][j] = rand() % 256;
+                r_img[i][j] = g_img[i][j] = b_img[i][j] = img[i][j];
             }
         }
     }
     Image(const Image& image)
     {
+        width = image.width;
+        height = image.height;
         if (image.img != nullptr)
         {
             img = new unsigned char* [image.width];
+            r_img = new unsigned char* [image.width];
+            g_img = new unsigned char* [image.width];
+            b_img = new unsigned char* [image.width];
             for (size_t i = 0; i < image.width; i++)
             {
                 img[i] = new unsigned char [image.height];
+                r_img[i] = new unsigned char [image.height];
+                g_img[i] = new unsigned char [image.height];
+                b_img[i] = new unsigned char [image.height];
                 for (size_t j = 0; j < image.height; j++)
                 {
-                    img[i][j] = image.img[i][j];
+                    r_img[i][j] = g_img[i][j] = b_img[i][j] = img[i][j] = image.img[i][j];
+                }
+            }
+        }
+    }
+    Image(Image* image)
+    {
+        if (image != nullptr && image->img != nullptr)
+        {
+            width = image->width;
+            height = image->height;
+            img = new unsigned char* [image->width];
+            r_img = new unsigned char* [image->width];
+            g_img = new unsigned char* [image->width];
+            b_img = new unsigned char* [image->width];
+            for (size_t i = 0; i < image->width; i++)
+            {
+                img[i] = new unsigned char [image->height];
+                r_img[i] = new unsigned char [image->height];
+                g_img[i] = new unsigned char [image->height];
+                b_img[i] = new unsigned char [image->height];
+                for (size_t j = 0; j < image->height; j++)
+                {
+                    r_img[i][j] = g_img[i][j] = b_img[i][j] = img[i][j] = image->img[i][j];
                 }
             }
         }
@@ -77,29 +131,40 @@ public:
             for (size_t i = 0; i < width; i++)
             {
                 delete [] img[i];
+                delete [] r_img[i];
+                delete [] g_img[i];
+                delete [] b_img[i];
             }
             delete img;
-            img = nullptr;
+            delete r_img;
+            delete g_img;
+            delete b_img;
+            r_img = g_img = b_img = img = nullptr;
         }
     }
 
     unsigned char** img;
+    unsigned char** r_img;
+    unsigned char** g_img;
+    unsigned char** b_img;
     size_t width;
     size_t height;
 };
 
 typedef std::pair< Image*, std::vector<Point> > detection_pair;
 typedef std::tuple< detection_pair, detection_pair, detection_pair > detection_tuple;
-typedef std::tuple< unsigned char, unsigned char > output_tuple;
+typedef std::tuple< Image*, unsigned char > output_tuple;
 
 // Настройки приложения
 unsigned char user_brightness = 0;
 unsigned char image_processing_limit = 0;
 std::string log_file_name = "";
+unsigned char MAX_BRIGHTNESS = 255;
+unsigned char MIN_BRIGHTNESS = 0;
 
 void print_help()
 {
-    fprintf(stderr, "Usage: flowgraph -b user_brightness -l "
+    log("Usage: flowgraph -b user_brightness -l "
         "image_processing_limit [-f log_file_name]\n");
 }
 
@@ -145,8 +210,102 @@ Image *get_next_image()
     }
 }
 
+// Поиск пикселей заданной яркости на изображении
+std::vector<Point> findPixels(Image* image, unsigned char value)
+{
+    std::vector<Point> result;
+    if (image != nullptr && image->img != nullptr)
+    {
+        for (size_t i = 0; i < image->width; i++)
+        {
+            if (image->img[i] != nullptr)
+            {
+                for (size_t j = 0; j < image->height; j++)
+                {
+                    if (image->img[i][j] == value)
+                    {
+                        result.push_back(Point(i, j));
+                    }
+                }
+            }
+        }
+    }
+    return result;
+}
+
+// Печать вектора точек
+std::string pointsToString(std::vector<Point> v)
+{
+    std::stringstream ss;
+    ss << '[';
+    for (size_t i = 0; i < v.size(); i++)
+    {
+        ss << '(' << v[i].x << ',' << v[i].y << ')';
+    }
+    ss << ']';
+    return ss.str();
+}
+
+void saveImageAsBmp(Image* image, const char* filename)
+{
+    FILE *f;
+    int w = image->width;
+    int h = image->height;
+    unsigned char *img = NULL;
+    int filesize = 54 + 3 * w * h;  //w is your image width, h is image height, both int
+
+    img = (unsigned char *)malloc(3 * w * h);
+    memset(img, 0, sizeof(img));
+
+    for(int i = 0; i < w; i++)
+    {
+        for(int j = 0; j < h; j++)
+        {
+            int x = i;
+            int y = (h - 1) - j;
+            int r = image->r_img[i][j];
+            int g = image->g_img[i][j];
+            int b = image->b_img[i][j];
+
+            img[(x+y*w)*3+2] = (unsigned char)(r);
+            img[(x+y*w)*3+1] = (unsigned char)(g);
+            img[(x+y*w)*3+0] = (unsigned char)(b);
+        }
+    }
+
+    unsigned char bmpfileheader[14] = {'B','M', 0,0,0,0, 0,0, 0,0, 54,0,0,0};
+    unsigned char bmpinfoheader[40] = {40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0, 24,0};
+    unsigned char bmppad[3] = {0,0,0};
+
+    bmpfileheader[ 2] = (unsigned char)(filesize    );
+    bmpfileheader[ 3] = (unsigned char)(filesize>> 8);
+    bmpfileheader[ 4] = (unsigned char)(filesize>>16);
+    bmpfileheader[ 5] = (unsigned char)(filesize>>24);
+
+    bmpinfoheader[ 4] = (unsigned char)(       w    );
+    bmpinfoheader[ 5] = (unsigned char)(       w>> 8);
+    bmpinfoheader[ 6] = (unsigned char)(       w>>16);
+    bmpinfoheader[ 7] = (unsigned char)(       w>>24);
+    bmpinfoheader[ 8] = (unsigned char)(       h    );
+    bmpinfoheader[ 9] = (unsigned char)(       h>> 8);
+    bmpinfoheader[10] = (unsigned char)(       h>>16);
+    bmpinfoheader[11] = (unsigned char)(       h>>24);
+
+    f = fopen(filename,"wb");
+    fwrite(bmpfileheader,1,14,f);
+    fwrite(bmpinfoheader,1,40,f);
+    for(int i = 0; i < h; i++)
+    {
+        fwrite(img+(w*(h-i-1)*3),3,w,f);
+        fwrite(bmppad,1,(4-(w*3)%4)%4,f);
+    }
+    fclose(f);
+}
+
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
+
     if (!process_input_args(argc, argv))
     {
         print_help();
@@ -155,74 +314,72 @@ int main(int argc, char *argv[])
 
     tbb::flow::graph g;
 
-    // Source node
+    // Source node ============================================================
     tbb::flow::source_node< Image* > image_generator(g,
         [](Image* &next_image) -> bool
         {
             next_image = get_next_image();
-            fprintf(stdout, "=========================================\n");
+            log("=========================================\n");
             if (next_image != nullptr)
             {
-                fprintf(stdout, "image_generator: next_image = %p\n", next_image);
+                log("image_generator: next_image = %p\n", next_image);
+                saveImageAsBmp(next_image, "img.bmp");
                 return true;
             }
             else
             {
-                fprintf(stdout, "image_generator: next_image = %p, return false\n", next_image);
+                log("image_generator: next_image = %p, return false\n", next_image);
                 return false;
             }
         }
     );
 
-    // Limiter node
+    // Limiter node ===========================================================
     tbb::flow::limiter_node< Image* > limiter(g, image_processing_limit);
 
-    // Maximum detector
+    // Maximum detector =======================================================
     tbb::flow::function_node< Image*, detection_pair > maximum_detector(
         g,
         tbb::flow::unlimited,
         [](Image* input_image) -> detection_pair
         {
-            std::vector<Point> result;
-
-            fprintf(stdout, "maximum_detector: input_image = %p\n", input_image);
-
+            std::vector<Point> result = findPixels(input_image, MAX_BRIGHTNESS);
+            std::string pointsStr = pointsToString(result);
+            log("maximum_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
             return std::make_pair(input_image, result);
         }
     );
 
-    // Minimum detector
+    // Minimum detector =======================================================
     tbb::flow::function_node< Image*, detection_pair > minimum_detector(
         g,
         tbb::flow::unlimited,
         [](Image* input_image) -> detection_pair
         {
-            std::vector<Point> result;
-
-            fprintf(stdout, "minimum_detector: input_image = %p\n", input_image);
-
+            std::vector<Point> result = findPixels(input_image, MIN_BRIGHTNESS);
+            std::string pointsStr = pointsToString(result);
+            log("minimum_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
             return std::make_pair(input_image, result);
         }
     );
 
-    // User detector
+    // User detector ==========================================================
     tbb::flow::function_node< Image*, detection_pair > user_detector(
         g,
         tbb::flow::unlimited,
         [](Image* input_image) -> detection_pair
         {
-            std::vector<Point> result;
-
-            fprintf(stdout, "user_detector: input_image = %p\n", input_image);
-
+            std::vector<Point> result = findPixels(input_image, user_brightness);
+            std::string pointsStr = pointsToString(result);
+            log("user_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
             return std::make_pair(input_image, result);
         }
     );
 
-    // Detectors join node
+    // Detectors join node ====================================================
     tbb::flow::join_node< detection_tuple, tbb::flow::queueing > detectors_join(g);
 
-    // Draw borders node
+    // Draw borders node ======================================================
     tbb::flow::function_node< detection_tuple, Image* > draw_borders_node(
         g,
         tbb::flow::unlimited,
@@ -232,48 +389,142 @@ int main(int argc, char *argv[])
             const detection_pair& min_detect = std::get<1>(t);
             const detection_pair& usr_detect = std::get<2>(t);
             Image* img = max_detect.first;
+            std::vector<Point> points;
+            points.insert(points.end(), max_detect.second.begin(), max_detect.second.end());
+            points.insert(points.end(), min_detect.second.begin(), min_detect.second.end());
+            points.insert(points.end(), usr_detect.second.begin(), usr_detect.second.end());
 
-            fprintf(stdout, "draw_borders_node: input_image = %p\n", img);
+            for (size_t i = 0; i < points.size(); i++)
+            {
+                const Point& p = points[i];
+                // Upper-left
+                if (p.x > 0 && p.y > 0)
+                {
+                    img->img[p.x - 1][p.y - 1] = img->r_img[p.x - 1][p.y - 1] = MAX_BRIGHTNESS;
+                    img->g_img[p.x - 1][p.y - 1] = img->b_img[p.x - 1][p.y - 1] = MIN_BRIGHTNESS;
+                }
+                // Upper
+                if (p.y > 0)
+                {
+                    img->img[p.x][p.y - 1] = img->r_img[p.x][p.y - 1] = MAX_BRIGHTNESS;
+                    img->g_img[p.x][p.y - 1] = img->b_img[p.x][p.y - 1] = MIN_BRIGHTNESS;
+                }
+                // Upper-right
+                if (p.y > 0 && p.x < (img->width - 1))
+                {
+                    img->img[p.x + 1][p.y - 1] = img->r_img[p.x + 1][p.y - 1] = MAX_BRIGHTNESS;
+                    img->g_img[p.x + 1][p.y - 1] = img->b_img[p.x + 1][p.y - 1] = MIN_BRIGHTNESS;
+                }
+                // Left
+                if (p.x > 0)
+                {
+                    img->img[p.x - 1][p.y] = img->r_img[p.x - 1][p.y] = MAX_BRIGHTNESS;
+                    img->g_img[p.x - 1][p.y] = img->b_img[p.x - 1][p.y] = MIN_BRIGHTNESS;
+                }
+                // Right
+                if (p.x < (img->width - 1))
+                {
+                    img->img[p.x + 1][p.y] = img->r_img[p.x + 1][p.y] = MAX_BRIGHTNESS;
+                    img->g_img[p.x + 1][p.y] = img->b_img[p.x + 1][p.y] = MIN_BRIGHTNESS;
+                }
+                // Lower-left
+                if (p.x > 0 && p.y < (img->height - 1))
+                {
+                    img->img[p.x - 1][p.y + 1] = img->r_img[p.x - 1][p.y + 1] = MAX_BRIGHTNESS;
+                    img->g_img[p.x - 1][p.y + 1] = img->b_img[p.x - 1][p.y + 1] = MIN_BRIGHTNESS;
+                }
+                // Lower
+                if (p.y < (img->height - 1))
+                {
+                    img->img[p.x][p.y + 1] = img->r_img[p.x][p.y + 1] = MAX_BRIGHTNESS;
+                    img->g_img[p.x][p.y + 1] = img->b_img[p.x][p.y + 1] = MIN_BRIGHTNESS;
+                }
+                // Lower-right
+                if (p.x < (img->width - 1) && p.y < (img->height - 1))
+                {
+                    img->img[p.x + 1][p.y + 1] = img->r_img[p.x + 1][p.y + 1] = MAX_BRIGHTNESS;
+                    img->g_img[p.x + 1][p.y + 1] = img->b_img[p.x + 1][p.y + 1] = MIN_BRIGHTNESS;
+                }
+            }
+
+            saveImageAsBmp(img, "selected.bmp");
+
+            log("draw_borders_node: input_image = %p\n", img);
 
             return img;
         }
     );
 
-    // Invert node
-    tbb::flow::function_node< Image*, unsigned char > invert_node(
+    // Invert node ============================================================
+    tbb::flow::function_node< Image*, Image* > invert_node(
         g,
         tbb::flow::unlimited,
-        [](Image* input_image) -> unsigned char
+        [](Image* input_image) -> Image*
         {
-            fprintf(stdout, "invert_node: input_image = %p\n", input_image);
-            return 0;
+            log("invert_node: input_image = %p\n", input_image);
+
+            Image invert_image (input_image);
+            for (size_t i = 0; i < invert_image.width; i++)
+            {
+                for (size_t j = 0; j < invert_image.height; j++)
+                {
+                    invert_image.img[i][j] = MAX_BRIGHTNESS - invert_image.img[i][j];
+                    invert_image.r_img[i][j] = MAX_BRIGHTNESS - invert_image.r_img[i][j];
+                    invert_image.g_img[i][j] = MAX_BRIGHTNESS - invert_image.g_img[i][j];
+                    invert_image.b_img[i][j] = MAX_BRIGHTNESS - invert_image.b_img[i][j];
+                }
+            }
+
+            saveImageAsBmp(&invert_image, "inverted.bmp");
+
+            return input_image;
         }
     );
 
-    // Average node
+    // Average node ===========================================================
     tbb::flow::function_node< Image*, unsigned char > average_node(
         g,
         tbb::flow::unlimited,
         [](Image* input_image) -> unsigned char
         {
             unsigned char result = 0;
-            fprintf(stdout, "average_node: input_image = %p, average pixel = %u\n",
+            size_t tmp_result = 0;
+            size_t size = input_image->width * input_image->height;
+            for (size_t i = 0; i < input_image->width; i++)
+            {
+                for (size_t j = 0; j < input_image->height; j++)
+                {
+                    tmp_result += input_image->img[i][j];
+                }
+            }
+            result = tmp_result / size;
+            log("average_node: input_image = %p, average pixel = %u\n",
                 input_image, result);
             return result;
         }
     );
 
-    // Invert & average join node
+    // Invert & average join node =============================================
     tbb::flow::join_node< output_tuple, tbb::flow::queueing > invert_average_join(g);
 
-    // Output node
+    // Output node ============================================================
     tbb::flow::function_node< output_tuple, tbb::flow::continue_msg > output_node(
         g,
         tbb::flow::unlimited,
         [](const output_tuple& t) -> tbb::flow::continue_msg
         {
+            Image* image = std::get<0>(t);
             unsigned char avg_pixel = std::get<1>(t);
-            fprintf(stdout, "output_node: average pixel = %u\n", avg_pixel);
+            log("output_node: average pixel = %u\n", avg_pixel);
+
+            if (log_file_name.size() > 0)
+            {
+                std::ofstream ofs (log_file_name, std::ofstream::out);
+                ofs << "average pixel value is " << std::to_string(avg_pixel) << std::endl;
+                ofs.close();
+            }
+
+            delete image;
             return tbb::flow::continue_msg();
         }
     );
