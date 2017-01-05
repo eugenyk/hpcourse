@@ -28,6 +28,7 @@ int main(int argc, char* argv[]){
     regex re("[0-9]*");
     int userBright=-1;
     int imageLimit=-1;
+///Добавил параметр количества изображений
     int imageCount=-1;
     int userHeight=SIZE_M;
     int userWidth=SIZE_N;
