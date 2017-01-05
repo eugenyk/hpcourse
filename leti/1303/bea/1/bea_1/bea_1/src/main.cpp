@@ -98,6 +98,8 @@ struct Executor
 		{
 			for (int i = 0; i < branches.size(); i++)
 				branches[i]->input->try_put(generateImage(params.m, params.n));
+			
+			g.wait_for_all();
 		}
 		
 		for (int k = 0; k < params.k % branches.size(); k++)
