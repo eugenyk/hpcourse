@@ -20,31 +20,52 @@ struct Position
 };
 
 class ImageRandom {
+public:
+	std::vector<int> imageP;
 	int width; //ширина
 	int height; //высота
-	int ** imageR;
-public:
+
 	ImageRandom() {
 		width = height = 0;
 	};
 	ImageRandom(int NEWwidth, int NEWheight) {
+		//std::srand(std::time(0));
+		Position newPosition;
 		width = NEWwidth;
 		height = NEWheight;
-		imageR = new int * [width];
-		for (int i = 0; i < width; i++) imageR[i] = new int[height];
 		for (int h = 0; h < height; h++) {
-			for (int w = 0; w < width; w++) imageR[w][h] = rand() % 256;
+			for (int w = 0; w < width; w++) {
+				imageP.push_back(rand() % 256);
+			}
 		}
 	};
-	~ImageRandom() {
-		/*for (unsigned i = width; i > 0; --i) {
-			delete [] imageR[i - 1];
-		} 
-		delete [] imageR;*/
+	ImageRandom(ImageRandom* image) {
+		Position newPosition;
+		width = image->width;
+		height = image->height;
+		for (int h = 0; h < height; h++) {
+			for (int w = 0; w < width; w++) {
+				imageP.push_back(image->imageP[h*width + w]);
+			}
+		}
 	};
+	ImageRandom(const ImageRandom & image) {
+		Position newPosition;
+		width = image.width;
+		height = image.height;
+		for (int h = 0; h < height; h++) {
+			for (int w = 0; w < width; w++) {
+				imageP.push_back(image.imageP[h*width + w]);
+			}
+		}
+	};
+
+	~ImageRandom() {
+	};
+
 	void OriginalImage() {
 		for (int h = 0; h < height; h++) {
-			for (int w = 0; w < width; w++) std::cout << imageR[w][h] << " ";
+			for (int w = 0; w < width; w++) std::cout << imageP[width*h + w] << " ";
 			std::cout << std::endl;
 		}
 	};
@@ -54,12 +75,12 @@ public:
 		int minimum = 255;
 		for (int h = 0; h < height; h++) {
 			for (int w = 0; w < width; w++) {
-				if (imageR[w][h] < minimum) minimum = imageR[w][h];
+				if (imageP[width*h + w] < minimum) minimum = imageP[width*h + w];
 			}
 		}
 		for (int h = 0; h < height; h++) {
 			for (int w = 0; w < width; w++) {
-				if (imageR[w][h] == minimum) {
+				if (imageP[width*h + w] == minimum) {
 					pos.w = w;
 					pos.h = h;
 					pos.res = minimum;
@@ -67,6 +88,7 @@ public:
 				}
 			}
 		}
+
 		return num;
 	};
 	std::vector<Position> RfindMAX() const {
@@ -75,12 +97,12 @@ public:
 		int maximum = 0;
 		for (int h = 0; h < height; h++) {
 			for (int w = 0; w < width; w++) {
-				if (imageR[w][h] > maximum) maximum = imageR[w][h];
+				if (imageP[width*h + w] > maximum) maximum = imageP[width*h + w];
 			}
 		}
 		for (int h = 0; h < height; h++) {
 			for (int w = 0; w < width; w++) {
-				if (imageR[w][h] == maximum) {
+				if (imageP[width*h + w] == maximum) {
 					pos.w = w;
 					pos.h = h;
 					pos.res = maximum;
@@ -88,6 +110,7 @@ public:
 				}
 			}
 		}
+
 		return num;
 	};
 	std::vector<Position> RfindSPEC(int spec) const {
@@ -95,7 +118,7 @@ public:
 		Position pos;
 		for (int h = 0; h < height; h++) {
 			for (int w = 0; w < width; w++) {
-				if (imageR[w][h] == spec) {
+				if (imageP[width*h + w] == spec) {
 					pos.w = w;
 					pos.h = h;
 					pos.res = spec;
@@ -105,67 +128,120 @@ public:
 		}
 		return num;
 	};
+
 	void selectPixels(std::vector<Position> numPixels) {
 		for (int i = 0; i < numPixels.size(); i++) {
 			if ((numPixels.at(i).w - 1 >= 0) && (numPixels.at(i).w - 1 < width) && (numPixels.at(i).h - 1 >= 0) && (numPixels.at(i).h - 1 < height))
-				imageR[numPixels.at(i).w - 1][numPixels.at(i).h - 1] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w - 1 + width*(numPixels.at(i).h - 1)] = numPixels.at(i).res;
 			if ((numPixels.at(i).w - 1 >= 0) && (numPixels.at(i).w - 1 < width) && (numPixels.at(i).h >= 0) && (numPixels.at(i).h < height))
-				imageR[numPixels.at(i).w - 1][numPixels.at(i).h] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w - 1 + width*(numPixels.at(i).h)] = numPixels.at(i).res;
 			if ((numPixels.at(i).w - 1 >= 0) && (numPixels.at(i).w - 1 < width) && (numPixels.at(i).h + 1 >= 0) && (numPixels.at(i).h + 1 < height))
-				imageR[numPixels.at(i).w - 1][numPixels.at(i).h + 1] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w - 1 + width*(numPixels.at(i).h + 1)] = numPixels.at(i).res;
 
 			if ((numPixels.at(i).w >= 0) && (numPixels.at(i).w < width) && (numPixels.at(i).h - 1 >= 0) && (numPixels.at(i).h - 1 < height))
-				imageR[numPixels.at(i).w][numPixels.at(i).h - 1] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w + width*(numPixels.at(i).h - 1)] = numPixels.at(i).res;
 			if ((numPixels.at(i).w >= 0) && (numPixels.at(i).w < width) && (numPixels.at(i).h + 1 >= 0) && (numPixels.at(i).h + 1 < height))
-				imageR[numPixels.at(i).w][numPixels.at(i).h + 1] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w + width*(numPixels.at(i).h + 1)] = numPixels.at(i).res;
 
 			if ((numPixels.at(i).w + 1 >= 0) && (numPixels.at(i).w + 1< width) && (numPixels.at(i).h - 1 >= 0) && (numPixels.at(i).h - 1 < height))
-				imageR[numPixels.at(i).w + 1][numPixels.at(i).h - 1] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w + 1 + width*(numPixels.at(i).h - 1)] = numPixels.at(i).res;
 			if ((numPixels.at(i).w + 1 >= 0) && (numPixels.at(i).w + 1< width) && (numPixels.at(i).h >= 0) && (numPixels.at(i).h < height))
-				imageR[numPixels.at(i).w + 1][numPixels.at(i).h] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w + 1 + width*(numPixels.at(i).h)] = numPixels.at(i).res;
 			if ((numPixels.at(i).w + 1 >= 0) && (numPixels.at(i).w + 1< width) && (numPixels.at(i).h + 1 >= 0) && (numPixels.at(i).h + 1 < height))
-				imageR[numPixels.at(i).w + 1][numPixels.at(i).h + 1] = numPixels.at(i).res;
+				imageP[numPixels.at(i).w + 1 + width*(numPixels.at(i).h + 1)] = numPixels.at(i).res;
 		}
 	};
 	void inversion() {
 		for (int h = 0; h < height; h++) {
-			for (int w = 0; w < width; w++) imageR[w][h] = 255 - imageR[w][h];
+			for (int w = 0; w < width; w++) imageP[width*h + w] = 255 - imageP[width*h + w];
 		}
 	};
 	double mean() const {
-		double sum = 0; 
+		double sum = 0;
 		for (int h = 0; h < height; h++) {
-			for (int w = 0; w < width; w++) sum += imageR[w][h];
+			for (int w = 0; w < width; w++) sum += imageP[width*h + w];
 		}
 		sum = sum / (height * width);
 		return sum;
 	};
 };
 
+class Parameters {
+public:
+	int b;
+	int l;
+	std::string f;
+	int n;
+	int w;
+	int h;
+	Parameters() {
+		b = 13;
+		l = 4;
+		f = "./log.txt";
+		n = 4;
+		w = 4;
+		h = 4;
+	};
+	void setParameters(int argc, char *argv[]) {
+		for (int i = 1; i < argc; i++)
+		{
+			if (!std::strcmp(argv[i], "-b") && i + 1 < argc)
+			{
+				b = std::atoi(argv[++i]);
+			}
+			else if (!std::strcmp(argv[i], "-l") && i + 1 < argc)
+			{
+				l = std::atoi(argv[++i]);
+			}
+			else if (!std::strcmp(argv[i], "-f") && i + 1 < argc)
+			{
+				f = argv[++i];
+			}
+			else if (!std::strcmp(argv[i], "-n") && i + 1 < argc)
+			{
+				n = std::atoi(argv[++i]);
+			}
+			else if (!std::strcmp(argv[i], "-h") && i + 1 < argc)
+			{
+				h = std::atoi(argv[++i]);
+			}
+			else if (!std::strcmp(argv[i], "-w") && i + 1 < argc)
+			{
+				w = std::atoi(argv[++i]);
+			}
+		}
+		if (b > 255) b = 255;
+		if (b < 0) b = 0;
+		if (l > 4) l = 4;
+		if (l < 1) l = 1;
+		if (n < 1) n = 1;
+		if (w < 1) w = 1;
+		if (h < 1) h = 1;
+	};
+};
 
-
-void main() {
+void main(int argc, char *argv[]) {
 	std::srand(std::time(0));
-	//¬ходные услови€ 
-	int _b = 13; //интересующее значение €ркости, дл€ шага є 2
-	int _l = 1; //предел одновременно обрабатываемых приложением изображений
-	//У-f log.txtФ: им€ файла журнала €ркостей
-
+	Parameters par;
+	if (argc != 1) {
+		par.setParameters(argc, argv);
+	}
+	std::ofstream fileout(par.f);
 	graph g;
 
 	int currI = 0;
-	source_node<ImageRandom> sourceNode(g, [&currI, &_l](ImageRandom &image){
-		if (currI >= _l) {
+	source_node<ImageRandom> sourceNode(g, [&currI, &par](ImageRandom &image){
+		if (currI >= par.n) {
 			return false;
 		}
 		currI++;
-		image = ImageRandom(4, 4);
+		image = ImageRandom(par.w, par.h);
 		std::cout << "Start" << std::endl;
 		image.OriginalImage();
 		return true;
 	}, false);
 	
-	limiter_node<ImageRandom> limiterNode(g, 4);
+	limiter_node<ImageRandom> limiterNode(g, par.l);
 
 	function_node<ImageRandom, std::vector<Position> > MaxValueNode(g, tbb::flow::unlimited, [](const ImageRandom &image)
 	{
@@ -177,9 +253,9 @@ void main() {
 		return image.RfindMIN();
 	});
 
-	function_node<ImageRandom, std::vector<Position> > SpecValueNode(g, tbb::flow::unlimited, [&_b](const ImageRandom &image)
+	function_node<ImageRandom, std::vector<Position> > SpecValueNode(g, tbb::flow::unlimited, [&par](const ImageRandom &image)
 	{
-		return image.RfindSPEC(_b);
+		return image.RfindSPEC(par.b);
 	});
 
 	using HighlightArgs = tuple<ImageRandom, std::vector<Position>, std::vector<Position>, std::vector<Position> >;
@@ -207,13 +283,13 @@ void main() {
 
 	join_node<tuple<ImageRandom, double> > finalJoinNode(g);
 
-	function_node<tuple<ImageRandom, double>, continue_msg> outputNode(g, serial, [](const tuple<ImageRandom, double> &info)
+	function_node<tuple<ImageRandom, double>, continue_msg> outputNode(g, serial, [&fileout](const tuple<ImageRandom, double> &info)
 	{
+		fileout << "Mean: " << tbb::flow::get<1>(info) << std::endl;
 		ImageRandom image = tbb::flow::get<0>(info);
-
 		std::cout << "Finish" << std::endl;
-		image.OriginalImage();
-		std::cout << "Mean: " << tbb::flow::get<1>(info) << std::endl;
+		//image.OriginalImage();
+		//std::cout << "Mean: " << tbb::flow::get<1>(info) << std::endl;
 		return continue_msg();
 	});
 
@@ -237,5 +313,6 @@ void main() {
 
 	g.wait_for_all();
 
+	fileout.close();
 	system("pause");
 }
