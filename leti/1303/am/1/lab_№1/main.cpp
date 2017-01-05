@@ -28,12 +28,13 @@ int main(int argc, char* argv[]){
     regex re("[0-9]*");
     int userBright=-1;
     int imageLimit=-1;
+    int imageCount=-1;
     int userHeight=SIZE_M;
     int userWidth=SIZE_N;
     string pathToLogFile;
     bool isErrorInCommandLine=false;
     int rez=0;
-    while (!isErrorInCommandLine&& (rez = getopt(argc,argv,"b:l:h:w:f:")) != -1){
+    while (!isErrorInCommandLine&& (rez = getopt(argc,argv,"b:l:h:w:c:f:")) != -1){
         switch (rez){
             case 'b':
                 if ( regex_match(optarg,re) ) {
@@ -75,6 +76,15 @@ int main(int argc, char* argv[]){
                     printf("option h don't have number argument - %s.\n",optarg);
                 }
                 break;
+            case 'c':
+                if ( regex_match(optarg,re) ){
+                    printf("found option n and argument %s.\n",optarg);
+                    imageCount=atoi(optarg);
+                }else {
+                    isErrorInCommandLine=true;
+                    printf("option l don't have number argument - %s.\n",optarg);
+                }
+                break;
             case '?': isErrorInCommandLine=true;break;
         };
     }
@@ -82,6 +92,7 @@ int main(int argc, char* argv[]){
     printf("UserBright:%d\n",userBright);
     printf("UserHeight:%d\n",userHeight);
     printf("UserWidth:%d\n",userWidth);
+    printf("ImCount:%d\n",imageCount);
     printf("PathLogFile:%s\n",pathToLogFile.data());
     if (isErrorInCommandLine) return 0;
     ///-------------
@@ -159,7 +170,10 @@ int main(int argc, char* argv[]){
     join_node< tuple<Image*,Image*>,key_matching<int > > joinRemoveNode(imageGraph,getImageId,getImageId);
 
     function_node<tuple<Image*,Image*> > imageRemoveNode(imageGraph,serial,removeImage);
-    
+    //function_node<Image* > imageRemoveNode(imageGraph,serial,removeImage);
+   // make_edge(limiterImageNode,queueImageMainNode);
+    //make_edge(queueImageMainNode,broadcastImageNode);
+
      make_edge(limiterImageNode,bufferImageNode);
      make_edge(bufferImageNode,broadcastImageNode);
 ///2
@@ -196,13 +210,21 @@ int main(int argc, char* argv[]){
 
     make_edge( joinRemoveNode,imageRemoveNode );
 
+    ///Добавил декремент
+    make_edge( imageRemoveNode,limiterImageNode.decrement );
+
     ImageGenerator imageGenerator(userHeight,userWidth);
-     for (int i=0;i<imageLimit; i++)
+
+    ///Снял ограничения с входного потока
+     for (int i=0;i<imageCount; i++)
      {
          Image *image= imageGenerator.getImage(i);
          image->showImage();
          printf("Im__________%p\n",image);
-        limiterImageNode.try_put(image);
+
+    ///Добавил цикл ожидания пока количество изображений в графе не станет
+    ///менеше imageLimit(те не сработает декремент)
+        while(!limiterImageNode.try_put(image));
     }
     imageGraph.wait_for_all();
     out.close();
