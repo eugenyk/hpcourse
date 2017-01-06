@@ -1,5 +1,6 @@
 #include "Image.h"
 #include "Options.h"
+#include "Message.h"
 
 #include "tbb/flow_graph.h"
 
@@ -22,24 +23,25 @@ int main(int argc, char *argv[])
 
   // Создание изображений
   int currImage = 0;
-  tbb::flow::source_node<Image> sourceNode(flowGraph, [&currImage, &opt](Image &image)
+  tbb::flow::source_node<Message<Image> > sourceNode(flowGraph, [&currImage, &opt](Message<Image> &message)
     {
       if (currImage >= opt.getAmountImages())
       {
         return false;
       }
 
-      image = Image(opt.getImageHeight(), opt.getImageWidth());
+      message.setKey(currImage);
+      message.setData(Image(opt.getImageHeight(), opt.getImageWidth()));
       currImage++;
 
       if (opt.IsDebug())
       {
         std::cout << std::endl << "Start Image " << currImage - 1 << std::endl;
-        for (unsigned int i = 0; i < image.getHeight(); i++)
+        for (unsigned int i = 0; i < message.getData().getHeight(); i++)
         {
-          for (unsigned int j = 0; j < image.getWidth(); j++)
+          for (unsigned int j = 0; j < message.getData().getWidth(); j++)
           {
-            std::cout << (int)image.at(i, j) << "   ";
+            std::cout << (int)message.getData().at(i, j) << "   ";
           }
           std::cout << std::endl;
         }
@@ -49,63 +51,73 @@ int main(int argc, char *argv[])
     }, false);
 
   // Ограничение одновреммено обрабатываемых изображений
-  tbb::flow::limiter_node<Image> limiterNode(flowGraph, opt.getMaxParallelFlow());
+  tbb::flow::limiter_node<Message<Image> > limiterNode(flowGraph, opt.getMaxParallelFlow());
 
   // Поиск максимального значения яркости
-  tbb::flow::function_node<Image, std::vector<std::pair<unsigned int, unsigned int> > > searchMaxValueNode(flowGraph, tbb::flow::unlimited, [](const Image &image)
+  tbb::flow::function_node<Message<Image>, Message<std::vector<std::pair<unsigned int, unsigned int> > > > searchMaxValueNode(flowGraph, tbb::flow::unlimited, [](const Message<Image> &message)
     {
-      return image.getIndexOfBrightness(image.getMaxBrightness());
+      Message<std::vector<std::pair<unsigned int, unsigned int> > > mes(message.getKey(), message.getData().getIndexOfBrightness(message.getData().getMaxBrightness()));
+      return mes;
     });
 
   // Поиск минимального значения яркости
-  tbb::flow::function_node<Image, std::vector<std::pair<unsigned int, unsigned int> > > searchMinValueNode(flowGraph, tbb::flow::unlimited, [](const Image &image)
+  tbb::flow::function_node<Message<Image>, Message<std::vector<std::pair<unsigned int, unsigned int> > > > searchMinValueNode(flowGraph, tbb::flow::unlimited, [](const Message<Image> &message)
     {
-      return image.getIndexOfBrightness(image.getMinBrightness());
+      Message<std::vector<std::pair<unsigned int, unsigned int> > > mes(message.getKey(), message.getData().getIndexOfBrightness(message.getData().getMinBrightness()));
+      return mes;
     });
 
   // Поиск заданного в командной строке значения яркости
-  tbb::flow::function_node<Image, std::vector<std::pair<unsigned int, unsigned int> > > searchSpecifiedValueNode(flowGraph, tbb::flow::unlimited, [&opt](const Image &image)
+  tbb::flow::function_node<Message<Image>, Message<std::vector<std::pair<unsigned int, unsigned int> > > > searchSpecifiedValueNode(flowGraph, tbb::flow::unlimited, [&opt](const Message<Image> &message)
     {
-      return image.getIndexOfBrightness(opt.getFindValue());
+      Message<std::vector<std::pair<unsigned int, unsigned int> > > mes(message.getKey(), message.getData().getIndexOfBrightness(opt.getFindValue()));
+      return mes;
     });
 
   // Сбор всех данных перед следующим этапом
-  using HighlightArgs = tbb::flow::tuple<Image, std::vector<std::pair<unsigned int, unsigned int> >, std::vector<std::pair<unsigned int, unsigned int> >, std::vector<std::pair<unsigned int, unsigned int> > >;
-  tbb::flow::join_node<HighlightArgs> joinNode(flowGraph);
+  using HighlightArgs = tbb::flow::tuple<Message<Image>, Message<std::vector<std::pair<unsigned int, unsigned int> > >, Message<std::vector<std::pair<unsigned int, unsigned int> > >, Message<std::vector<std::pair<unsigned int, unsigned int> > > >;
+  tbb::flow::join_node<HighlightArgs, tbb::flow::tag_matching> joinNode(flowGraph,
+                                                                        [](const Message<Image> &message) -> size_t {return (size_t) message.getKey();},
+                                                                        [](const Message<std::vector<std::pair<unsigned int, unsigned int> > > &message) -> size_t {return (size_t) message.getKey();},
+                                                                        [](const Message<std::vector<std::pair<unsigned int, unsigned int> > > &message) -> size_t {return (size_t) message.getKey();},
+                                                                        [](const Message<std::vector<std::pair<unsigned int, unsigned int> > > &message) -> size_t {return (size_t) message.getKey();});
 
   // Подсветка всех найденных объектов
-  tbb::flow::function_node<HighlightArgs, Image> highlightNode(flowGraph, tbb::flow::unlimited, [&opt](HighlightArgs highlightArgs)
+  tbb::flow::function_node<HighlightArgs, Message<Image>> highlightNode(flowGraph, tbb::flow::unlimited, [&opt](HighlightArgs highlightArgs)
     {
-      Image image = tbb::flow::get<0>(highlightArgs);
-      image.highlightPixels(tbb::flow::get<1>(highlightArgs), image.getMaxBrightness());
-      image.highlightPixels(tbb::flow::get<2>(highlightArgs), image.getMinBrightness());
-      image.highlightPixels(tbb::flow::get<3>(highlightArgs), opt.getFindValue());
-      return image;
+      Message<Image> input = tbb::flow::get<0>(highlightArgs);
+      Image image = input.getData();
+      image.highlightPixels((tbb::flow::get<1>(highlightArgs)).getData(), image.getMaxBrightness());
+      image.highlightPixels((tbb::flow::get<2>(highlightArgs)).getData(), image.getMinBrightness());
+      image.highlightPixels((tbb::flow::get<3>(highlightArgs)).getData(), opt.getFindValue());
+      return Message<Image>(input.getKey(), image);
     });
 
   // Инвертирование изображения
-  tbb::flow::function_node<Image, Image> invertNode(flowGraph, tbb::flow::unlimited, [](Image image)
+  tbb::flow::function_node<Message<Image>, Message<Image>> invertNode(flowGraph, tbb::flow::unlimited, [](Message<Image> message)
     {
-      image.invert();
-      return image;
+      message.getData().invert();
+      return message;
     });
 
   // Поиск средней яркости изображения
-  tbb::flow::function_node<Image, double> searchAvgNode(flowGraph, tbb::flow::unlimited, [](const Image &image)
+  tbb::flow::function_node<Message<Image>, Message<double> > searchAvgNode(flowGraph, tbb::flow::unlimited, [](const Message<Image> &message)
     {
-      return image.getAverageBrightness();
+      return Message<double>(message.getKey(), message.getData().getAverageBrightness());
     });
 
   // Сбор всех данных перед финальным этапом
-  tbb::flow::join_node<tbb::flow::tuple<Image, double> > finalJoinNode(flowGraph);
+  tbb::flow::join_node<tbb::flow::tuple<Message<Image>, Message<double> >, tbb::flow::tag_matching> finalJoinNode(flowGraph,
+                                                                                        [](const Message<Image> &message) -> size_t {return (size_t) message.getKey();},
+                                                                                        [](const Message<double> &message) -> size_t {return (size_t) message.getKey();});
 
   // Вывод информации
-  tbb::flow::function_node<tbb::flow::tuple<Image, double>, tbb::flow::continue_msg> outputNode(flowGraph, tbb::flow::serial, [&opt, &fout](const tbb::flow::tuple<Image, double> &info)
+  tbb::flow::function_node<tbb::flow::tuple<Message<Image>, Message<double> >, tbb::flow::continue_msg> outputNode(flowGraph, tbb::flow::serial, [&opt, &fout](const tbb::flow::tuple<Message<Image>, Message<double> > &info)
     {
-      fout << tbb::flow::get<1>(info) << std::endl;
+      fout << (tbb::flow::get<1>(info)).getData() << std::endl;
       if (opt.IsDebug())
       {
-        Image image = tbb::flow::get<0>(info);
+        Image image = tbb::flow::get<0>(info).getData();
         std::cout << std::endl << "Final Image" << std::endl;
         for (unsigned int i = 0; i < image.getHeight(); i++)
         {

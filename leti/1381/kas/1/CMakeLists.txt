@@ -4,7 +4,7 @@ project(kas_1)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_EXE main.cpp Image.h Image.cpp Options.h Options.cpp)
+set(SOURCE_EXE main.cpp Image.h Image.cpp Options.h Options.cpp Message.h)
 
 add_executable(kas_1 ${SOURCE_EXE})
 
