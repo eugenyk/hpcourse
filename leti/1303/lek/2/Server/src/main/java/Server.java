@@ -4,6 +4,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
@@ -16,7 +17,7 @@ public class Server {
     private final Config config = new Config();
     private final Logger logger = Logger.getLogger(this.getClass().getName());
     AsynchronousServerSocketChannel socketChannel = null;
-    //ConcurrentSkipListSet<E>
+    ConcurrentSkipListSet<Client> clients = new ConcurrentSkipListSet<>();
 
     private class ResultConnectionHandler implements CompletionHandler<AsynchronousSocketChannel, Void> {
 
@@ -24,6 +25,8 @@ public class Server {
             try {
                 logger.info(new StringBuffer("Accepted a connection from ").append(socket.getRemoteAddress()).toString());
                 socketChannel.accept(null, this);
+                Client client = new Client(socket);
+                clients.add(client);
             } catch (IOException e) {
                 e.printStackTrace();
             }
