@@ -70,21 +70,26 @@ void MyFlowGraph::run()
         res.pixels = find_elements(res.img, max);
         return res;
     });
-    tbb::flow::function_node<selected_pixels, image>
-            ext_min(g, images_limit, [](selected_pixels pixs)
+    tbb::flow::join_node<std::tuple<selected_pixels, selected_pixels, selected_pixels> >
+            pixs_join(g);
+    tbb::flow::function_node<std::tuple<selected_pixels, selected_pixels, selected_pixels>, image>
+            ext_min(g, images_limit, [](std::tuple<selected_pixels, selected_pixels, selected_pixels> pixs_tup)
     {
+        selected_pixels pixs = std::get<0>(pixs_tup);
         extend_pixels(pixs.img, pixs.pixels);
         return pixs.img;
     });
-    tbb::flow::function_node<selected_pixels, image>
-            ext_max(g, images_limit, [](selected_pixels pixs)
+    tbb::flow::function_node<std::tuple<selected_pixels, selected_pixels, selected_pixels>, image>
+            ext_max(g, images_limit, [](std::tuple<selected_pixels, selected_pixels, selected_pixels> pixs_tup)
     {
+        selected_pixels pixs = std::get<1>(pixs_tup);
         extend_pixels(pixs.img, pixs.pixels);
         return pixs.img;
     });
-    tbb::flow::function_node<selected_pixels, image>
-            ext_br(g, images_limit, [](selected_pixels pixs)
+    tbb::flow::function_node<std::tuple<selected_pixels, selected_pixels, selected_pixels>, image>
+            ext_br(g, images_limit, [](std::tuple<selected_pixels, selected_pixels, selected_pixels> pixs_tup)
     {
+        selected_pixels pixs = std::get<2>(pixs_tup);
         extend_pixels(pixs.img, pixs.pixels);
         return pixs.img;
     });
@@ -113,9 +118,12 @@ void MyFlowGraph::run()
     tbb::flow::make_edge(input_img, select_elements);
     tbb::flow::make_edge(find_min_max, select_min_elements);
     tbb::flow::make_edge(find_min_max, select_max_elements);
-    tbb::flow::make_edge(select_min_elements, ext_min);
-    tbb::flow::make_edge(select_max_elements, ext_max);
-    tbb::flow::make_edge(select_elements, ext_br);
+    tbb::flow::make_edge(select_min_elements, tbb::flow::input_port<0>(pixs_join));
+    tbb::flow::make_edge(select_max_elements, tbb::flow::input_port<1>(pixs_join));
+    tbb::flow::make_edge(select_elements, tbb::flow::input_port<2>(pixs_join));
+    tbb::flow::make_edge(pixs_join, ext_min);
+    tbb::flow::make_edge(pixs_join, ext_max);
+    tbb::flow::make_edge(pixs_join, ext_br);
     tbb::flow::make_edge(ext_min, tbb::flow::input_port<0>(join));
     tbb::flow::make_edge(ext_max, tbb::flow::input_port<1>(join));
     tbb::flow::make_edge(ext_br, tbb::flow::input_port<2>(join));
