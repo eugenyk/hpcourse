@@ -18,6 +18,8 @@ struct listening_thread_args
     TcpClient tcp;
 };
 
+bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
+void setnameandmsg(std::string& snd_data, std::string name, std::string msg);
 void* listen_tcp(void* _args);
 
 class MainWindow : public QWidget
@@ -26,6 +28,9 @@ class MainWindow : public QWidget
 
 private:
     TcpClient tcp_client;
+    QLabel* name_info;
+    QLineEdit* name;
+    QPushButton* connect_btn;
     QScrollArea* scroll;
     QLabel* text;
     QLabel* rec_info;
@@ -45,6 +50,7 @@ public:
     ~MainWindow();
 
 public slots:
+    void connect_to_srv();
     void send_text();
 };
 

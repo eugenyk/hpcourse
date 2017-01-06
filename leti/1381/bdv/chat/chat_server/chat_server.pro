@@ -11,8 +11,7 @@ TEMPLATE = app
 LIBS += -lpthread
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
     tcpserver.cpp
 
-HEADERS  += mainwindow.h \
+HEADERS  += \
     tcpserver.h

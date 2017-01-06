@@ -7,6 +7,7 @@ int TcpServer::clients_number;
 int TcpServer::port;
 struct sockaddr_in TcpServer::server_addr;
 struct sockaddr_in TcpServer::client_addr;
+std::vector<TcpServer::NameId> TcpServer::name_id;
 
 TcpServer::TcpServer()
 {
@@ -36,21 +37,34 @@ void* TcpServer::wait_client(void *id)
     long i = (long)id;
     new_socket_descr[i] = accept(socket_descr, (struct sockaddr*) &client_addr, &client);
     if(new_socket_descr[i] < 0)
+    {
         std::cout << "Waiting client error" << std::endl;
-    else
-        std::cout << "Client connected" << std::endl;
+        pthread_exit(-1);
+    }
 
-    std::string _id = std::to_string(i);
-    send(_id, i);
+    std::string name = receive(i);
+    std::cout << name << " connected" << std::endl;
+    NameId nd;
+    nd.name = name;
+    nd.id = i;
+    name_id.push_back(nd);
 
     while(true)
     {
-        std::string msg = receive(i);
-        std::cout << "Receive from " << i << ": " << msg << std::endl;
-        if(msg[0] == '-')
+        std::string rec_data = receive(i);
+        if(rec_data == "")
             break;
-        int rec_id = msg[0]-'0';
-        send(msg, rec_id);
+        std::string snd_name,rec_name, rec_msg;
+        if(getnameandmsg(rec_data, rec_name, rec_msg))
+        {
+            snd_name = findNameById(i);
+            setnameandmsg(rec_data, snd_name, rec_msg);
+            int rec_id = findIdByName(rec_name);
+            if(rec_id != -1)
+                send(rec_data, rec_id);
+        }
+        else
+            break;
     }
 
     pthread_exit(0);
@@ -99,4 +113,38 @@ void TcpServer::close_()
     for(int i = 0; i < clients_number; i++)
         close(new_socket_descr[i]);
     close(socket_descr);
+}
+
+bool TcpServer::getnameandmsg(std::string rec_data, std::string& name, std::string& msg)
+{
+    if(rec_data == "--")
+        return false;
+    int name_size = (int)rec_data[0];
+    rec_data.erase(rec_data.begin());
+    name = rec_data.substr(0, name_size);
+    msg = rec_data.erase(0, name_size);
+    return true;
+}
+
+void TcpServer::setnameandmsg(std::string& snd_data, std::string name, std::string msg)
+{
+    snd_data = "0" + name + msg;
+    char name_size = name.size();
+    snd_data[0] = name_size;
+}
+
+std::string TcpServer::findNameById(int id)
+{
+    for(int i = 0; i < name_id.size(); i++)
+        if(name_id[i].id == id)
+            return name_id[i].name;
+    return "";
+}
+
+int TcpServer::findIdByName(std::string name)
+{
+    for(int i = 0; i < name_id.size(); i++)
+        if(name_id[i].name == name)
+            return name_id[i].id;
+    return -1;
 }

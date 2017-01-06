@@ -26,6 +26,8 @@ public:
     void send(std::string msg);
     std::string receive();
     void close_();
+
+
 };
 
 #endif // TCPCLIENT_H
