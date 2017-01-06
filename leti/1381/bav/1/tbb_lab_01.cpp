@@ -25,10 +25,10 @@ void log(const char* format, ...)
     va_end(args);
 }
 
-const size_t IMAGE_WIDTH = 30;
-const size_t IMAGE_HEIGHT = 30;
+const size_t IMAGE_WIDTH = 16;
+const size_t IMAGE_HEIGHT = 16;
 
-int num_images = 1;
+int num_images = 5;
 int img_number = 0;
 
 // Точка
@@ -96,7 +96,10 @@ public:
                 b_img[i] = new unsigned char [image.height];
                 for (size_t j = 0; j < image.height; j++)
                 {
-                    r_img[i][j] = g_img[i][j] = b_img[i][j] = img[i][j] = image.img[i][j];
+                    img[i][j] = image.img[i][j];
+                    r_img[i][j] = image.r_img[i][j];
+                    g_img[i][j] = image.g_img[i][j];
+                    b_img[i][j] = image.b_img[i][j];
                 }
             }
         }
@@ -119,7 +122,10 @@ public:
                 b_img[i] = new unsigned char [image->height];
                 for (size_t j = 0; j < image->height; j++)
                 {
-                    r_img[i][j] = g_img[i][j] = b_img[i][j] = img[i][j] = image->img[i][j];
+                    img[i][j] = image->img[i][j];
+                    r_img[i][j] = image->r_img[i][j];
+                    g_img[i][j] = image->g_img[i][j];
+                    b_img[i][j] = image->b_img[i][j];
                 }
             }
         }
@@ -318,12 +324,16 @@ int main(int argc, char *argv[])
     tbb::flow::source_node< Image* > image_generator(g,
         [](Image* &next_image) -> bool
         {
+            std::string filename = "img";
+            filename += std::to_string(img_number);
+            filename += ".bmp";
             next_image = get_next_image();
             log("=========================================\n");
             if (next_image != nullptr)
             {
                 log("image_generator: next_image = %p\n", next_image);
-                saveImageAsBmp(next_image, "img.bmp");
+
+                saveImageAsBmp(next_image, filename.c_str());
                 return true;
             }
             else
@@ -447,7 +457,10 @@ int main(int argc, char *argv[])
                 }
             }
 
-            saveImageAsBmp(img, "selected.bmp");
+            std::string filename = "selected";
+            filename += std::to_string(img_number);
+            filename += ".bmp";
+            saveImageAsBmp(img, filename.c_str());
 
             log("draw_borders_node: input_image = %p\n", img);
 
@@ -475,7 +488,10 @@ int main(int argc, char *argv[])
                 }
             }
 
-            saveImageAsBmp(&invert_image, "inverted.bmp");
+            std::string filename = "inverted";
+            filename += std::to_string(img_number);
+            filename += ".bmp";
+            saveImageAsBmp(&invert_image, filename.c_str());
 
             return input_image;
         }
