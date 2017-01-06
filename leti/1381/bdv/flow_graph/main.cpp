@@ -16,7 +16,6 @@ void print_usage()
 
 int main(int argc, char *argv[])
 {
-
     graph_options opt;
     if(!ArgsParser::parse(argc, argv, opt))
     {

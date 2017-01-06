@@ -82,12 +82,21 @@ void MyFlowGraph::run()
     });
     tbb::flow::join_node<std::tuple<image, image, image>, tbb::flow::queueing >
             join(g);
+    tbb::flow::function_node<std::tuple<image, image, image>, image>
+            inverse_br(g, images_limit, [](std::tuple<image, image, image> tup)
+    {
+        image res, img;
+        img = std::get<0>(tup);
+        res = inverse_brightness(img);
+        return res;
+    });
+    tbb::flow::buffer_node<image> inversed_img(g);
     tbb::flow::function_node<std::tuple<image, image, image>, img_avgbr>
-            inverse_and_avg(g, tbb::flow::unlimited, [](std::tuple<image, image, image> tup)
+            calc_avgbr(g, images_limit, [](std::tuple<image, image, image> tup)
     {
         img_avgbr res;
         res.img = std::get<0>(tup);
-        res.avg_br = inverse_and_avgbr(res.img);
+        res.avg_br = calc_avg_br(res.img);
         return res;
     });
     tbb::flow::buffer_node<img_avgbr> avg_br(g);
@@ -102,9 +111,10 @@ void MyFlowGraph::run()
     tbb::flow::make_edge(ext_min, tbb::flow::input_port<0>(join));
     tbb::flow::make_edge(ext_max, tbb::flow::input_port<1>(join));
     tbb::flow::make_edge(ext_br, tbb::flow::input_port<2>(join));
-    tbb::flow::make_edge(join, inverse_and_avg);
-    tbb::flow::make_edge(inverse_and_avg, avg_br);
-
+    tbb::flow::make_edge(join, inverse_br);
+    tbb::flow::make_edge(inverse_br, inversed_img);
+    tbb::flow::make_edge(join, calc_avgbr);
+    tbb::flow::make_edge(calc_avgbr, avg_br);
 
     for(int i = 0; i < imgs.size(); i++)
         input_img.try_put(imgs[i]);
@@ -112,6 +122,13 @@ void MyFlowGraph::run()
 
     if(logging)
         write_avgs_to_file(avg_br);
+
+    for(int i = 0; i < imgs.size(); i++)
+    {
+        image img;
+        inversed_img.try_get(img);
+        delete[] img.data;
+    }
 }
 
 std::pair<uchar, uchar> MyFlowGraph::find_minmax_value(image img)
@@ -189,26 +206,6 @@ void MyFlowGraph::extend_pix(image img, pixel p)
                 pix_ptr[0] = p.value;
         }
 }
-double MyFlowGraph::inverse_and_avgbr(image img)
-{
-    double avg_br = 0;
-    double* buffer = new double[img.height];
-    tbb::parallel_for(size_t(0), size_t(img.height), size_t(1),
-        [buffer, &img](size_t i) {
-            buffer[i] = 0;
-            for(int j = 0; j < img.width; j++)
-            {
-                uchar value = img.data[i*img.width + j];
-                img.data[i*img.width + j] = 255 - value;
-                buffer[i] += value;
-            }
-            buffer[i] /= img.width;
-    });
-    for(int i = 0; i < img.height; i++)
-        avg_br += buffer[i];
-    delete[] buffer;
-    return avg_br / img.height;
-}
 
 void MyFlowGraph::write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node)
 {
@@ -220,4 +217,34 @@ void MyFlowGraph::write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node)
         of << "Avg brightness for image[" << res.img.id << "] = " << res.avg_br << std::endl;
     }
     of.close();
+}
+
+image MyFlowGraph::inverse_brightness(image img)
+{
+    image res;
+    res.data = new uchar[img.width*img.height];
+    tbb::parallel_for(size_t(0), size_t(img.height), size_t(1),
+        [&res, &img](size_t i)
+    {
+            for(int j = 0; j < img.width; j++)
+                res.data[i*img.width + j] = img.data[i*img.width + j];
+    });
+    return res;
+}
+
+double MyFlowGraph::calc_avg_br(image img)
+{
+    double avg_br = 0;
+    double* buffer = new double[img.height];
+    tbb::parallel_for(size_t(0), size_t(img.height), size_t(1),
+        [buffer, &img](size_t i) {
+            buffer[i] = 0;
+            for(int j = 0; j < img.width; j++)
+                buffer[i] += img.data[i*img.width + j];
+            buffer[i] /= img.width;
+    });
+    for(int i = 0; i < img.height; i++)
+        avg_br += buffer[i];
+    delete[] buffer;
+    return avg_br / img.height;
 }

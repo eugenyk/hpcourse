@@ -5,6 +5,7 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/flow_graph.h>
 //#include <tbb/tick_count.h>
+#include "structs.h"
 
 typedef tbb::flow::graph tbb_graph;
 
