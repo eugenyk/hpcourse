@@ -11,10 +11,11 @@ using namespace std;
 
 typedef vector<pair<size_t, size_t>> points;
 const int MAX_INTENSITY = 255;
+const int IMAGE_SIZE = 256;
 
 class Image {
 public:
-    Image(size_t width, size_t height)
+    Image(size_t width = IMAGE_SIZE, size_t height = IMAGE_SIZE)
             : width_(width), height_(height) {
         data_ = vector<vector<int>>(height_, vector<int>(width_));
     }
@@ -142,20 +143,16 @@ int main(int argc, char* argv[]) {
         }
     }
     ofstream log(log_file);
-    size_t width = 256;
-    size_t height = 256;
 
     graph g;
     size_t total_images = 1000;
     size_t counter = 0;
-    auto generator = [&](Image& output) -> bool {
+    auto generator = [&](Image& image) -> bool {
         if (counter >= total_images) {
             return false;
         }
         counter++;
-        Image image(width, height);
         image.fill_random();
-        output = image;
         return true;
     };
     source_node<Image> source(g, generator);
@@ -172,9 +169,9 @@ int main(int argc, char* argv[]) {
         return image.target_intensity_points(target_intensity);
     };
 
-    function_node<Image, points, rejecting> max_node(g, unlimited, max_body);
-    function_node<Image, points, rejecting> min_node(g, unlimited, min_body);
-    function_node<Image, points, rejecting> equal_node(g, unlimited, equal_body);
+    function_node<Image, points, rejecting> max_node(g, serial, max_body);
+    function_node<Image, points, rejecting> min_node(g, serial, min_body);
+    function_node<Image, points, rejecting> equal_node(g, serial, equal_body);
     join_node<tuple<Image, points, points, points>, queueing> join(g);
 
     auto highlight_body = [&log](tuple<Image, points, points, points> input)->Image {
@@ -190,7 +187,7 @@ int main(int argc, char* argv[]) {
     auto mean_body = [](const Image& image)->float {
         return image.mean_intensity();
     };
-    function_node<Image, float, rejecting> mean_node(g, unlimited, mean_body);
+    function_node<Image, float, rejecting> mean_node(g, serial, mean_body);
 
     auto invert_body = [](const Image& image)->Image {
         Image result(image);
@@ -203,7 +200,7 @@ int main(int argc, char* argv[]) {
         log << "Mean intensity = " << mean << endl;
         return continue_msg();
     };
-    function_node<float, continue_msg, rejecting> output(g, unlimited, output_body);
+    function_node<float, continue_msg, rejecting> output(g, serial, output_body);
 
     make_edge(source, limit);
     make_edge(limit, broadcast);
