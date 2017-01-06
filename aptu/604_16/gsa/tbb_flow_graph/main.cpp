@@ -103,7 +103,7 @@ int main(int argc, char** argv)
     graph g;
 
     size_t img_counter = 0;
-    auto img_generator_lambda = [&opt, &img_counter] (image& img) {
+    auto img_generator_lambda = [] (image& img) {
         img.resize(M);
         for (int i = 0; i < M; ++i)
         {
@@ -113,8 +113,7 @@ int main(int argc, char** argv)
                 img[i][j] = rand();
             }
         }
-        ++img_counter;
-        return img_counter < opt.n_images;
+        return true;
     };
 
     source_node<image> img_generator(g, img_generator_lambda, false);
@@ -147,7 +146,7 @@ int main(int argc, char** argv)
         return res;
     };
 
-    function_node<image, positions_vec> max_val_finder(g, 1, max_val_finder_lambda);
+    function_node<image, positions_vec> max_val_finder(g, serial, max_val_finder_lambda);
     make_edge(limiter, max_val_finder);
 
 
@@ -174,7 +173,7 @@ int main(int argc, char** argv)
         return res;
     };
 
-    function_node<image, positions_vec> min_val_finder(g, 1, min_val_finder_lambda);
+    function_node<image, positions_vec> min_val_finder(g, serial, min_val_finder_lambda);
     make_edge(limiter, min_val_finder);
 
 
@@ -194,7 +193,7 @@ int main(int argc, char** argv)
         return res;
     };
 
-    function_node<image, positions_vec> val_finder(g, 1, val_finder_lambda);
+    function_node<image, positions_vec> val_finder(g, serial, val_finder_lambda);
     make_edge(limiter, val_finder);
 
 
@@ -272,7 +271,7 @@ int main(int argc, char** argv)
         file << sum / (M * N) << std::endl;
     };
 
-    function_node<image, continue_msg> mean_calcer(g, 1, mean_calcer_lambda);
+    function_node<image, continue_msg> mean_calcer(g, serial, mean_calcer_lambda);
     make_edge(marker, mean_calcer);
 
     img_generator.activate();
