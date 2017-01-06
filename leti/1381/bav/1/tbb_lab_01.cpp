@@ -25,8 +25,8 @@ void log(const char* format, ...)
     va_end(args);
 }
 
-const size_t IMAGE_WIDTH = 16;
-const size_t IMAGE_HEIGHT = 16;
+size_t IMAGE_WIDTH = 16;
+size_t IMAGE_HEIGHT = 16;
 
 int num_images = 5;
 int img_number = 0;
@@ -171,7 +171,7 @@ unsigned char MIN_BRIGHTNESS = 0;
 void print_help()
 {
     log("Usage: flowgraph -b user_brightness -l "
-        "image_processing_limit [-f log_file_name]\n");
+        "image_processing_limit [-f log_file_name -n num_images -s image_size]\n");
 }
 
 // Обработка входных параметров
@@ -180,7 +180,7 @@ bool process_input_args(int argc, char *argv[])
     int opt;
     bool b_flag_exist = false;
     bool l_flag_exist = false;
-    while ((opt = getopt(argc, argv, "b:l:f:")) != -1)
+    while ((opt = getopt(argc, argv, "b:l:f:n:s:")) != -1)
     {
         switch (opt)
         {
@@ -194,6 +194,12 @@ bool process_input_args(int argc, char *argv[])
             break;
         case 'f':
             log_file_name = std::string(optarg);
+            break;
+        case 'n':
+            num_images = atoi(optarg);
+            break;
+        case 's':
+            IMAGE_WIDTH = IMAGE_HEIGHT = atoi(optarg);
             break;
         default:
             print_help();
@@ -395,6 +401,7 @@ int main(int argc, char *argv[])
         tbb::flow::unlimited,
         [](const detection_tuple& t) -> Image*
         {
+            static int image_counter = 0;
             const detection_pair& max_detect = std::get<0>(t);
             const detection_pair& min_detect = std::get<1>(t);
             const detection_pair& usr_detect = std::get<2>(t);
@@ -458,9 +465,10 @@ int main(int argc, char *argv[])
             }
 
             std::string filename = "selected";
-            filename += std::to_string(img_number);
+            filename += std::to_string(image_counter);
             filename += ".bmp";
             saveImageAsBmp(img, filename.c_str());
+            image_counter++;
 
             log("draw_borders_node: input_image = %p\n", img);
 
@@ -474,6 +482,7 @@ int main(int argc, char *argv[])
         tbb::flow::unlimited,
         [](Image* input_image) -> Image*
         {
+            static int image_counter = 0;
             log("invert_node: input_image = %p\n", input_image);
 
             Image invert_image (input_image);
@@ -489,9 +498,10 @@ int main(int argc, char *argv[])
             }
 
             std::string filename = "inverted";
-            filename += std::to_string(img_number);
+            filename += std::to_string(image_counter);
             filename += ".bmp";
             saveImageAsBmp(&invert_image, filename.c_str());
+            image_counter++;
 
             return input_image;
         }
