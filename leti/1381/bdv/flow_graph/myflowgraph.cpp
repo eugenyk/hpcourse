@@ -2,7 +2,6 @@
 
 MyFlowGraph::MyFlowGraph(graph_options opt)
 {
-    image img;
     images_limit = opt.max_images;
     imgs_h = opt.image_h;
     imgs_w = opt.image_w;
@@ -13,6 +12,7 @@ MyFlowGraph::MyFlowGraph(graph_options opt)
 
 MyFlowGraph::~MyFlowGraph()
 {
+
 }
 
 void MyFlowGraph::run()
@@ -20,6 +20,7 @@ void MyFlowGraph::run()
     tbb_graph g;
 
     int w, h, num_imgs = 0, max_imgs = images_limit;
+    //max_imgs = 500;
     h = imgs_h;
     w = imgs_w;
     tbb::flow::source_node<image>
@@ -70,8 +71,11 @@ void MyFlowGraph::run()
         res.pixels = find_elements(res.img, max);
         return res;
     });
-    tbb::flow::join_node<std::tuple<selected_pixels, selected_pixels, selected_pixels> >
-            pixs_join(g);
+    tbb::flow::join_node<std::tuple<selected_pixels, selected_pixels, selected_pixels>, tbb::flow::tag_matching>
+            pixs_join(g,
+                      [](const selected_pixels& pixs)->int {return pixs.img.id;},
+                      [](const selected_pixels& pixs)->int {return pixs.img.id;},
+                      [](const selected_pixels& pixs)->int {return pixs.img.id;});
     tbb::flow::function_node<std::tuple<selected_pixels, selected_pixels, selected_pixels>, image>
             ext_min(g, images_limit, [](std::tuple<selected_pixels, selected_pixels, selected_pixels> pixs_tup)
     {
@@ -93,8 +97,11 @@ void MyFlowGraph::run()
         extend_pixels(pixs.img, pixs.pixels);
         return pixs.img;
     });
-    tbb::flow::join_node<std::tuple<image, image, image>, tbb::flow::queueing >
-            join(g);
+    tbb::flow::join_node<std::tuple<image, image, image>, tbb::flow::tag_matching >
+            join(g,
+                 [](const image& img)->int {return img.id;},
+                 [](const image& img)->int {return img.id;},
+                 [](const image& img)->int {return img.id;});
     tbb::flow::function_node<std::tuple<image, image, image>, image>
             inverse_br(g, images_limit, [](std::tuple<image, image, image> tup)
     {
