@@ -10,8 +10,14 @@
 
 int main(int argc, char *argv[])
 {
+    /*
     TcpServer::start(32165);
     TcpServer::wait_clients(2);
     TcpServer::close_();
+    */
+    TcpServer srv;
+    srv.start(32165);
+    srv.wait_clients(2);
+    srv.close_();
     return 0;
 }

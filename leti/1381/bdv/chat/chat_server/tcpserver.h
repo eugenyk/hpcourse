@@ -12,37 +12,48 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+class TcpServer;
+
+struct wait_client_args
+{
+    int socket_descr;
+    TcpServer* srv;
+};
+
+void *wait_client(void *ar);
+
 class TcpServer
 {
-    struct NameId
+    struct NameSD
     {
         std::string name;
-        int id;
+        int socket_descriptor;
     };
 
 private:
-    static int socket_descr;
-    static int new_socket_descr[10];
-    static pthread_t threads[10];
-    static int clients_number;
-    static int port;
-    static struct sockaddr_in server_addr;
-    static struct sockaddr_in client_addr;
-    static std::vector<NameId> name_id;
+    int socket_descr;
+    //int new_socket_descr[10];
+    pthread_t threads[10];
+    int clients_number;
+    int port;
+    struct sockaddr_in server_addr;
+    //struct sockaddr_in client_addr;
+    std::vector<struct NameSD> name_id;
+    wait_client_args* wcargs;
 
-    TcpServer();
 public:
-    static void start(int portnum);
-    static void *wait_client(void *id);
-    static void wait_clients(int max_number);
-    static void send(std::string msg, int receiver_id);
-    static std::string receive(int sender_id);
-    static void close_();
-
+    TcpServer();
+    ~TcpServer();
+    void start(int portnum);
+    void wait_clients(int max_number);
+    void send(std::string msg, int socket_descriptor);
+    std::string receive(int socket_descriptor);
+    void close_();
     static bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
     static void setnameandmsg(std::string& snd_data, std::string name, std::string msg);
-    static std::string findNameById(int id);
-    static int findIdByName(std::string name);
+    std::string findNameBySD(int socket_descriptor);
+    int findSDByName(std::string name);
+    void add_client(std::string name, int socket_descriptor);
 };
 
 #endif // TCPSERVER_H
