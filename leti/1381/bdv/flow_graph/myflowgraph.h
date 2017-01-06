@@ -8,7 +8,8 @@
 class MyFlowGraph
 {
 private:
-    std::vector<image> imgs;
+    int imgs_h;
+    int imgs_w;
     int images_limit;
     unsigned char br;
     bool logging;
@@ -18,10 +19,9 @@ private:
     static tbb::concurrent_vector<pixel> find_elements(image img, int value);
     static void extend_pixels(image img, tbb::concurrent_vector<pixel> pixels);
     static void extend_pix(image img, pixel p);
-    //static double inverse_and_avgbr(image img);
     static image inverse_brightness(image img);
     static double calc_avg_br(image img);
-    void write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node);
+    void write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node, int num_images);
 
 public:
     MyFlowGraph(graph_options opt);

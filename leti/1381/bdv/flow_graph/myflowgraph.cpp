@@ -4,13 +4,8 @@ MyFlowGraph::MyFlowGraph(graph_options opt)
 {
     image img;
     images_limit = opt.max_images;
-    for(int i = 0; i < opt.max_images; i++)
-    {
-        img.id = i;
-        img.generate(opt.image_w, opt.image_h);
-        imgs.push_back(img);
-    }
-
+    imgs_h = opt.image_h;
+    imgs_w = opt.image_w;
     br = opt.brightness;
     logging = opt.logging;
     log_file = opt.filename;
@@ -18,15 +13,28 @@ MyFlowGraph::MyFlowGraph(graph_options opt)
 
 MyFlowGraph::~MyFlowGraph()
 {
-    for(int i = 0; i < imgs.size(); i++)
-        delete[] imgs[i].data;
 }
 
 void MyFlowGraph::run()
 {
     tbb_graph g;
 
-    tbb::flow::broadcast_node<image> input_img(g);
+    int w, h, num_imgs = 0, max_imgs = images_limit;
+    h = imgs_h;
+    w = imgs_w;
+    tbb::flow::source_node<image>
+            input_img(g, [&num_imgs, max_imgs, w, h](image& img)
+    {
+        if(num_imgs < max_imgs)
+        {
+            num_imgs++;
+            img.id = num_imgs;
+            img.generate(w, h);
+            return true;
+        }
+        return false;
+    }, false
+    );
     tbb::flow::function_node<image, minmax>
             find_min_max(g, images_limit, [](image img)
     {
@@ -116,18 +124,27 @@ void MyFlowGraph::run()
     tbb::flow::make_edge(join, calc_avgbr);
     tbb::flow::make_edge(calc_avgbr, avg_br);
 
-    for(int i = 0; i < imgs.size(); i++)
-        input_img.try_put(imgs[i]);
+    input_img.activate();
+
     g.wait_for_all();
 
     if(logging)
-        write_avgs_to_file(avg_br);
-
-    for(int i = 0; i < imgs.size(); i++)
+        write_avgs_to_file(avg_br, max_imgs);
+    else
     {
-        image img;
-        inversed_img.try_get(img);
-        delete[] img.data;
+        for(int i = 0; i < max_imgs; i++)
+        {
+            img_avgbr res;
+            avg_br.try_get(res);
+            delete[] res.img.data;
+        }
+    }
+
+    for(int i = 0; i < max_imgs; i++)
+    {
+        image inv_img;
+        inversed_img.try_get(inv_img);
+        delete[] inv_img.data;
     }
 }
 
@@ -207,14 +224,15 @@ void MyFlowGraph::extend_pix(image img, pixel p)
         }
 }
 
-void MyFlowGraph::write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node)
+void MyFlowGraph::write_avgs_to_file(tbb::flow::buffer_node<img_avgbr>& node, int num_images)
 {
     std::ofstream of(log_file);
-    for(int i = 0; i < imgs.size(); i++)
+    for(int i = 0; i < num_images; i++)
     {
         img_avgbr res;
         node.try_get(res);
         of << "Avg brightness for image[" << res.img.id << "] = " << res.avg_br << std::endl;
+        delete[] res.img.data;
     }
     of.close();
 }
