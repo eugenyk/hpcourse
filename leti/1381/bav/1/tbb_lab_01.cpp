@@ -56,11 +56,13 @@ public:
     {
         width = height = 0;
         img = r_img = g_img = b_img = nullptr;
+        id = 0;
     }
-    Image(size_t w, size_t h)
+    Image(size_t w, size_t h, size_t ID)
     {
         width = w;
         height = h;
+        id = ID;
         img = new unsigned char* [width];
         r_img = new unsigned char* [width];
         g_img = new unsigned char* [width];
@@ -82,6 +84,7 @@ public:
     {
         width = image.width;
         height = image.height;
+        id = image.id;
         if (image.img != nullptr)
         {
             img = new unsigned char* [image.width];
@@ -110,6 +113,7 @@ public:
         {
             width = image->width;
             height = image->height;
+            id = image->id;
             img = new unsigned char* [image->width];
             r_img = new unsigned char* [image->width];
             g_img = new unsigned char* [image->width];
@@ -155,6 +159,7 @@ public:
     unsigned char** b_img;
     size_t width;
     size_t height;
+    size_t id;
 };
 
 typedef std::pair< Image*, std::vector<Point> > detection_pair;
@@ -213,8 +218,9 @@ Image *get_next_image()
 {
     if (img_number < num_images)
     {
+        Image* img = new Image(IMAGE_WIDTH, IMAGE_HEIGHT, img_number);
         img_number++;
-        return new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
+        return img;
     }
     else
     {
@@ -330,21 +336,21 @@ int main(int argc, char *argv[])
     tbb::flow::source_node< Image* > image_generator(g,
         [](Image* &next_image) -> bool
         {
-            std::string filename = "img";
-            filename += std::to_string(img_number);
-            filename += ".bmp";
+            //std::string filename = "img";
+            //filename += std::to_string(img_number);
+            //filename += ".bmp";
             next_image = get_next_image();
-            log("=========================================\n");
+            //log("=========================================\n");
             if (next_image != nullptr)
             {
-                log("image_generator: next_image = %p\n", next_image);
+                //log("image_generator: next_image = %p\n", next_image);
 
-                saveImageAsBmp(next_image, filename.c_str());
+                //saveImageAsBmp(next_image, filename.c_str());
                 return true;
             }
             else
             {
-                log("image_generator: next_image = %p, return false\n", next_image);
+                //log("image_generator: next_image = %p, return false\n", next_image);
                 return false;
             }
         }
@@ -356,12 +362,12 @@ int main(int argc, char *argv[])
     // Maximum detector =======================================================
     tbb::flow::function_node< Image*, detection_pair > maximum_detector(
         g,
-        tbb::flow::unlimited,
+        tbb::flow::serial,
         [](Image* input_image) -> detection_pair
         {
             std::vector<Point> result = findPixels(input_image, MAX_BRIGHTNESS);
             std::string pointsStr = pointsToString(result);
-            log("maximum_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
+            //log("maximum_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
             return std::make_pair(input_image, result);
         }
     );
@@ -369,12 +375,12 @@ int main(int argc, char *argv[])
     // Minimum detector =======================================================
     tbb::flow::function_node< Image*, detection_pair > minimum_detector(
         g,
-        tbb::flow::unlimited,
+        tbb::flow::serial,
         [](Image* input_image) -> detection_pair
         {
             std::vector<Point> result = findPixels(input_image, MIN_BRIGHTNESS);
             std::string pointsStr = pointsToString(result);
-            log("minimum_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
+            //log("minimum_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
             return std::make_pair(input_image, result);
         }
     );
@@ -382,23 +388,28 @@ int main(int argc, char *argv[])
     // User detector ==========================================================
     tbb::flow::function_node< Image*, detection_pair > user_detector(
         g,
-        tbb::flow::unlimited,
+        tbb::flow::serial,
         [](Image* input_image) -> detection_pair
         {
             std::vector<Point> result = findPixels(input_image, user_brightness);
             std::string pointsStr = pointsToString(result);
-            log("user_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
+            //log("user_detector: input_image = %p, points = %s\n", input_image, pointsStr.c_str());
             return std::make_pair(input_image, result);
         }
     );
 
     // Detectors join node ====================================================
-    tbb::flow::join_node< detection_tuple, tbb::flow::queueing > detectors_join(g);
+    tbb::flow::join_node< detection_tuple, tbb::flow::tag_matching > detectors_join(
+        g,
+        [](const detection_pair &p) -> size_t { return (size_t)p.first->id; },
+        [](const detection_pair &p) -> size_t { return (size_t)p.first->id; },
+        [](const detection_pair &p) -> size_t { return (size_t)p.first->id; }
+    );
 
     // Draw borders node ======================================================
     tbb::flow::function_node< detection_tuple, Image* > draw_borders_node(
         g,
-        tbb::flow::unlimited,
+        tbb::flow::serial,
         [](const detection_tuple& t) -> Image*
         {
             static int image_counter = 0;
@@ -464,13 +475,13 @@ int main(int argc, char *argv[])
                 }
             }
 
-            std::string filename = "selected";
-            filename += std::to_string(image_counter);
-            filename += ".bmp";
-            saveImageAsBmp(img, filename.c_str());
-            image_counter++;
+            //std::string filename = "selected";
+            //filename += std::to_string(image_counter);
+            //filename += ".bmp";
+            //saveImageAsBmp(img, filename.c_str());
+            //image_counter++;
 
-            log("draw_borders_node: input_image = %p\n", img);
+            //log("draw_borders_node: input_image = %p\n", img);
 
             return img;
         }
@@ -479,11 +490,11 @@ int main(int argc, char *argv[])
     // Invert node ============================================================
     tbb::flow::function_node< Image*, Image* > invert_node(
         g,
-        tbb::flow::unlimited,
+        tbb::flow::serial,
         [](Image* input_image) -> Image*
         {
             static int image_counter = 0;
-            log("invert_node: input_image = %p\n", input_image);
+            //log("invert_node: input_image = %p\n", input_image);
 
             Image invert_image (input_image);
             for (size_t i = 0; i < invert_image.width; i++)
@@ -497,11 +508,11 @@ int main(int argc, char *argv[])
                 }
             }
 
-            std::string filename = "inverted";
-            filename += std::to_string(image_counter);
-            filename += ".bmp";
-            saveImageAsBmp(&invert_image, filename.c_str());
-            image_counter++;
+            //std::string filename = "inverted";
+            //filename += std::to_string(image_counter);
+            //filename += ".bmp";
+            //saveImageAsBmp(&invert_image, filename.c_str());
+            //image_counter++;
 
             return input_image;
         }
@@ -510,7 +521,7 @@ int main(int argc, char *argv[])
     // Average node ===========================================================
     tbb::flow::function_node< Image*, unsigned char > average_node(
         g,
-        tbb::flow::unlimited,
+        tbb::flow::serial,
         [](Image* input_image) -> unsigned char
         {
             unsigned char result = 0;
@@ -524,8 +535,7 @@ int main(int argc, char *argv[])
                 }
             }
             result = tmp_result / size;
-            log("average_node: input_image = %p, average pixel = %u\n",
-                input_image, result);
+            //log("average_node: input_image = %p, average pixel = %u\n", input_image, result);
             return result;
         }
     );
@@ -536,18 +546,18 @@ int main(int argc, char *argv[])
     // Output node ============================================================
     tbb::flow::function_node< output_tuple, tbb::flow::continue_msg > output_node(
         g,
-        tbb::flow::unlimited,
+        tbb::flow::serial,
         [](const output_tuple& t) -> tbb::flow::continue_msg
         {
             Image* image = std::get<0>(t);
             unsigned char avg_pixel = std::get<1>(t);
-            log("output_node: average pixel = %u\n", avg_pixel);
+            //log("output_node: average pixel = %u\n", avg_pixel);
 
             if (log_file_name.size() > 0)
             {
-                std::ofstream ofs (log_file_name, std::ofstream::out);
-                ofs << "average pixel value is " << std::to_string(avg_pixel) << std::endl;
-                ofs.close();
+                //std::ofstream ofs (log_file_name, std::ofstream::out);
+                //ofs << "average pixel value is " << std::to_string(avg_pixel) << std::endl;
+                //ofs.close();
             }
 
             delete image;
