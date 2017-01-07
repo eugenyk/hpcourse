@@ -3,8 +3,9 @@
 
 
 
-Image::Image(unsigned m , unsigned n )
+Image::Image(int count, unsigned m , unsigned n )
 {
+	id = count;
 	height = m;
 	wight = n;
 	size = n*m;
@@ -21,22 +22,25 @@ Image::Image(const Image& im){
 	wight = im.wight;
 	size = im.size;
 	matrix = im.matrix;
+	id = im.id;
 }
 
+int Image::get_id() const
+{ return id; }
 Pixels Image::min_pixel() const
 {
 	Pixels min_arr;
 	unsigned char min = 255;
-	//tbb::parallel_for(0, size, 1, [=](int i, byte &min, std::vector<unsigned> &min_arr)
+	min_arr.first = id;
 	for (auto i = 0; i < size; i++)
 	{
 		if (matrix[i] < min){
-			min_arr.clear();
-			min_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
+			min_arr.second.clear();
+			min_arr.second.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
 			min = matrix[i];
 		}
 		else if (matrix[i] == min)
-			min_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
+			min_arr.second.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
 	}
 
 	return min_arr;
@@ -46,24 +50,25 @@ Pixels Image::max_pixel() const
 {
 	Pixels max_arr;
 	unsigned char max = 0;
-	//tbb::parallel_for(0, size, 1, [=](int i, byte &max, std::vector<unsigned> &max_arr)
+	max_arr.first = id;
 	for (auto i = 0; i < size; i++)
 	{
 		if (matrix[i] > max){
-			max_arr.clear();
-			max_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
+			max_arr.second.clear();
+			max_arr.second.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
 			max = matrix[i];
 		}
 		else if (matrix[i] == max)
-			max_arr.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
+			max_arr.second.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
 	}
 	return max_arr;
 }
 Pixels Image::find_pixel(unsigned char val) const
 {
 	Pixels find;
+	find.first = id;
 	for (int i = 0; i < size; i++)
-	if (matrix[i] == val) find.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
+	if (matrix[i] == val) find.second.push_back(Pixel((unsigned)(i % wight), (unsigned)(i / height)));
 	return find;
 }
 unsigned char Image::operator() (unsigned row, unsigned col) const
@@ -85,11 +90,11 @@ double Image::mean_brightness() const{
 	return mean;
 }
 void Image::lead_point(Pixels p){ 
-	for (auto i = 0; i < p.size(); i++)
+	for (auto i = 0; i < p.second.size(); i++)
 	{
-		for (auto x = p[i].x - 1; x <= p[i].x; x++)
-		for (auto y = p[i].y - 1; y <= p[i].y; y++)
-		if ((x>0) && (x<wight) && (y > 0) && (y < height) && ((x != p[i].x) || (y != p[i].y)))
+		for (auto x = p.second[i].x - 1; x <= p.second[i].x; x++)
+		for (auto y = p.second[i].y - 1; y <= p.second[i].y; y++)
+		if ((x>0) && (x<wight) && (y > 0) && (y < height) && ((x != p.second[i].x) || (y != p.second[i].y)))
 			matrix[y*wight + x] = 255;
 	}
 	return; 

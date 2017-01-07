@@ -12,14 +12,14 @@ struct Pixel
 	unsigned y;
 
 };
-typedef std::vector<Pixel> Pixels;
+typedef std::pair<int, std::vector<Pixel>> Pixels;
 class Image
 {
 public:
-	Image(unsigned m = M_size, unsigned n = N_size);
+	Image(int count = 0,unsigned m = M_size, unsigned n = N_size);
 	Image(const Image& im);
 	~Image(){}
-
+	int get_id() const;
 	void inverse_image();
 	double mean_brightness() const;
 	void lead_point(Pixels p);
@@ -29,6 +29,7 @@ public:
 	void print_image() const;
 	unsigned char Image::operator() (unsigned row, unsigned col) const;
 private:
+	int id;
 	Pixel get_pixel(unsigned i){ return Pixel((unsigned)(i % wight), (unsigned)(i / height)); }
 	vector<unsigned char> matrix;
 	unsigned height;
