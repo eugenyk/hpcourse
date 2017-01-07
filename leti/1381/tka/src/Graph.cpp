@@ -1,8 +1,6 @@
 
 #include "stdafx.h"
 #include <tbb/flow_graph.h>
-#include "tbb/tbb.h"
-#include "tbb/blocked_range2d.h"
 #include "picture.h"
 #include <windows.h>
 #include <iostream>
@@ -20,11 +18,11 @@ int main(int argc, char *argv[]) {
 	srand(time(NULL));
 	graph g;
 
-	auto source = [&info](Picture& result)
+	int counter = 0;
+	auto source = [&info, &counter](Picture& result)
 	{
-		static int counter = 0;
 		if (counter >= info.get_number_image())return false;
-		result = Picture();
+		result = Picture(counter);
 		++counter;
 		return true;
 	};
@@ -37,13 +35,17 @@ int main(int argc, char *argv[]) {
 	function_node<Picture, Cells> f_find_min(g, unlimited, find_min_pixel);
 	auto find_equil_pixel = [&info](const Picture& input){return input.find_pixel(info.get_brightness()); };
 	function_node<Picture, Cells> f_find_equil(g, unlimited, find_equil_pixel);
-	join_node<tuple<Picture, Cells, Cells, Cells>> join_vector(g);
+	join_node<tuple<Picture, Cells, Cells, Cells>, tag_matching> join_vector(g,
+		[](const Picture& pt)->int {return pt.get_id();},
+		[](const Cells& cl)->int {return cl.first; },
+		[](const Cells& cl)->int {return cl.first; },
+		[](const Cells& cl)->int {return cl.first; });
 	auto distinguish_pixels = [](tuple<Picture, Cells, Cells, Cells> in){
-		auto im = tbb::flow::get<0>(in);
-		im.lead_point(tbb::flow::get<1>(in));
-		im.lead_point(tbb::flow::get<2>(in));
-		im.lead_point(tbb::flow::get<3>(in));
-		return im;
+		auto pt = tbb::flow::get<0>(in);
+		pt.lead_point(tbb::flow::get<1>(in));
+		pt.lead_point(tbb::flow::get<2>(in));
+		pt.lead_point(tbb::flow::get<3>(in));
+		return pt;
 	};
 	function_node<tuple<Picture, Cells, Cells, Cells>, Picture> f_dist_pixel(g, unlimited, distinguish_pixels);
 	auto inverse_image = [](const Picture& input)
@@ -52,14 +54,16 @@ int main(int argc, char *argv[]) {
 		new_im.inverse_image();
 		return new_im;
 	};
-	function_node<Picture> f_invers_image(g, unlimited, inverse_image);
-	auto find_mean_brightness = [](const Picture& input){	return input.mean_brightness(); };
-	function_node<Picture, double> f_find_mean(g, unlimited, find_mean_brightness);
+	function_node<Picture, Picture> f_invers_image(g, unlimited, inverse_image);
+	auto find_mean_brightness = [](const Picture& input){	return pair<int, double>(input.get_id(),input.mean_brightness());};
+	function_node<Picture, pair<int,double>> f_find_mean(g, unlimited, find_mean_brightness);
 	ofstream out_file(info.get_file_name());
-	auto file_output = [&out_file, &info](double b){if (info.get_file_name() != "") out_file << b << endl; return continue_msg(); };
-	function_node<double> f_file_output(g, serial, file_output);
-	join_node<tuple<continue_msg, continue_msg>> finish_join(g);
-	function_node<tuple<continue_msg, continue_msg>> finish_image(g, serial, [](tuple<continue_msg, continue_msg>){cout << "end_image" << endl; });
+	auto file_output = [&out_file, &info](pair<int, double> b){if (parser.get_file_name() != "") out_file << b.second << endl;return b.first; };
+	function_node<pair<int,double>,int> f_file_output(g, serial, file_output);
+	join_node<tuple<int, Picture>,tag_matching> finish_join(g,
+		[](const int& id)->int {return id; },
+		[](const Picture& pt)->int {return pt.get_id(); });
+	function_node<tuple<int, Picture>> finish_image(g, serial, [](tuple<int, Picture> out ){cout << "result_image = "<< std::get<0>(out) <<" = " << std::get<1>(out).get_id()<< endl; });
 	make_edge(input, limit_node);
 	make_edge(limit_node, broad_node);
 	make_edge(broad_node, f_find_max);
@@ -78,7 +82,6 @@ int main(int argc, char *argv[]) {
 	make_edge(finish_join, finish_image);
 	make_edge(finish_image, limit_node.decrement);
 
-	input.activate();
 	g.wait_for_all();
 	return 0;
 }
