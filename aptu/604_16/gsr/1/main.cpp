@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
                                   return true;
                               }, false);
 
-    function_node<image, pos_v> max_node(g, unlimited,
+    function_node<image, pos_v> max_node(g, 1,
                                          [](image const &im) {
                                              unsigned char maxi = 0;
                                              im.map([&maxi](unsigned char elem) {
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
                                              return im.filter(maxi);
                                          });
 
-    function_node<image, pos_v> min_node(g, unlimited,
+    function_node<image, pos_v> min_node(g, 1,
                                          [](image const &im) {
                                              unsigned char mini = 255;
                                              im.map([&mini](unsigned char elem) {
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
                                          });
 
 
-    function_node<image, pos_v> eq_node(g, unlimited,
+    function_node<image, pos_v> eq_node(g, 1,
                                         [brightness](image const &im) {
                                             return im.filter(brightness);
                                         });
