@@ -140,7 +140,11 @@ int main(int argc, char *argv[])
         });
         return img.img;
     });
-    tbb::flow::join_node<jointype, tbb::flow::tag_matching> joinNode(g);
+    tbb::flow::join_node<jointype, tbb::flow::tag_matching> joinNode(g,
+     [](const image8u& imag)->int{ return imag.id; },
+    [](const image8u& imag)->int{ return imag.id; },
+    [](const image8u& imag)->int{ return imag.id; }
+    );
     tbb::flow::function_node<jointype, image8u> inverseNode(g, args.imagesLimit, [](jointype t) {
         image8u img = std::get<0>(t);
         tbb::parallel_for(0, img.height, 1, [img](size_t i) {
