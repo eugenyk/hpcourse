@@ -406,6 +406,16 @@ int main(int argc, char *argv[])
         [](const detection_pair &p) -> size_t { return (size_t)p.first->id; }
     );
 
+    // Limiter decrement node =================================================
+    tbb::flow::function_node< detection_tuple, tbb::flow::continue_msg > decrement_node(
+        g,
+        tbb::flow::serial,
+        [](const detection_tuple& t) -> tbb::flow::continue_msg
+        {
+            return tbb::flow::continue_msg();
+        }
+    );
+
     // Draw borders node ======================================================
     tbb::flow::function_node< detection_tuple, Image* > draw_borders_node(
         g,
@@ -575,8 +585,11 @@ int main(int argc, char *argv[])
     tbb::flow::make_edge(maximum_detector, tbb::flow::input_port<0>(detectors_join));
     tbb::flow::make_edge(minimum_detector, tbb::flow::input_port<1>(detectors_join));
     tbb::flow::make_edge(user_detector, tbb::flow::input_port<2>(detectors_join));
-    // Link detectors join node with draw borders node
+    // Link detectors join node with draw borders node and limiter decrement node
     tbb::flow::make_edge(detectors_join, draw_borders_node);
+    tbb::flow::make_edge(detectors_join, decrement_node);
+    // Link decrement node with limiter decrement port
+    tbb::flow::make_edge(decrement_node, limiter.decrement);
     // Link draw borders node with invert and average nodes
     tbb::flow::make_edge(draw_borders_node, invert_node);
     tbb::flow::make_edge(draw_borders_node, average_node);
@@ -585,8 +598,6 @@ int main(int argc, char *argv[])
     tbb::flow::make_edge(average_node, tbb::flow::input_port<1>(invert_average_join));
     // Link invert & average join node with output node
     tbb::flow::make_edge(invert_average_join, output_node);
-    // Link output node with limiter decrement port
-    tbb::flow::make_edge(output_node, limiter.decrement);
 
     g.wait_for_all();
 
