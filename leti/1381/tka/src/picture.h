@@ -12,14 +12,15 @@ struct Cell
 	unsigned y;
 
 };
-typedef std::vector<Cell> Cells;
+typedef std::pair<int, std::vector<Cell>> Cells;
 class Picture
 {
 public:
-	Picture(unsigned m = M_size, unsigned n = N_size);
+	Picture(int count = 0, unsigned m = M_size, unsigned n = N_size);
 	Picture(const Picture& im);
 	~Picture(){}
 
+	int get_id() const;
 	void inverse_image();
 	double mean_brightness() const;
 	void lead_point(Cells p);
@@ -29,6 +30,7 @@ public:
 	void print_image() const;
 	unsigned char Picture::operator() (unsigned row, unsigned col) const;
 private:
+	int id;
 	Cell get_pixel(unsigned i){ return Cell((unsigned)(i % wight), (unsigned)(i / height)); }
 	vector<unsigned char> matrix;
 	unsigned height;

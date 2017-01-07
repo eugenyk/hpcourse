@@ -3,8 +3,9 @@
 
 
 
-Picture::Picture(unsigned m, unsigned n)
+Picture::Picture(int count, unsigned m, unsigned n)
 {
+	id = count;
 	height = m;
 	wight = n;
 	size = n*m;
@@ -16,26 +17,31 @@ Picture::Picture(unsigned m, unsigned n)
 		matrix.push_back(m);
 	}
 }
-Picture::Picture(const Picture& im){
-	height = im.height;
-	wight = im.wight;
-	size = im.size;
-	matrix = im.matrix;
+Picture::Picture(const Picture& pt){
+	height = pt.height;
+	wight = pt.wight;
+	size = pt.size;
+	matrix = pt.matrix;
+	id = pt.id;
 }
+
+int Picture::get_id() const
+{ return id; }
 
 Cells Picture::min_cell() const
 {
 	Cells min_arr;
 	unsigned char min = 255;
+	min_arr.first = id;
 	for (auto i = 0; i < size; i++)
 	{
 		if (matrix[i] < min){
-			min_arr.clear();
-			min_arr.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
+			min_arr.second.clear();
+			min_arr.secoand.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
 			min = matrix[i];
 		}
 		else if (matrix[i] == min)
-			min_arr.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
+			min_arr.second.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
 	}
 
 	return min_arr;
@@ -45,15 +51,16 @@ Cells Picture::max_cell() const
 {
 	Cells max_arr;
 	unsigned char max = 0;
+	max_arr.first = id;
 	for (auto i = 0; i < size; i++)
 	{
 		if (matrix[i] > max){
-			max_arr.clear();
-			max_arr.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
+			max_arr.second.clear();
+			max_arr.second.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
 			max = matrix[i];
 		}
 		else if (matrix[i] == max)
-			max_arr.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
+			max_arr.second.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
 	}
 	return max_arr;
 }
@@ -61,7 +68,7 @@ Cells Picture::find_cell(unsigned char val) const
 {
 	Cells find;
 	for (int i = 0; i < size; i++)
-	if (matrix[i] == val) find.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
+	if (matrix[i] == val) find.second.push_back(Cell((unsigned)(i % wight), (unsigned)(i / height)));
 	return find;
 }
 unsigned char Picture::operator() (unsigned row, unsigned col) const
@@ -83,11 +90,11 @@ double Picture::mean_brightness() const{
 	return mean;
 }
 void Picture::lead_point(Cells p){
-	for (auto i = 0; i < p.size(); i++)
+	for (auto i = 0; i < p.second.size(); i++)
 	{
-		for (auto x = p[i].x - 1; x <= p[i].x; x++)
-		for (auto y = p[i].y - 1; y <= p[i].y; y++)
-		if ((x>0) && (x<wight) && (y > 0) && (y < height) && ((x != p[i].x) || (y != p[i].y)))
+		for (auto x = p.second[i].x - 1; x <= p.second[i].x; x++)
+		for (auto y = p.second[i].y - 1; y <= p.second[i].y; y++)
+		if ((x>0) && (x<wight) && (y > 0) && (y < height) && ((x != p.second[i].x) || (y != p.second[i].y)))
 			matrix[y*wight + x] = 255;
 	}
 	return;
