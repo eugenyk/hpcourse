@@ -48,6 +48,29 @@ struct tuple_to_key {
 typedef std::tuple<double, int> float_with_id;
 
 namespace node_functions {
+    struct image_generator {
+    private:
+        size_t counter_;
+        const size_t number_of_images_;
+        const size_t image_rows_;
+        const size_t image_cols_;
+    public:
+        image_generator(size_t number_of_images, size_t image_rows, size_t image_cols): counter_(0),
+                                                 number_of_images_(number_of_images),
+                                                 image_rows_(image_rows),
+                                                 image_cols_(image_cols)
+        {};
+
+        bool operator()(std::shared_ptr<Image>& image) {
+            if (counter_ > number_of_images_) {
+                return false;
+            }
+            image = std::make_shared<Image>(image_rows_, image_cols_, counter_);
+            ++counter_;
+            return true;
+        }
+    };
+
     struct max {
         ImageWithValue operator()(shared_ptr<Image> image) {
             std::vector<int> row_max;
@@ -69,6 +92,18 @@ namespace node_functions {
             }
             int max_el = *std::max_element(row_min.begin(), row_min.end());
             auto image_with_value = ImageWithValue(image, max_el);
+            return image_with_value;
+        }
+    };
+
+    struct add_value {
+    private:
+        int value_;
+    public:
+        add_value(int value): value_(value) {}
+
+        ImageWithValue operator() (shared_ptr<Image> image) {
+            auto image_with_value = ImageWithValue(image, value_);
             return image_with_value;
         }
     };

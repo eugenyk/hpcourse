@@ -2,15 +2,14 @@
 #include <random>
 #include <functional>
 #include <algorithm>
-#include <cmath>
 
 Image::Image() : rows_(0), cols_(0), id_(0), data_() {}
 Image::Image(size_t rows, size_t cols, int id) : rows_(rows), cols_(cols), id_(id), data_(rows) {
+    std::random_device rnd_device;
+    std::mt19937 mersenne(rnd_device());
+    std::uniform_int_distribution<int> dist(0, max_brightness_);
+    auto gen = std::bind(dist, mersenne);
     for (auto& row: data_) {
-        std::random_device rnd_device;
-        std::mt19937 mersenne(rnd_device());
-        std::uniform_int_distribution<int> dist(0, max_brightness_);
-        auto gen = std::bind(dist, mersenne);
         row.resize(cols_);
         std::generate(row.begin(), row.end(), gen);
     }

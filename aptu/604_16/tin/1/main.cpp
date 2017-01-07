@@ -46,13 +46,15 @@ int main(int argc, char* argv[]) {
     size_t square_side = 2;
     size_t image_rows = 20;
     size_t image_cols = 20;
-    size_t images_num = 2000;
+    size_t images_num = 20000;
+    image_generator image_gen(images_num, image_rows, image_cols);
 
     graph g;
-    limiter_node<shared_ptr<Image>> input_node(g, limit);
+    source_node<shared_ptr<Image>> input_node(g, image_gen);
+    limiter_node<shared_ptr<Image>> limit_node (g, limit);
     function_node<shared_ptr<Image>, ImageWithValue> max_node(g, unlimited, max());
     function_node<shared_ptr<Image>, ImageWithValue> min_node(g, unlimited, min());
-    limiter_node<ImageWithValue> value_input_node(g, limit);
+    function_node<shared_ptr<Image>, ImageWithValue> add_value_node(g, unlimited, add_value(value));
     function_node<ImageWithValue, ImageWithPoints> value_points_node(g, unlimited, get_values());
     function_node<ImageWithValue, ImageWithPoints> max_points_node(g, unlimited, get_values());
     function_node<ImageWithValue, ImageWithPoints> min_points_node(g, unlimited, get_values());
@@ -65,18 +67,19 @@ int main(int argc, char* argv[]) {
     function_node<shared_ptr<Image>, float_with_id> averages_node(g, unlimited, count_average());
     join_node<tbb::flow::tuple<shared_ptr<Image>, float_with_id>, key_matching<int>>
             answer_join_node(g, image_to_key(), tuple_to_key<double>());
-    function_node<tbb::flow::tuple<shared_ptr<Image>, float_with_id>, continue_msg> output_signal_node(g, 1,
+    function_node<tbb::flow::tuple<shared_ptr<Image>, float_with_id>, continue_msg> output_signal_node(g, unlimited,
             [](const tbb::flow::tuple<shared_ptr<Image>, float_with_id>& tuple) {
                 return continue_msg();
             });
 
-    function_node<float_with_id, float_with_id> logger_node(g, 1, logger(log_file));
+    function_node<float_with_id, float_with_id> logger_node(g, serial, logger(log_file));
 
-    make_edge(input_node, max_node);
-    make_edge(input_node, min_node);
+    make_edge(limit_node, max_node);
+    make_edge(limit_node, min_node);
+    make_edge(limit_node, add_value_node);
     make_edge(max_node, max_points_node);
     make_edge(min_node, min_points_node);
-    make_edge(value_input_node, value_points_node);
+    make_edge(add_value_node, value_points_node);
     make_edge(value_points_node, input_port<0>(point_join_node));
     make_edge(max_points_node, input_port<1>(point_join_node));
     make_edge(min_points_node, input_port<2>(point_join_node));
@@ -92,15 +95,9 @@ int main(int argc, char* argv[]) {
         make_edge(logger_node, input_port<1>(answer_join_node));
     }
     make_edge(answer_join_node, output_signal_node);
-    make_edge(output_signal_node, input_node.decrement);
-    make_edge(output_signal_node, value_input_node.decrement);
+    make_edge(output_signal_node, limit_node.decrement);
+    make_edge(input_node, limit_node);
 
-    for (int i = 0; i < images_num; ++i) {
-        auto image = std::make_shared<Image>(image_rows, image_cols, i);
-        input_node.try_put(image);
-        auto image_with_value = ImageWithValue(image, value);
-        value_input_node.try_put(image_with_value);
-    }
     g.wait_for_all();
 
     return 0;
