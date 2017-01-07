@@ -1,14 +1,5 @@
 #include "tcpserver.h"
-/*
-int TcpServer::socket_descr;
-int TcpServer::new_socket_descr[10];
-pthread_t TcpServer::threads[10];
-int TcpServer::clients_number;
-int TcpServer::port;
-struct sockaddr_in TcpServer::server_addr;
-struct sockaddr_in TcpServer::client_addr;
-std::vector<TcpServer::NameId> TcpServer::name_id;
-*/
+
 void* wait_client(void *ar)
 {
     struct wait_client_args* args = (struct wait_client_args*) ar;
@@ -25,18 +16,19 @@ void* wait_client(void *ar)
     std::string name = srv->receive(new_socket_descr);
     std::cout << name << " connected" << std::endl;
     srv->add_client(name, new_socket_descr);
-    /*
-    NameId nd;
-    nd.name = name;
-    nd.id = i;
-    name_id.push_back(nd);
-    */
+
+    int mu_ind;
+    pthread_mutex_t* mu = srv->getMutexBySD(new_socket_descr, &mu_ind);
+    pthread_mutex_init(mu, 0);
+    std::cout << "Mutex " << mu_ind << " initialized" << std::endl;
+
 
     while(true)
     {
         std::string rec_data = srv->receive(new_socket_descr);
         if(rec_data == "")
             break;
+        else std::cout << rec_data << std::endl;
         std::string snd_name,rec_name, rec_msg;
         if(TcpServer::getnameandmsg(rec_data, rec_name, rec_msg))
         {
@@ -44,11 +36,20 @@ void* wait_client(void *ar)
             TcpServer::setnameandmsg(rec_data, snd_name, rec_msg);
             int rec_sd = srv->findSDByName(rec_name);
             if(rec_sd != -1)
+            {
+                pthread_mutex_t* mutex = srv->getMutexBySD(rec_sd, &mu_ind);
+                pthread_mutex_lock(mutex);
+                std::cout << "Mutex " << mu_ind << " locked" << std::endl;
+
                 srv->send(rec_data, rec_sd);
+
+                pthread_mutex_unlock(mutex);
+            }
         }
         else
             break;
     }
+    pthread_mutex_destroy(mu);
     close(new_socket_descr);
     pthread_exit(0);
 }
@@ -123,10 +124,6 @@ std::string TcpServer::receive(int socket_descriptor)
 
 void TcpServer::close_()
 {
-    /*
-    for(int i = 0; i < clients_number; i++)
-        close(new_socket_descr[i]);
-        */
     close(socket_descr);
 }
 
@@ -170,4 +167,16 @@ void TcpServer::add_client(std::string name, int socket_descriptor)
     ns.name = name;
     ns.socket_descriptor = socket_descriptor;
     name_id.push_back(ns);
+}
+
+pthread_mutex_t* TcpServer::getMutexBySD(int sd, int *mu_index)
+{
+    for(int i = 0; i < name_id.size(); i++)
+        if(name_id[i].socket_descriptor == sd)
+        {
+            if(mu_index != 0)
+                mu_index[0] = i;
+            return &mutexs[i];
+        }
+    return 0;
 }

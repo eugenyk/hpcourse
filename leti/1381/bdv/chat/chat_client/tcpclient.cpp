@@ -47,7 +47,7 @@ std::string TcpClient::receive()
 {
     char buffer[256];
     bzero(buffer, 256);
-    int res = read(socket_descr, buffer, 16);
+    int res = read(socket_descr, buffer, 255);
     if(res < 0)
     {
         if(res == -1)

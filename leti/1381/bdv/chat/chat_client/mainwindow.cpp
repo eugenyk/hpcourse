@@ -64,6 +64,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->setLayout(la);
 
     connect(connect_btn, SIGNAL(released()), this, SLOT(connect_to_srv()));
+    connect(scroll->verticalScrollBar(), SIGNAL(rangeChanged(int,int)), this, SLOT(slide_max(int,int)));
 }
 
 MainWindow::~MainWindow()
@@ -80,7 +81,7 @@ MainWindow::~MainWindow()
     delete connect_btn;
     delete la;
     pthread_cancel(listening_thread);
-    tcp_client.send("-");
+    tcp_client.send("--");
     tcp_client.close_();
     delete args;
 }
@@ -114,4 +115,10 @@ void MainWindow::send_text()
     setnameandmsg(snd_data, rec_name, msg_);
     tcp_client.send(snd_data);
     msg->setText("");
+}
+
+void MainWindow::slide_max(int min, int max)
+{
+    QScrollBar* bar = scroll->verticalScrollBar();
+    bar->setValue(max);
 }

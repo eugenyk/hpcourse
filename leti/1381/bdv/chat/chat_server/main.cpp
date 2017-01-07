@@ -10,14 +10,19 @@
 
 int main(int argc, char *argv[])
 {
-    /*
-    TcpServer::start(32165);
-    TcpServer::wait_clients(2);
-    TcpServer::close_();
-    */
+    int max_clients;
+    if(argc < 2)
+    {
+        std::cout << "Usage:\nchat_server max_clients\nExample:\nchat_server 10" << std::endl;
+        return -1;
+    }
+    else
+        max_clients = std::stoi(argv[1]);
+    if(max_clients < 1)
+        return -1;
     TcpServer srv;
     srv.start(32165);
-    srv.wait_clients(2);
+    srv.wait_clients(max_clients);
     srv.close_();
     return 0;
 }

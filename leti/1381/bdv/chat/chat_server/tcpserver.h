@@ -32,14 +32,13 @@ class TcpServer
 
 private:
     int socket_descr;
-    //int new_socket_descr[10];
-    pthread_t threads[10];
+    pthread_t threads[100];
     int clients_number;
     int port;
     struct sockaddr_in server_addr;
-    //struct sockaddr_in client_addr;
     std::vector<struct NameSD> name_id;
     wait_client_args* wcargs;
+    pthread_mutex_t mutexs[100];
 
 public:
     TcpServer();
@@ -54,6 +53,7 @@ public:
     std::string findNameBySD(int socket_descriptor);
     int findSDByName(std::string name);
     void add_client(std::string name, int socket_descriptor);
+    pthread_mutex_t* getMutexBySD(int sd, int* mu_index = 0);
 };
 
 #endif // TCPSERVER_H

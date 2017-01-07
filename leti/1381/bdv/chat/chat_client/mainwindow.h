@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QScrollBar>
 #include "tcpclient.h"
 
 #include <pthread.h>
@@ -52,6 +53,7 @@ public:
 public slots:
     void connect_to_srv();
     void send_text();
+    void slide_max(int min, int max);
 };
 
 #endif // MAINWINDOW_H
