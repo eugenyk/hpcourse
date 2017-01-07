@@ -8,6 +8,7 @@ import java.util.logging.Logger;
  * Created by Елена on 06.01.2017.
  */
 public final class Config {
+    // Default configuration.
     private String host = "localhost";
     private int port = 5353;
     private final Logger logger = Logger.getLogger(this.getClass().getName());
