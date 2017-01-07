@@ -5,6 +5,7 @@ Image::Image()
 {
     width = 0;
     height = 0;
+	id = -1;
     pixels = nullptr;
 }
 
@@ -12,6 +13,7 @@ Image::Image(int w, int h)
 {
     width = w;
     height = h;
+	id = -1;
     pixels = new Brightness[w * h];
     random();
 }

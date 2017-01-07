@@ -10,6 +10,7 @@ struct Image
     Brightness* pixels;
     int width;
     int height;
+	int id;
 
     Image();
     Image(int w, int h);

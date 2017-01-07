@@ -81,6 +81,7 @@ int main(int argc, const char** argv)
     int task_id = 0;
     source_node<std::shared_ptr<Image>> image_generate_node(g, [&task_id](std::shared_ptr<Image>& image) mutable {
         Image* img = new Image(25, 25);
+		img->id = task_id;
         img->random();
         image = std::shared_ptr<Image>(img);
         return task_id++ < image_count;
@@ -89,7 +90,7 @@ int main(int argc, const char** argv)
 
     broadcast_node<std::shared_ptr<Image>> broadcast_origin_image_node(g);
 
-    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_min_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, std::pair<int, std::vector<Pixel>>> find_min_node(g, unlimited, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         Brightness min = image->pixels[0];
         Brightness curr;
@@ -106,10 +107,10 @@ int main(int argc, const char** argv)
                 }
             }
         }
-        return pixels;
+        return std::pair<int, std::vector<Pixel>> (image->id, pixels);
     });
 
-    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_max_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, std::pair<int, std::vector<Pixel>>> find_max_node(g, unlimited, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         Brightness max = image->pixels[0];
         Brightness curr;
@@ -126,10 +127,10 @@ int main(int argc, const char** argv)
                 }
             }
         }
-        return pixels;
+		return std::pair<int, std::vector<Pixel>>(image->id, pixels);
     });
 
-    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_desired_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, std::pair<int, std::vector<Pixel>>> find_desired_node(g, unlimited, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         if (desired_brightness >= 0) {
             Brightness b = desired_brightness;
@@ -141,17 +142,22 @@ int main(int argc, const char** argv)
                 }
             }
         }
-        return pixels;
+		return std::pair<int, std::vector<Pixel>>(image->id, pixels);
     });
 
-    using SelectedPixels = tbb::flow::tuple<std::shared_ptr<Image>, std::vector<Pixel>, std::vector<Pixel>, std::vector<Pixel>>;
-    join_node<SelectedPixels> join_selected_pixels_node(g);
+    using SelectedPixels = tbb::flow::tuple<std::shared_ptr<Image>, std::pair<int, std::vector<Pixel>>, std::pair<int, std::vector<Pixel>>, std::pair<int, std::vector<Pixel>>>;
+    join_node<SelectedPixels, tbb::flow::tag_matching> join_selected_pixels_node(g,
+		[](const std::shared_ptr<Image> &image) -> int {return (int)image->id; },
+		[](const std::pair<int, std::vector<Pixel>> &pixels) -> int {return (int)pixels.first; },
+		[](const std::pair<int, std::vector<Pixel>> &pixels) -> int {return (int)pixels.first; },
+		[](const std::pair<int, std::vector<Pixel>> &pixels) -> int {return (int)pixels.first; }
+		);
 
     function_node<SelectedPixels, std::shared_ptr<Image>> highlight_node(g, unlimited, [](SelectedPixels pixels) {
         auto matrix = tbb::flow::get<0>(pixels);
-        highlight(matrix, tbb::flow::get<1>(pixels));
-        highlight(matrix, tbb::flow::get<2>(pixels));
-        highlight(matrix, tbb::flow::get<3>(pixels));
+        highlight(matrix, tbb::flow::get<1>(pixels).second);
+        highlight(matrix, tbb::flow::get<2>(pixels).second);
+        highlight(matrix, tbb::flow::get<3>(pixels).second);
         return matrix;
     });
 
