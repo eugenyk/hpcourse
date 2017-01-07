@@ -1,8 +1,8 @@
 #include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <memory>
-#include "tbb/task_group.h"
+//#include <fstream>
+//#include <algorithm>
+//#include <memory>
+//#include "tbb/task_group.h"
 #include "tbb/flow_graph.h"
 #include "image.h"
 
@@ -89,7 +89,7 @@ int main(int argc, const char** argv)
 
     broadcast_node<std::shared_ptr<Image>> broadcast_origin_image_node(g);
 
-    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_min_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_min_node(g, serial, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         Brightness min = image->pixels[0];
         Brightness curr;
@@ -109,7 +109,7 @@ int main(int argc, const char** argv)
         return pixels;
     });
 
-    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_max_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_max_node(g, serial, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         Brightness max = image->pixels[0];
         Brightness curr;
@@ -129,7 +129,7 @@ int main(int argc, const char** argv)
         return pixels;
     });
 
-    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_desired_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_desired_node(g, serial, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         if (desired_brightness >= 0) {
             Brightness b = desired_brightness;
@@ -157,7 +157,7 @@ int main(int argc, const char** argv)
 
     broadcast_node<std::shared_ptr<Image>> broadcast_update_image_node(g);
 
-    function_node<std::shared_ptr<Image>, std::shared_ptr<Image>> inverse_image_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, std::shared_ptr<Image>> inverse_image_node(g, serial, [](std::shared_ptr<Image> image) {
         std::shared_ptr<Image> inverse_image = std::make_shared<Image>(image->width, image->height);
         for (int i = 0; i < image->height; i++) {
             for (int j = 0; j < image->width; j++) {
@@ -167,7 +167,7 @@ int main(int argc, const char** argv)
         return inverse_image;
     });
 
-    function_node<std::shared_ptr<Image>, double> mean_node(g, unlimited, [](std::shared_ptr<Image> image) {
+    function_node<std::shared_ptr<Image>, double> mean_node(g, serial, [](std::shared_ptr<Image> image) {
         int count = image->height * image->width;
         double mean = 0.0;
         for (int i = 0; i < image->height; i++) {
