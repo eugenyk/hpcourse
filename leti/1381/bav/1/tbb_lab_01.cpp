@@ -362,7 +362,7 @@ int main(int argc, char *argv[])
     // Maximum detector =======================================================
     tbb::flow::function_node< Image*, detection_pair > maximum_detector(
         g,
-        tbb::flow::serial,
+        tbb::flow::unlimited,
         [](Image* input_image) -> detection_pair
         {
             std::vector<Point> result = findPixels(input_image, MAX_BRIGHTNESS);
@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
     // Minimum detector =======================================================
     tbb::flow::function_node< Image*, detection_pair > minimum_detector(
         g,
-        tbb::flow::serial,
+        tbb::flow::unlimited,
         [](Image* input_image) -> detection_pair
         {
             std::vector<Point> result = findPixels(input_image, MIN_BRIGHTNESS);
@@ -388,7 +388,7 @@ int main(int argc, char *argv[])
     // User detector ==========================================================
     tbb::flow::function_node< Image*, detection_pair > user_detector(
         g,
-        tbb::flow::serial,
+        tbb::flow::unlimited,
         [](Image* input_image) -> detection_pair
         {
             std::vector<Point> result = findPixels(input_image, user_brightness);
@@ -419,7 +419,7 @@ int main(int argc, char *argv[])
     // Draw borders node ======================================================
     tbb::flow::function_node< detection_tuple, Image* > draw_borders_node(
         g,
-        tbb::flow::serial,
+        tbb::flow::unlimited,
         [](const detection_tuple& t) -> Image*
         {
             static int image_counter = 0;
@@ -500,7 +500,7 @@ int main(int argc, char *argv[])
     // Invert node ============================================================
     tbb::flow::function_node< Image*, Image* > invert_node(
         g,
-        tbb::flow::serial,
+        tbb::flow::unlimited,
         [](Image* input_image) -> Image*
         {
             static int image_counter = 0;
@@ -531,7 +531,7 @@ int main(int argc, char *argv[])
     // Average node ===========================================================
     tbb::flow::function_node< Image*, unsigned char > average_node(
         g,
-        tbb::flow::serial,
+        tbb::flow::unlimited,
         [](Image* input_image) -> unsigned char
         {
             unsigned char result = 0;
@@ -556,7 +556,7 @@ int main(int argc, char *argv[])
     // Output node ============================================================
     tbb::flow::function_node< output_tuple, tbb::flow::continue_msg > output_node(
         g,
-        tbb::flow::serial,
+        tbb::flow::unlimited,
         [](const output_tuple& t) -> tbb::flow::continue_msg
         {
             Image* image = std::get<0>(t);
