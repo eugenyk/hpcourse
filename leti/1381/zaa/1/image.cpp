@@ -1,19 +1,21 @@
 #include <random>
 #include "image.h"
 
-Image::Image()
-{
-    width = 0;
-    height = 0;
-    pixels = nullptr;
+Image::Image() {
+
+  key = 0;
+  width = 0;
+  height = 0;
+  pixels = nullptr;
 }
 
-Image::Image(int w, int h)
-{
-    width = w;
-    height = h;
-    pixels = new Brightness[w * h];
-    random();
+Image::Image(int w, int h) {
+  
+  key = 0;
+  width = w;
+  height = h;
+  pixels = new Brightness[w * h];
+  random();
 }
 
 Image::~Image()
