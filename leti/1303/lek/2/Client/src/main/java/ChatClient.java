@@ -1,8 +1,6 @@
 import protobuf.Message;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -20,48 +18,43 @@ public class ChatClient {
     private final String name;
     private AsynchronousSocketChannel socketChannel;
     private Thread waiter;
+    private final Client client;
 
     /**
      * Class for waiting messages.
      */
     private class Waiter implements Runnable {
-        public void read() {
+        public boolean read() {
 
             try {
                 Message.Msg msg = Message.Msg.parseDelimitedFrom(Channels.newInputStream(socketChannel));
                 if (msg != null) {
-                    System.out.println();
-                    System.out.print(msg.getSender());
-                    System.out.print(new StringBuffer(" [").append(msg.getDateTime()).append("] :"));
-                    System.out.println(new StringBuffer(" ").append(msg.getText()));
+                    client.showMessage(msg);
+                    return true;
                 }
             } catch (IOException e) {
                 // Disconnect.
-                try {
-                    if (socketChannel.isOpen()) {
-                        socketChannel.shutdownOutput();
-                        socketChannel.close();
-                    }
-                    waiter.interrupt();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
+                disconnect();
+                client.connectionLost();
+                return false;
             }
+            return false;
         }
 
         public void run() {
-           while (true) {
-               read();
-           }
+            while (read()) {
+            }
         }
     }
 
-    public ChatClient(String name) {
+    public ChatClient(String name, Client client) {
         this.name = name;
+        this.client = client;
     }
 
     /**
      * Start client
+     *
      * @return succes flag
      */
     public boolean start() {
@@ -80,8 +73,21 @@ public class ChatClient {
         }
     }
 
+    public void disconnect() {
+        try {
+            if (socketChannel.isOpen()) {
+                socketChannel.shutdownOutput();
+                socketChannel.close();
+            }
+            waiter.interrupt();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
+
     /**
      * Send message
+     *
      * @param message
      */
     public void send(String message) {
@@ -98,32 +104,10 @@ public class ChatClient {
                 System.out.println("Server was shutted down!");
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            client.connectionLost();
+            disconnect();
         }
     }
 
-    public static void main(String[] args) {
-        System.out.print("Please, introduce yourself: ");
 
-        BufferedReader consoleReader = new BufferedReader(
-                new InputStreamReader(System.in));
-        try {
-            String name = consoleReader.readLine();
-            ChatClient client = new ChatClient(name);
-            if (!client.start()) {
-                System.out.println("It's impossible to set connection!");
-                return;
-            }
-
-            while (true) {
-                System.out.print("You : ");
-                String message = consoleReader.readLine();
-                if (message != null) {
-                    client.send(message);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 }

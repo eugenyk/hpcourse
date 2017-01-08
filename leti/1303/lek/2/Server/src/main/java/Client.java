@@ -15,6 +15,7 @@ public class Client implements Comparable {
 
     /**
      * Read message
+     *
      * @return message
      */
     public Message.Msg read() {
@@ -30,6 +31,7 @@ public class Client implements Comparable {
 
     /**
      * Start working with client
+     *
      * @param server
      */
     public void start(Server server) {
@@ -46,6 +48,7 @@ public class Client implements Comparable {
 
     /**
      * Send message to real corresponding client.
+     *
      * @param msg
      */
     public void send(Message.Msg msg) {

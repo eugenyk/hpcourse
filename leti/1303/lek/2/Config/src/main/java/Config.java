@@ -1,4 +1,3 @@
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -25,7 +24,7 @@ public final class Config {
         Properties config = new Properties();
         InputStream configFile = null;
         try {
-            configFile = new FileInputStream("config.txt");
+            configFile = getClass().getClassLoader().getResourceAsStream("config.txt");
             config.load(configFile);
             host = config.getProperty("host");
             try {

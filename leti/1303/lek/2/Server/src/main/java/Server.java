@@ -30,7 +30,8 @@ public class Server {
 
         public void completed(AsynchronousSocketChannel socket, Void server) {
             try {
-                logger.info(new StringBuffer("Accepted a connection from ").append(socket.getRemoteAddress()).toString());
+                logger.info(new StringBuffer("Accepted a connection from ")
+                        .append(socket.getRemoteAddress()).toString());
                 socketChannel.accept(null, this);
                 Client client = new Client(socket);
                 clients.add(client);
@@ -47,8 +48,9 @@ public class Server {
 
     /**
      * Broadcast message to all clients
+     *
      * @param msg
-     * @param id client id from which message was gotten.
+     * @param id  client id from which message was gotten.
      */
     public void broadcast(Message.Msg msg, int id) {
         logger.info(new StringBuffer("Send message from client ").append(id).toString());
