@@ -357,8 +357,8 @@ int main( int argc, char * argv[] )
     }
 
     /* Default values */
-    size_t M = 50;
-    size_t N = 50;
+    size_t M = 10;
+    size_t N = 10;
 
     cout << "Runing with the following parameters: " << endl;
     cout << " - M x N = " << "( " << M << " x " << N << ")" << endl;
@@ -371,13 +371,13 @@ int main( int argc, char * argv[] )
     limiter_node<image> limiter( g, queue_len );
 
     broadcast_node<image> broadcaster( g );
-    function_node<image, image, rejecting> equal_elements( g, unlimited, eq_elements{target} );
-    function_node<image, image, rejecting> max_elements( g, unlimited, max_luminance{} );
-    function_node<image, image, rejecting> min_elements( g, unlimited, min_luminance{} );
-    join_node<img_tuple, queueing> join( g );
-    function_node<img_tuple, flt_tuple, rejecting> mean( g, unlimited, mean_luminance{} );
-    function_node<img_tuple, continue_msg, rejecting> inverser( g, unlimited, inverse_image{} );
-    function_node<flt_tuple, continue_msg, rejecting> output( g, unlimited, logger( stream ) );
+    function_node<image, image> equal_elements( g, 1, eq_elements{target} );
+    function_node<image, image> max_elements( g, 1, max_luminance{} );
+    function_node<image, image> min_elements( g, 1, min_luminance{} );
+    join_node<img_tuple> join( g );
+    function_node<img_tuple, flt_tuple> mean( g, 1, mean_luminance{} );
+    function_node<img_tuple, continue_msg> inverser( g, 1, inverse_image{} );
+    function_node<flt_tuple, continue_msg> output( g, 1, logger( stream ) );
 
     make_edge( source, limiter );
     make_edge( limiter, broadcaster );
