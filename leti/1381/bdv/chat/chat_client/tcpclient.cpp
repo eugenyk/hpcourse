@@ -36,6 +36,7 @@ bool TcpClient::connect_(int portnum)
 
 void TcpClient::send(std::string msg)
 {
+    std::cout << "Send: " << msg << " " << std::endl;
     int res = write(socket_descr, msg.data(), msg.size()*sizeof(char));
     if(res < 0)
     {

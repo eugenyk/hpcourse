@@ -1,182 +1,88 @@
 #include "tcpserver.h"
 
-void* wait_client(void *ar)
+TcpServer::TcpServer(QObject *parent) : QTcpServer(parent)
 {
-    struct wait_client_args* args = (struct wait_client_args*) ar;
-    TcpServer* srv = args->srv;
-    struct sockaddr_in client_addr;
-    socklen_t client = sizeof(client_addr);
-    int new_socket_descr = accept(args->socket_descr, (struct sockaddr*) &client_addr, &client);
-    if(new_socket_descr < 0)
-    {
-        std::cout << "Waiting client error" << std::endl;
-        pthread_exit(0);
-    }
-
-    std::string name = srv->receive(new_socket_descr);
-    std::cout << name << " connected" << std::endl;
-    srv->add_client(name, new_socket_descr);
-
-    int mu_ind;
-    pthread_mutex_t* mu = srv->getMutexBySD(new_socket_descr, &mu_ind);
-    pthread_mutex_init(mu, 0);
-    std::cout << "Mutex " << mu_ind << " initialized" << std::endl;
-
-
-    while(true)
-    {
-        std::string rec_data = srv->receive(new_socket_descr);
-        if(rec_data == "")
-            break;
-        else std::cout << rec_data << std::endl;
-        std::string snd_name,rec_name, rec_msg;
-        if(TcpServer::getnameandmsg(rec_data, rec_name, rec_msg))
-        {
-            snd_name = srv->findNameBySD(new_socket_descr);
-            TcpServer::setnameandmsg(rec_data, snd_name, rec_msg);
-            int rec_sd = srv->findSDByName(rec_name);
-            if(rec_sd != -1)
-            {
-                pthread_mutex_t* mutex = srv->getMutexBySD(rec_sd, &mu_ind);
-                pthread_mutex_lock(mutex);
-                std::cout << "Mutex " << mu_ind << " locked" << std::endl;
-
-                srv->send(rec_data, rec_sd);
-
-                pthread_mutex_unlock(mutex);
-            }
-        }
-        else
-            break;
-    }
-    pthread_mutex_destroy(mu);
-    close(new_socket_descr);
-    pthread_exit(0);
-}
-
-TcpServer::TcpServer()
-{
-
+    pool = new QThreadPool(0);
+    pool->setMaxThreadCount(5);
+    //QThreadPool::globalInstance()->setMaxThreadCount(5);
 }
 
 TcpServer::~TcpServer()
 {
-    delete wcargs;
+    for(int i = 0; i < sockets.size(); i++)
+        delete sockets[i].second;
+    std::cout << "Sever finished" << std::endl;
+    delete[] pool;
+}
+
+void TcpServer::incomingConnection(qintptr socketDescriptor)
+{
+    QTcpSocket* socket = new QTcpSocket();
+    std::pair<std::string, QTcpSocket*> elem;
+    elem.second = socket;
+    sockets.push_back(elem);
+    socket->setSocketDescriptor(socketDescriptor);
+
+    connect(socket, SIGNAL(readyRead()), this, SLOT(ready_read()));
 }
 
 void TcpServer::start(int portnum)
 {
     port = portnum;
-    socket_descr = socket(AF_INET, SOCK_STREAM, 0);
-    if (socket_descr < 0)
-        std::cout << "Creating socket error" << std::endl;
-    bzero((char *) &server_addr, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(port);
-
-    int res = bind(socket_descr, (struct sockaddr *) &server_addr, sizeof(server_addr));
-    if (res < 0)
-        std::cout << "Binding error" << std::endl;
-    listen(socket_descr, 5);
-}
-
-void TcpServer::wait_clients(int max_number)
-{
-    wcargs = new struct wait_client_args;
-    wcargs->socket_descr = socket_descr;
-    wcargs->srv = this;
-    clients_number = max_number;
-    for(int i = 0; i < max_number; i++)
+    if(listen(QHostAddress::Any, port))
     {
-        int rc = pthread_create(&threads[i], 0, wait_client, (void *)wcargs);
-        if(rc < 0)
-            std::cout << "Creating thread " << i << " error" << std::endl;
+        std::cout << "Server started." << std::endl;
     }
-
-    for(int i = 0; i < max_number; i++)
-    {
-        void* status;
-        pthread_join(threads[i], &status);
-    }
-}
-
-void TcpServer::send(std::string msg, int socket_descriptor)
-{
-    int n = write(socket_descriptor, msg.data(), msg.size()*sizeof(char));
-    if(n < 0)
-        std::cout << "Sending error" << std::endl;
-}
-
-std::string TcpServer::receive(int socket_descriptor)
-{
-    char buffer[256];
-    int n = read(socket_descriptor, buffer, 255);
-    if(n < 0)
-        std::cout << "Receiving error" << std::endl;
     else
     {
-        std::string res(buffer, n);
-        return res;
+        std::cout << "Starting server error." << std::endl;
     }
-    return "";
 }
 
-void TcpServer::close_()
+void TcpServer::ready_read()
 {
-    close(socket_descr);
+    QTcpSocket* socket = (QTcpSocket*)QObject::sender();
+    ReadAndHandle* mytask = new ReadAndHandle(socket, sockets);
+    mytask->setAutoDelete(true);
+
+    connect(mytask, SIGNAL(setting_username(QTcpSocket*,char*,int)), this, SLOT(set_username(QTcpSocket*,char*,int)));
+    connect(mytask, SIGNAL(deleting_socket_from_store(QTcpSocket*)), this, SLOT(close_socket(QTcpSocket*)));
+
+    pool->start(mytask);
 }
 
-bool TcpServer::getnameandmsg(std::string rec_data, std::string& name, std::string& msg)
+
+void TcpServer::close_socket(QTcpSocket* socket)
 {
-    if(rec_data == "--")
-        return false;
-    int name_size = (int)rec_data[0];
-    rec_data.erase(rec_data.begin());
-    name = rec_data.substr(0, name_size);
-    msg = rec_data.erase(0, name_size);
-    return true;
+    socket->close();
+    delete_socket_from_store(socket);
+    delete socket;
 }
 
-void TcpServer::setnameandmsg(std::string& snd_data, std::string name, std::string msg)
+void TcpServer::delete_socket_from_store(QTcpSocket* sock)
 {
-    snd_data = "0" + name + msg;
-    char name_size = name.size();
-    snd_data[0] = name_size;
-}
-
-std::string TcpServer::findNameBySD(int socket_descriptor)
-{
-    for(int i = 0; i < name_id.size(); i++)
-        if(name_id[i].socket_descriptor == socket_descriptor)
-            return name_id[i].name;
-    return "";
-}
-
-int TcpServer::findSDByName(std::string name)
-{
-    for(int i = 0; i < name_id.size(); i++)
-        if(name_id[i].name == name)
-            return name_id[i].socket_descriptor;
-    return -1;
-}
-
-void TcpServer::add_client(std::string name, int socket_descriptor)
-{
-    struct NameSD ns;
-    ns.name = name;
-    ns.socket_descriptor = socket_descriptor;
-    name_id.push_back(ns);
-}
-
-pthread_mutex_t* TcpServer::getMutexBySD(int sd, int *mu_index)
-{
-    for(int i = 0; i < name_id.size(); i++)
-        if(name_id[i].socket_descriptor == sd)
+    for(auto it = sockets.begin(); it != sockets.end(); it++)
+    {
+        std::pair<std::string, QTcpSocket*> elem = *it;
+        if(elem.second == sock)
         {
-            if(mu_index != 0)
-                mu_index[0] = i;
-            return &mutexs[i];
+            sockets.erase(it);
+            break;
         }
-    return 0;
+    }
+}
+
+void TcpServer::set_username(QTcpSocket* socket, char* name, int size)
+{
+    std::string s(name, size);
+    delete[] name;
+
+    for(auto it = sockets.begin(); it != sockets.end(); it++)
+    {
+        if((*it).second == socket)
+        {
+            (*it).first = s;
+            break;
+        }
+    }
 }

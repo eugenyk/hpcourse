@@ -3,8 +3,6 @@
 
 bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg)
 {
-    if(rec_data == "--")
-        return false;
     int name_size = (int)rec_data[0];
     rec_data.erase(rec_data.begin());
     name = rec_data.substr(0, name_size);
@@ -81,7 +79,7 @@ MainWindow::~MainWindow()
     delete connect_btn;
     delete la;
     pthread_cancel(listening_thread);
-    tcp_client.send("--");
+    tcp_client.send("----");
     tcp_client.close_();
     delete args;
 }
@@ -94,7 +92,7 @@ void MainWindow::connect_to_srv()
 
     if(tcp_client.connect_(32165))
     {
-        tcp_client.send(name->text().toStdString());
+        tcp_client.send("+" + name->text().toStdString());
         text->setText("Welcome, " + name->text() + "\n");
 
         args = new struct listening_thread_args;
