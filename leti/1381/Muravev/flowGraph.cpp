@@ -52,7 +52,13 @@ void flowGraph(base args)
 		});
 		return fPImage.imageFP;
 	});
-	flow::join_node<jointype, flow::queueing> joinNode(g);
+	
+	flow::join_node<jointype, flow::tag_matching> joinNode(g,
+         [](const image8u& img)->int{return img.id;},
+         [](const image8u& img)->int{return img.id;},
+         [](const image8u& img)->int{return img.id;}
+     );
+	 
 	flow::function_node<jointype, image8u> inverseNode(g, args.imagSizeMax, [](jointype t) {
 		image8u img = std::get<0>(t);
 		parallel_for(0, img.height, 1, [img](size_t i) {
