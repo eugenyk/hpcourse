@@ -1,0 +1,7 @@
+Makefile
+*.txt
+.idea/
+CMakeCache.txt
+CMakeFiles/
+flow_graph
+cmake_install.cmake
