@@ -26,7 +26,7 @@ protected:
     void incomingConnection(qintptr socketDescriptor);
 
 public:
-    explicit TcpServer(QObject *parent = 0);
+    explicit TcpServer(int max_threads, QObject *parent = 0);
     ~TcpServer();
     void start(int portnum);
 

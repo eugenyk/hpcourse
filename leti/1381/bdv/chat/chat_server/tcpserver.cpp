@@ -1,9 +1,9 @@
 #include "tcpserver.h"
 
-TcpServer::TcpServer(QObject *parent) : QTcpServer(parent)
+TcpServer::TcpServer(int max_threads, QObject *parent) : QTcpServer(parent)
 {
     pool = new QThreadPool(0);
-    pool->setMaxThreadCount(5);
+    pool->setMaxThreadCount(max_threads);
 }
 
 TcpServer::~TcpServer()
