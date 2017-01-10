@@ -5,8 +5,8 @@
 #include <QTcpSocket>
 #include <QThreadPool>
 #include <QThread>
-//#include <vector>
-#include <tbb/concurrent_vector.h>
+#include <QMutex>
+#include <vector>
 
 #include <string>
 #include <iostream>
@@ -18,7 +18,7 @@ class ReadAndHandle : public QObject, public QRunnable
 public:
     //считывает с сокета, находит в списке указатель на сокет получателя по имени и отправляет
     ReadAndHandle(QTcpSocket *socket,
-                  std::vector<std::pair<std::string, QTcpSocket *> > sockets);
+                  std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets);
 
 signals:
     void deleting_socket_from_store(QTcpSocket* socket);
@@ -26,13 +26,13 @@ signals:
 
 private:
     QTcpSocket* socket;
-    std::vector<std::pair<std::string, QTcpSocket*> > sockets;
+    std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets;
 
     static bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
     static void setnameandmsg(std::string& snd_data, std::string name, std::string msg);
     void delete_name_sock(QTcpSocket *sock);
-    std::string find_name_by_sock(QTcpSocket* sock);
-    QTcpSocket* find_sock_by_name(std::string name);
+    std::string find_name_by_sock(QTcpSocket* sock, QMutex **mutex);
+    QTcpSocket* find_sock_by_name(std::string name, QMutex **mutex);
 
 protected:
     void run();

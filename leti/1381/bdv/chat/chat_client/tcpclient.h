@@ -1,32 +1,30 @@
 #ifndef TCPCLIENT_H
 #define TCPCLIENT_H
 
-#include <stdio.h>
-#include <iostream>
 #include <string>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
+#include <QTcpSocket>
+#include <QObject>
 
-class TcpClient
+class TcpClient : public QObject
 {
-private:
-    int socket_descr;
-    int port;
-    struct sockaddr_in server_addr;
-    struct hostent* server;
+    Q_OBJECT
 
+private:
+    QTcpSocket* socket;
+
+private slots:
+    void ready_read_slot();
 public:
     TcpClient();
-    bool connect_(int portnum);
+    ~TcpClient();
+    void connect_(int portnum);
+    bool isConnected();
     void send(std::string msg);
     std::string receive();
     void close_();
 
+signals:
+    void ready_read();
 
 };
 

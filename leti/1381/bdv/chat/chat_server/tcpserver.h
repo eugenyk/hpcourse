@@ -5,7 +5,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QThreadPool>
-
+#include <QMutex>
 #include <vector>
 //#include <tbb/concurrent_vector.h>
 #include <iostream>
@@ -20,7 +20,7 @@ private:
     QThreadPool* pool;
     int port;
     int max_threads;
-    std::vector<std::pair<std::string, QTcpSocket*> > sockets;
+    std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets;
 
 protected:
     void incomingConnection(qintptr socketDescriptor);
@@ -30,7 +30,7 @@ public:
     ~TcpServer();
     void start(int portnum);
 
-    void delete_socket_from_store(QTcpSocket *sock);
+    void delete_socket_from_store(QTcpSocket *sock, QMutex** mut);
 
     static bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
     static void setnameandmsg(std::string& snd_data, std::string name, std::string msg);

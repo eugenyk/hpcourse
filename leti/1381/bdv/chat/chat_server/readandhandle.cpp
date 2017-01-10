@@ -1,6 +1,6 @@
 #include "readandhandle.h"
 
-ReadAndHandle::ReadAndHandle(QTcpSocket* socket, std::vector<std::pair<std::string, QTcpSocket *> > sockets)
+ReadAndHandle::ReadAndHandle(QTcpSocket* socket, std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets)
 {
     this->socket = socket;
     this->sockets = sockets;
@@ -10,8 +10,9 @@ void ReadAndHandle::run()
 {
     char buffer[256];
     int n = socket->read(buffer, 255);
+    if(n < 1) return;
     std::string s(buffer, n);
-
+    std::cout << s << std::endl;
     //если пришло сообщение отключения
     if(s[0] == '-')
     {
@@ -23,9 +24,6 @@ void ReadAndHandle::run()
     if(s[0] == '+')
     {
         std::string name = s.substr(1);
-        std::pair<std::string, QTcpSocket*> elem;
-        elem.first = name;
-        elem.second = socket;
         std::cout << "Client " << name << " connected." << std::endl;
         char* data = new char[name.size()];
         memcpy(data, name.data(), name.size()*sizeof(char));
@@ -36,44 +34,53 @@ void ReadAndHandle::run()
     std::string name, msg;
     std::cout << "Received: " << s << std::endl;
     getnameandmsg(s, name, msg);
-    QTcpSocket* rec_sock = find_sock_by_name(name);
+    QMutex* rec_mutex;
+    QMutex* snd_mutex;
+    QTcpSocket* rec_sock = find_sock_by_name(name, &rec_mutex);
     if(rec_sock != 0)
     {
-        name = find_name_by_sock(socket);
+        name = find_name_by_sock(socket, &snd_mutex);
         setnameandmsg(s, name, msg);
-
         std::cout << "Sent " << s << std::endl;
         int wdesc = rec_sock->socketDescriptor();
-
-        //l
+        rec_mutex->lock();
         write(wdesc, s.data(), s.size());
-        //ul
+        rec_mutex->unlock();
     }
     else
     {
         std::cout << "Cant find client" << std::endl;
+        name = find_name_by_sock(socket, &snd_mutex);
+        name = "SERVER";
+        msg = "Cant find client.";
+        setnameandmsg(s, name, msg);
+        std::cout << "Sent " << s << std::endl;
+        int wdesc = socket->socketDescriptor();
+        snd_mutex->lock();
+        write(wdesc, s.data(), s.size());
+        snd_mutex->unlock();
     }
 }
 
-std::string ReadAndHandle::find_name_by_sock(QTcpSocket* sock)
+std::string ReadAndHandle::find_name_by_sock(QTcpSocket* sock, QMutex **mutex)
 {
     for(auto it = sockets.begin(); it != sockets.end(); it++)
-    {
-        std::pair<std::string, QTcpSocket*> elem = *it;
-        if(elem.second == sock)
-            return elem.first;
-    }
+        if(std::get<1>(*it) == sock)
+        {
+            mutex[0] = std::get<2>(*it);
+            return std::get<0>(*it);
+        }
     return "";
 }
 
-QTcpSocket* ReadAndHandle::find_sock_by_name(std::string name)
+QTcpSocket* ReadAndHandle::find_sock_by_name(std::string name, QMutex** mutex)
 {
     for(auto it = sockets.begin(); it != sockets.end(); it++)
-    {
-        std::pair<std::string, QTcpSocket*> elem = *it;
-        if(elem.first == name)
-            return elem.second;
-    }
+        if(std::get<0>(*it) == name)
+        {
+            mutex[0] = std::get<2>(*it);
+            return std::get<1>(*it);
+        }
     return 0;
 }
 
