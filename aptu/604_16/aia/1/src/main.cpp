@@ -88,18 +88,18 @@ int main(int argc, char** argv) {
     limiter_node<RandomImage> limitNode(graph, parser.m_taskLimit);
     broadcast_node<RandomImage> broadcastFst(graph);
     
-    function_node<RandomImage, Points, rejecting> maxBrightNode(graph, unlimited, maxBrightPoints);
-    function_node<RandomImage, Points, rejecting> minBrightNode(graph, unlimited, minBrightPoints);
-    function_node<RandomImage, Points, rejecting> targetBrightNode(graph, unlimited, targetBrightPoints);
+    function_node<RandomImage, Points, rejecting> maxBrightNode(graph, serial, maxBrightPoints);
+    function_node<RandomImage, Points, rejecting> minBrightNode(graph, serial, minBrightPoints);
+    function_node<RandomImage, Points, rejecting> targetBrightNode(graph, serial, targetBrightPoints);
     
     
     join_node<tuple<RandomImage, Points, Points, Points>, queueing> joinNode(graph);
     function_node<tuple<RandomImage, Points, Points, Points>, RandomImage, rejecting> identifyNode(graph, unlimited, identify);
     
     broadcast_node<RandomImage> broadcastSnd(graph);
-    function_node<RandomImage, RandomImage, rejecting> invertNode(graph, unlimited, invert);
-    function_node<RandomImage, double, rejecting> meanNode(graph, unlimited, mean);
-    function_node<double, continue_msg, rejecting> printNode(graph, 1, printer);
+    function_node<RandomImage, RandomImage, rejecting> invertNode(graph, serial, invert);
+    function_node<RandomImage, double, rejecting> meanNode(graph, serial, mean);
+    function_node<double, continue_msg, rejecting> printNode(graph, serial, printer);
     
     make_edge(sourceNode, limitNode);
     make_edge(limitNode, broadcastFst);
