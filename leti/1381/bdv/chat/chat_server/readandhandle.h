@@ -12,6 +12,8 @@
 #include <iostream>
 #include <unistd.h>
 
+#include "../protobuff/chatmessage.pb.h"
+
 class ReadAndHandle : public QObject, public QRunnable
 {
     Q_OBJECT
@@ -28,8 +30,6 @@ private:
     QTcpSocket* socket;
     std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets;
 
-    static bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
-    static void setnameandmsg(std::string& snd_data, std::string name, std::string msg);
     void delete_name_sock(QTcpSocket *sock);
     std::string find_name_by_sock(QTcpSocket* sock, QMutex **mutex);
     QTcpSocket* find_sock_by_name(std::string name, QMutex **mutex);

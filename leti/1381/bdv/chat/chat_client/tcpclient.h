@@ -12,9 +12,6 @@ class TcpClient : public QObject
 private:
     QTcpSocket* socket;
 
-private slots:
-    void ready_read_slot();
-    void connected_slot();
 public:
     TcpClient();
     ~TcpClient();
@@ -23,11 +20,7 @@ public:
     void send(std::string msg);
     std::string receive();
     void close_();
-
-signals:
-    void ready_read();
-    void connected();
-
+    QTcpSocket* getSocket();
 };
 
 #endif // TCPCLIENT_H

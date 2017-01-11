@@ -1,0 +1,10 @@
+message ChatMessage {
+    enum Command {
+	INIT = 0;
+	SEND = 1;
+	DISC = 2;
+    }
+    required Command MsgType = 1 [default = DISC]; 
+    required string Name = 2;   
+    optional string Message = 3;   
+} 

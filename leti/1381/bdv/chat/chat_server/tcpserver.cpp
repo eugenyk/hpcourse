@@ -2,6 +2,7 @@
 
 TcpServer::TcpServer(int max_threads, QObject *parent) : QTcpServer(parent)
 {
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
     pool = new QThreadPool(0);
     pool->setMaxThreadCount(max_threads);
 }
@@ -17,6 +18,7 @@ TcpServer::~TcpServer()
     }
     std::cout << "Sever finished" << std::endl;
     delete[] pool;
+    google::protobuf::ShutdownProtobufLibrary();
 }
 
 void TcpServer::incomingConnection(qintptr socketDescriptor)

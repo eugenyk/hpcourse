@@ -9,12 +9,14 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = chat_server
 TEMPLATE = app
 
-LIBS += -lpthread
+LIBS += -lprotobuf
 
 SOURCES += main.cpp\
     tcpserver.cpp \
-    readandhandle.cpp
+    readandhandle.cpp \
+    ../protobuff/chatmessage.pb.cc
 
 HEADERS  += \
     tcpserver.h \
-    readandhandle.h
+    readandhandle.h \
+    ../protobuff/chatmessage.pb.h

@@ -1,24 +1,10 @@
 #include "mainwindow.h"
 
-bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg)
-{
-    int name_size = (int)rec_data[0];
-    rec_data.erase(rec_data.begin());
-    name = rec_data.substr(0, name_size);
-    msg = rec_data.erase(0, name_size);
-    return true;
-}
-
-void setnameandmsg(std::string& snd_data, std::string name, std::string msg)
-{
-    snd_data = "0" + name + msg;
-    char name_size = name.size();
-    snd_data[0] = name_size;
-}
-
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
 {
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
     la = new QGridLayout(0);
     name_info = new QLabel("Enter your name");
     la->addWidget(name_info, 0, 0, 1, 1);
@@ -73,27 +59,24 @@ MainWindow::~MainWindow()
     delete name;
     delete connect_btn;
     delete la;
+
+    google::protobuf::ShutdownProtobufLibrary();
 }
 
 void MainWindow::connect_to_srv()
 {
-    connect(tcp_client, SIGNAL(connected()), this, SLOT(connected_to_srv()));
+    connect(tcp_client->getSocket(), SIGNAL(connected()), this, SLOT(connected_to_srv()));
     tcp_client->connect_(32165);
-    /*
-    connect_btn->setVisible(false);
-    name_info->setText("Your name:");
-    name->setReadOnly(true);
-    text->setText("Welcome, " + name->text() + "\n");
-    std::string s = "+" + name->text().toStdString();
-    tcp_client->send(s);
-    connect(tcp_client, SIGNAL(ready_read()), this, SLOT(read_message()));
-    connect(send, SIGNAL(released()), this, SLOT(send_text()));
-    */
 }
 
 void MainWindow::disconnect_from_srv()
 {
-    tcp_client->send("----");
+    ChatMessage msg;
+    msg.set_msgtype(ChatMessage::Command::ChatMessage_Command_DISC);
+    msg.set_name(name->text().toStdString());
+    std::string s;
+    msg.SerializeToString(&s);
+    tcp_client->send(s);
     tcp_client->close_();
 }
 
@@ -103,10 +86,13 @@ void MainWindow::send_text()
     text->setText(text->text() + "To " + rec_id->text() + ": " + msg->text() + "\n");
     rec_name = rec_id->text().toStdString();
     msg_ = msg->text().toStdString();
-    setnameandmsg(snd_data, rec_name, msg_);
-    //std::cout << "Sent: " << snd_data << std::endl;
+    ChatMessage msg;
+    msg.set_msgtype(ChatMessage::Command::ChatMessage_Command_SEND);
+    msg.set_name(rec_name);
+    msg.set_message(msg_);
+    msg.SerializeToString(&snd_data);
     tcp_client->send(snd_data);
-    msg->setText("");
+    this->msg->setText("");
 }
 
 void MainWindow::slide_max(int min, int max)
@@ -118,10 +104,9 @@ void MainWindow::slide_max(int min, int max)
 void MainWindow::read_message()
 {
     std::string rec_data = tcp_client->receive();
-    //std::cout << "Received: " << rec_data << std::endl;
-    std::string snd_name, msg;
-    getnameandmsg(rec_data, snd_name, msg);
-    rec_data = "From " + snd_name + ": " + msg + "\n";
+    ChatMessage msg;
+    msg.ParseFromString(rec_data);
+    rec_data = "From " + msg.name() + ": " + msg.message() + "\n";
     text->setText((text->text().toStdString() + rec_data).c_str());
     update();
 }
@@ -138,8 +123,12 @@ void MainWindow::connected_to_srv()
     name_info->setText("Your name:");
     name->setReadOnly(true);
     text->setText("Welcome, " + name->text() + "\n");
-    std::string s = "+" + name->text().toStdString();
+    ChatMessage msg;
+    msg.set_msgtype(ChatMessage::Command::ChatMessage_Command_INIT);
+    msg.set_name(name->text().toStdString());
+    std::string s;
+    msg.SerializeToString(&s);
     tcp_client->send(s);
-    connect(tcp_client, SIGNAL(ready_read()), this, SLOT(read_message()));
+    connect(tcp_client->getSocket(), SIGNAL(readyRead()), this, SLOT(read_message()));
     connect(send, SIGNAL(released()), this, SLOT(send_text()));
 }

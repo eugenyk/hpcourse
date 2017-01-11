@@ -11,9 +11,7 @@
 #include <QScrollBar>
 #include <QThreadPool>
 #include "tcpclient.h"
-
-bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
-void setnameandmsg(std::string& snd_data, std::string name, std::string msg);
+#include "../protobuff/chatmessage.pb.h"
 
 class MainWindow : public QWidget
 {

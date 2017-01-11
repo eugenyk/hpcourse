@@ -3,8 +3,6 @@
 TcpClient::TcpClient()
 {
     socket = new QTcpSocket();
-    connect(socket, SIGNAL(connected()), this, SLOT(connected_slot()));
-    connect(socket, SIGNAL(readyRead()), this, SLOT(ready_read_slot()));
 }
 
 TcpClient::~TcpClient()
@@ -41,13 +39,7 @@ void TcpClient::close_()
     socket->close();
 }
 
-void TcpClient::ready_read_slot()
+QTcpSocket* TcpClient::getSocket()
 {
-    emit ready_read();
+    return socket;
 }
-
-void TcpClient::connected_slot()
-{
-    emit connected();
-}
-

@@ -29,12 +29,7 @@ public:
     explicit TcpServer(int max_threads, QObject *parent = 0);
     ~TcpServer();
     void start(int portnum);
-
     void delete_socket_from_store(QTcpSocket *sock, QMutex** mut);
-
-    static bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
-    static void setnameandmsg(std::string& snd_data, std::string name, std::string msg);
-
     std::string find_name_by_sock(QTcpSocket* sock);
     QTcpSocket* find_sock_by_name(std::string name);
 
