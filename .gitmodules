@@ -22,3 +22,6 @@
 [submodule "aptu/604_16/bfa"]
 	path = aptu/604_16/bfa
 	url = https://github.com/fbocharov/au-parallelka.git
+[submodule "leti/1303/zda/2"]
+	path = leti/1303/zda/2
+	url = https://github.com/dmitry64/async-lockfree-chat.git
