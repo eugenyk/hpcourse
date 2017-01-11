@@ -32,7 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
     scroll->setWidgetResizable(true);
     scroll->setWidget(text);
     la->addWidget(scroll, 1, 0, 1, 3);
-    rec_info = new QLabel("Receiver ID");
+    rec_info = new QLabel("Receiver name");
     la->addWidget(rec_info, 2, 0, 1, 1);
     rec_id = new QLineEdit();
     la->addWidget(rec_id, 2, 1, 1, 1);
@@ -42,6 +42,12 @@ MainWindow::MainWindow(QWidget *parent)
     la->addWidget(msg, 3, 1, 1, 1);
     send = new QPushButton("Send");
     la->addWidget(send, 3, 2, 1, 1);
+
+    rec_info->setVisible(false);
+    rec_id->setVisible(false);
+    msg_info->setVisible(false);
+    msg->setVisible(false);
+    send->setVisible(false);
 
     this->setLayout(la);
 
@@ -71,7 +77,9 @@ MainWindow::~MainWindow()
 
 void MainWindow::connect_to_srv()
 {
+    connect(tcp_client, SIGNAL(connected()), this, SLOT(connected_to_srv()));
     tcp_client->connect_(32165);
+    /*
     connect_btn->setVisible(false);
     name_info->setText("Your name:");
     name->setReadOnly(true);
@@ -80,6 +88,7 @@ void MainWindow::connect_to_srv()
     tcp_client->send(s);
     connect(tcp_client, SIGNAL(ready_read()), this, SLOT(read_message()));
     connect(send, SIGNAL(released()), this, SLOT(send_text()));
+    */
 }
 
 void MainWindow::disconnect_from_srv()
@@ -115,4 +124,22 @@ void MainWindow::read_message()
     rec_data = "From " + snd_name + ": " + msg + "\n";
     text->setText((text->text().toStdString() + rec_data).c_str());
     update();
+}
+
+void MainWindow::connected_to_srv()
+{
+    rec_info->setVisible(true);
+    rec_id->setVisible(true);
+    msg_info->setVisible(true);
+    msg->setVisible(true);
+    send->setVisible(true);
+
+    connect_btn->setVisible(false);
+    name_info->setText("Your name:");
+    name->setReadOnly(true);
+    text->setText("Welcome, " + name->text() + "\n");
+    std::string s = "+" + name->text().toStdString();
+    tcp_client->send(s);
+    connect(tcp_client, SIGNAL(ready_read()), this, SLOT(read_message()));
+    connect(send, SIGNAL(released()), this, SLOT(send_text()));
 }

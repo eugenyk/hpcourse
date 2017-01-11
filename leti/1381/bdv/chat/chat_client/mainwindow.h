@@ -45,6 +45,7 @@ public:
 public slots:
     void connect_to_srv();
     void disconnect_from_srv();
+    void connected_to_srv();
     void send_text();
     void slide_max(int min, int max);
     void read_message();

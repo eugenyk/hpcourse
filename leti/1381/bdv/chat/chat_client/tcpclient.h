@@ -14,6 +14,7 @@ private:
 
 private slots:
     void ready_read_slot();
+    void connected_slot();
 public:
     TcpClient();
     ~TcpClient();
@@ -25,6 +26,7 @@ public:
 
 signals:
     void ready_read();
+    void connected();
 
 };
 

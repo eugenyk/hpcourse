@@ -8,10 +8,7 @@ int main(int argc, char *argv[])
 
     int max_threads;
     if(argc < 2)
-    {
-        std::cout << "Usage:\ntcp_server 5\n5 - max threads.\n";
-        return -1;
-    }
+        max_threads = 5;
     else
         max_threads = std::stoi(argv[1]);
     TcpServer srv(max_threads);
