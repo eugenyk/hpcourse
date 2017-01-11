@@ -1,34 +1,7 @@
 #pragma once
 
 #include <functional>
-
-template <typename T>
-class Matrix
-{
-	Matrix(std::pair<uint32_t, uint32_t> _size)
-	{
-		size = _size;
-		data = new T[size.first * size.second];
-		memset(data, 0, sizeof(T)* size.first * size.second);
-	}
-
-	Matrix(T* _data, std::pair<uint32_t, uint32_t> _size)
-	{
-		data = _data;
-		size = _size;
-	}
-
-
-	T* getData()
-	{
-		return data;
-	}
-
-
-protected:
-	T* data;
-	std::pair<uint32_t, uint32_t> size;
-};
+#include <random>
 
 class CharMatrix
 {
@@ -60,8 +33,11 @@ public:
 
 	void randomFilling()
 	{
+		std::random_device device;
+		std::mt19937 generator(device());
+		std::uniform_int_distribution<int> range(0, 255);
 		for (unsigned int i = 0; i < w * h; ++i) {
-			data[i] = rand() % 256;
+			data[i] = range(generator);
 		}
 	}
 

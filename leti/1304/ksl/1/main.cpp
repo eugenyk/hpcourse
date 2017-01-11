@@ -1,18 +1,16 @@
 #include <iostream>
 #include <vector>
-#include <set>
-#include <random>
-#include <iomanip>
 #include <fstream>
-#include <chrono>
 #include <tbb/flow_graph.h>
 
 #include "Utils.h"
 #include "Matrix.h"
 
-int main(int argc, const char* argv[]) 
+using TaggedVector = std::pair<int, std::vector<int>>;
+using TaggedCharMatrix = std::pair<int, CharMatrix*>;
+
+int main(int argc, const char* argv[])
 {
-	srand(time(nullptr));
 
 	unsigned char brightnessValue = 0;
 	int	maxParallel = 10,
@@ -28,27 +26,28 @@ int main(int argc, const char* argv[])
 
 	tbb::flow::graph g;
 
-	tbb::flow::source_node<CharMatrix*> sourceNode(g, 
-		[=, &currCount](CharMatrix* &matrix) {
-		matrix = new CharMatrix(width, height);
+	tbb::flow::source_node<TaggedCharMatrix> sourceNode(g,
+		[=, &currCount](TaggedCharMatrix& matrix) {
+		matrix.first = currCount;
+		matrix.second = new CharMatrix(width, height);
 		return currCount++ < matrixCount;
 	});
 
-	tbb::flow::limiter_node<CharMatrix*> limeterNode(g, maxParallel);
-	
-	tbb::flow::function_node<CharMatrix*, CharMatrix*> generetaMatrixNode(g, tbb::flow::unlimited,
-		[](CharMatrix* matrix) {
-		matrix->randomFilling();
+	tbb::flow::limiter_node<TaggedCharMatrix> limeterNode(g, maxParallel);
+
+	tbb::flow::function_node<TaggedCharMatrix, TaggedCharMatrix> generetaMatrixNode(g, tbb::flow::unlimited,
+		[](const TaggedCharMatrix& matrix) {
+		matrix.second->randomFilling();
 		return matrix;
 	});
 
-	tbb::flow::function_node<CharMatrix*, std::vector<int>> searchMinNode(g, tbb::flow::unlimited,
-		[](CharMatrix* matrix) {
+	tbb::flow::function_node<TaggedCharMatrix, TaggedVector> searchMinNode(g, tbb::flow::unlimited,
+		[](const TaggedCharMatrix& matrix) {
 
 		std::vector<int> vec;
 		unsigned char min = 255;
 
-		matrix->processingCell([&vec, &min](unsigned char& elem, int position){
+		matrix.second->processingCell([&vec, &min](unsigned char& elem, int position) {
 			if (elem < min) {
 				min = elem;
 				vec.clear();
@@ -58,16 +57,16 @@ int main(int argc, const char* argv[])
 				vec.push_back(position);
 			}
 		});
-		return vec;
+		return TaggedVector(matrix.first, vec);
 	});
 
-	tbb::flow::function_node<CharMatrix*, std::vector<int>> searchMaxNode(g, tbb::flow::unlimited,
-		[](CharMatrix* matrix) {
+	tbb::flow::function_node<TaggedCharMatrix, TaggedVector> searchMaxNode(g, tbb::flow::unlimited,
+		[](const TaggedCharMatrix& matrix) {
 
 		std::vector<int> vec;
 		unsigned char max = 0;
 
-		matrix->processingCell([&vec, &max](unsigned char& elem, int position){
+		matrix.second->processingCell([&vec, &max](unsigned char& elem, int position) {
 			if (elem > max) {
 				max = elem;
 				vec.clear();
@@ -77,38 +76,42 @@ int main(int argc, const char* argv[])
 				vec.push_back(position);
 			}
 		});
-		return vec;
+		return TaggedVector(matrix.first, vec);
 	});
 
-	tbb::flow::function_node<CharMatrix*, std::vector<int>> searchEqualNode(g, tbb::flow::unlimited,
-		[brightnessValue](CharMatrix* matrix) {
-		
+	tbb::flow::function_node<TaggedCharMatrix, TaggedVector> searchEqualNode(g, tbb::flow::unlimited,
+		[brightnessValue](const TaggedCharMatrix& matrix) {
+
 		std::vector<int> vec;
 
-		matrix->processingCell([&vec, brightnessValue](unsigned char& elem, int position){
+		matrix.second->processingCell([&vec, brightnessValue](unsigned char& elem, int position) {
 			if (elem == brightnessValue) {
 				vec.push_back(position);
 			}
 		});
-		
-		return vec;
+
+		return TaggedVector(matrix.first, vec);
 	});
 
 
-	tbb::flow::join_node<std::tuple<CharMatrix*, std::vector<int>, std::vector<int>, std::vector<int>>> joinNode(g);
+	tbb::flow::join_node<std::tuple<TaggedCharMatrix, TaggedVector, TaggedVector, TaggedVector>, tbb::flow::tag_matching> joinNode(g,
+		[](const TaggedCharMatrix matrix)->int {return matrix.first; },
+		[](const TaggedVector vec)->int {return vec.first; },
+		[](const TaggedVector vec)->int {return vec.first; },
+		[](const TaggedVector vec)->int {return vec.first; });
 
-	tbb::flow::function_node<std::tuple<CharMatrix*, std::vector<int>, std::vector<int>, std::vector<int>>, CharMatrix*> highlightNode(g, tbb::flow::unlimited,
-		[](std::tuple<CharMatrix*, std::vector<int>, std::vector<int>, std::vector<int>> param) {
-		
-		CharMatrix* matrix = std::get<0>(param);
-		std::vector<int> all = std::get<1>(param);
-		all.insert(all.end(), std::get<2>(param).begin(), std::get<2>(param).end());
-		all.insert(all.end(), std::get<3>(param).begin(), std::get<3>(param).end());
+	tbb::flow::function_node<std::tuple<TaggedCharMatrix, TaggedVector, TaggedVector, TaggedVector>, CharMatrix*> highlightNode(g, tbb::flow::unlimited,
+		[](std::tuple<TaggedCharMatrix, TaggedVector, TaggedVector, TaggedVector> param) {
+
+		CharMatrix* matrix = (std::get<0>(param)).second;
+		std::vector<int> all = std::get<1>(param).second;
+		all.insert(all.end(), std::get<2>(param).second.begin(), std::get<2>(param).second.end());
+		all.insert(all.end(), std::get<3>(param).second.begin(), std::get<3>(param).second.end());
 
 		for each (int pos in all) {
 			matrix->pixel(pos, 255);
 		}
-		
+
 		return matrix;
 	});
 
@@ -117,14 +120,14 @@ int main(int argc, const char* argv[])
 
 		CharMatrix* invertMatrix = new CharMatrix(*matrix);
 
-		invertMatrix->processingCell([](unsigned char& elem, int position){
+		invertMatrix->processingCell([](unsigned char& elem, int position) {
 			elem = 255 - elem;
 		});
 
 		return invertMatrix;
 	});
 
-	tbb::flow::function_node<CharMatrix*, float> averageBrightnessNode(g, tbb::flow::unlimited,
+	tbb::flow::function_node<CharMatrix*, std::pair<float, CharMatrix*>> averageBrightnessNode(g, tbb::flow::unlimited,
 		[](CharMatrix* matrix) {
 
 		unsigned long long avr = 0;
@@ -133,15 +136,17 @@ int main(int argc, const char* argv[])
 			avr += elem;
 		});
 
-		return (float) avr / matrix->getSize();
+		return std::pair<float, CharMatrix*>((float)avr / matrix->getSize(), matrix);
 	});
 
-	tbb::flow::join_node<std::tuple<CharMatrix*, float>> waitCalculateNode(g);
+	tbb::flow::join_node<std::tuple<CharMatrix*, std::pair<float, CharMatrix*>>> waitCalculateNode(g);
 
-	tbb::flow::function_node<std::tuple<CharMatrix*, float>> debugNode(g, tbb::flow::serial,
-		[&fs](std::tuple<CharMatrix*, float> res) {
+	tbb::flow::function_node<std::tuple<CharMatrix*, std::pair<float, CharMatrix*>>> debugNode(g, tbb::flow::serial,
+		[&fs](std::tuple<CharMatrix*, std::pair<float, CharMatrix*>> res) {
+		auto result = std::get<1>(res);
 		delete std::get<0>(res);
-		fs << std::get<1>(res) << std::endl;
+		delete result.second;
+		fs << result.first << std::endl;
 	});
 
 
