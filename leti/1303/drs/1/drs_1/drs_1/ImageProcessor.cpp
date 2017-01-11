@@ -7,7 +7,7 @@ ImageProcessor::ImageProcessor(DummyImageInputStream & in, int numThreads, const
 {
 	if (!logFilename.empty())
 	{
-		loggerNode = new function_node<unsigned char, bool>(g, unlimited, LogWriter(logFilename));
+		loggerNode = new function_node<unsigned char, bool>(g, 1, LogWriter(logFilename));
 		nodes.push_back(loggerNode);
 	}
 
@@ -49,9 +49,9 @@ void ImageProcessor::buildProcessingBranch()
 
 	// build the first level of G
 	auto * input = new broadcast_node<Image>(g);
-	auto * min = new function_node<Image, L1Output>(g, unlimited, MinBrightness());
-	auto * max = new function_node<Image, L1Output>(g, unlimited, MaxBrightness());
-	auto * equ = new function_node<Image, L1Output>(g, unlimited, EquBrightness(0));
+	auto * min = new function_node<Image, L1Output>(g, 1, MinBrightness());
+	auto * max = new function_node<Image, L1Output>(g, 1, MaxBrightness());
+	auto * equ = new function_node<Image, L1Output>(g, 1, EquBrightness(0));
 
 	make_edge(*input, *min);
 	make_edge(*input, *max);
@@ -65,11 +65,11 @@ void ImageProcessor::buildProcessingBranch()
 	make_edge(*input, std::get<3>(join->input_ports()));
 
 	// build the second level of G
-	auto * inv = new function_node<Image, Image>(g, unlimited, Inverse());
-	auto * avg = new function_node<MinMaxPair, unsigned char>(g, unlimited, Average());
+	auto * inv = new function_node<Image, Image>(g, 1, Inverse());
+	auto * avg = new function_node<MinMaxPair, unsigned char>(g, 1, Average());
 
-	auto * j2i = new function_node<L1Result, Image>(g, unlimited, ToImageConverter());
-	auto * j2a = new function_node<L1Result, MinMaxPair>(g, unlimited, ToMinMaxConverter());
+	auto * j2i = new function_node<L1Result, Image>(g, 1, ToImageConverter());
+	auto * j2a = new function_node<L1Result, MinMaxPair>(g, 1, ToMinMaxConverter());
 
 	make_edge(*join, *j2i);
 	make_edge(*join, *j2a);
