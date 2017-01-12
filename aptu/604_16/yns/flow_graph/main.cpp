@@ -155,15 +155,15 @@ int main(int argc, char* argv[]) {
     source_node<image> generator(g, generate(h, w), false);
     limiter_node<image> limiter(g, limit);
     broadcast_node<image> send_to_finders(g);
-    function_node<image,elems> find_max( g, unlimited, max_elems() );
-    function_node<image,elems> find_min( g, unlimited, min_elems() );
-    function_node<image,elems> find_given( g, unlimited, find_elems(given_bright) );
+    function_node<image,elems> find_max( g, serial, max_elems() );
+    function_node<image,elems> find_min( g, serial, min_elems() );
+    function_node<image,elems> find_given( g, serial, find_elems(given_bright) );
     join_node< tuple<image, elems, elems, elems>, queueing > join_to_frame( g );
     function_node<tuple<image, elems, elems, elems>, image> mark_all( g, unlimited, mark() );
     broadcast_node<image> split(g);
-    function_node<image,image> invert( g, unlimited, inverse() );
-    function_node<image,double> average( g, unlimited, avg_bright());
-    function_node<double, continue_msg> logger(g, unlimited, [&fout](float avg) -> continue_msg {
+    function_node<image,image> invert( g, serial, inverse() );
+    function_node<image,double> average( g, serial, avg_bright());
+    function_node<double, continue_msg> logger(g, serial, [&fout](float avg) -> continue_msg {
         fout << avg << std::endl;
         return continue_msg();
     });
