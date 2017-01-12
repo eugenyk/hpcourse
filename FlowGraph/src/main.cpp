@@ -119,17 +119,17 @@ int main(int argc, char **argv) {
     make_edge(limiter, broadcastNode);
 
     function_node<Matrix, PosOfMatrix> maxBrightFinder{g,
-                                                       threshold,
+                                                       serial,
                                                        BrightFinder{MAX_BRIGHTNESS}
     };
 
     function_node<Matrix, PosOfMatrix> minBrightFinder{g,
-                                                       threshold,
+                                                       serial,
                                                        BrightFinder{MIN_BRIGHTNESS}
     };
 
     function_node<Matrix, PosOfMatrix> targetBrightFinder{g,
-                                                          threshold,
+                                                          serial,
                                                           BrightFinder{targetBrightness}
     };
 
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     make_edge(targetBrightFinder, input_port<2>(joinNode));
 
     function_node<PosTriple, PosOfMatrix> joinPositions{g,
-                                                        threshold,
+                                                        unlimited,
                                                         [&logFile](PosTriple const &posTriple) -> PosOfMatrix {
                                                             vector<size_t> pos{};
                                                             pos.insert(pos.end(), get<0>(posTriple).begin(),
@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
     make_edge(joinNode, joinPositions);
 
     function_node<PosOfMatrix, Matrix> markPositions{g,
-                                                     threshold,
+                                                     unlimited,
                                                      [&logFile](PosOfMatrix const &posOfMatrix) -> Matrix {
                                                          Matrix matrix;
                                                          matrix.resize(N * M);
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
     make_edge(markPositions, broadcastNode2);
 
     function_node<Matrix, Matrix> inversionBrightness{g,
-                                                      threshold,
+                                                      serial,
                                                       [&logFile](Matrix const &matrix) -> Matrix {
                                                           logFile << "Start invert" << endl;
                                                           Matrix result;
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
     };
 
     function_node<Matrix, uint8_t> averageBrightness{g,
-                                                     threshold,
+                                                     serial,
                                                      [&logFile](Matrix const &matrix) -> uint8_t {
                                                          logFile << "Start calc average" << endl;
                                                          size_t sum = 0;
@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
 
 
     function_node<MatrixWithAverage> finalNode{g,
-                                               threshold,
+                                               unlimited,
                                                [&logFile](MatrixWithAverage const &matrixWithAverage) {
                                                    logFile << "Average brightness is "
                                                            << (int) get<1>(matrixWithAverage)
