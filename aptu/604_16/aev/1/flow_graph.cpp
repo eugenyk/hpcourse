@@ -1,7 +1,6 @@
 #define TBB_PREVIEW_GRAPH_NODES 1
+#define TBB_PREVIEW_FLOW_GRAPH_FEATURES 1
 #include "tbb/flow_graph.h"
-#include "tbb/atomic.h"
-#include "tbb/spin_mutex.h"
 
 #include <random>
 #include <fstream>
@@ -16,11 +15,29 @@ struct image_t {
     vector<vector<unsigned char>> img;
     size_t w, h;
     size_t id;
+
+    size_t key() const {
+        return id;
+    }
 };
 
 struct search_result_t {
+    size_t image_id;
     vector<pair<size_t, size_t>> pos;
     unsigned char value;
+
+    size_t key() const {
+        return image_id;
+    }
+};
+
+struct avg_result_t {
+    size_t id;
+    double avg;
+
+    size_t key() const {
+        return id;
+    }
 };
 
 class image_generator_body {
@@ -65,6 +82,7 @@ class min_search_func_body {
 public:
     search_result_t operator()(const image_t & input) {
         search_result_t result;
+        result.image_id = input.id;
         for (size_t i = 0; i < input.h; ++i) {
             for (size_t j = 0; j < input.w; ++j) {
                 result.value = min(result.value, input.img[i][j]);
@@ -85,6 +103,7 @@ class max_search_func_body {
 public:
     search_result_t operator()(const image_t & input) {
         search_result_t result;
+        result.image_id = input.id;
         for (size_t i = 0; i < input.h; ++i) {
             for (size_t j = 0; j < input.w; ++j) {
                 result.value = max(result.value, input.img[i][j]);
@@ -106,7 +125,7 @@ public:
     value_search_func_body(unsigned char value) : _value(value) {}
 
     search_result_t operator()(const image_t & input) {
-        search_result_t result{ {}, _value };
+        search_result_t result{ input.id, {}, _value };
         for (size_t i = 0; i < input.h; ++i) {
             for (size_t j = 0; j < input.w; ++j) {
                 if (input.img[i][j] == result.value) {
@@ -180,14 +199,14 @@ public:
 
 class avg_func_body {
 public:
-    double operator()(const image_t & input) {
+    avg_result_t operator()(const image_t & input) {
         double result = 0.0;
         for (size_t i = 0; i < input.h; ++i) {
             for (size_t j = 0; j < input.w; ++j) {
                 result += input.img[i][j];
             }
         }
-        return result / input.w / input.h;
+        return { input.id, result / input.w / input.h };
     }
 };
 
@@ -195,9 +214,9 @@ class results_func_body {
 public:
     results_func_body(ofstream & out) : _out(out) {}
 
-    continue_msg operator()(const flow::tuple< image_t, double > & input) {
+    continue_msg operator()(const flow::tuple< image_t, avg_result_t > & input) {
         if (_out) {
-            _out << setprecision(2) << fixed << get<0>(input).id << ": " << get<1>(input) << endl;
+            _out << setprecision(2) << fixed << get<1>(input).id << ": " << get<1>(input).avg << endl;
         }
         return continue_msg();
     }
@@ -255,17 +274,17 @@ int main(int argc, char *argv[]) {
     source_node< image_t > image_generator(flow_graph, image_generator_body(images_count, images_width, images_height), false);
     limiter_node< image_t > limiter(flow_graph, parallel_limit, 0);
     broadcast_node< image_t > image_broadcast(flow_graph);
-    function_node< image_t, search_result_t, rejecting > min_search_func(flow_graph, unlimited, min_search_func_body());
-    function_node< image_t, search_result_t, rejecting > max_search_func(flow_graph, unlimited, max_search_func_body());
-    function_node< image_t, search_result_t, rejecting > value_search_func(flow_graph, unlimited, value_search_func_body(search_value));
-    join_node< flow::tuple< image_t, search_result_t, search_result_t, search_result_t > > search_joiner(flow_graph);
+    function_node< image_t, search_result_t > min_search_func(flow_graph, unlimited, min_search_func_body());
+    function_node< image_t, search_result_t > max_search_func(flow_graph, unlimited, max_search_func_body());
+    function_node< image_t, search_result_t > value_search_func(flow_graph, unlimited, value_search_func_body(search_value));
+    join_node< flow::tuple< image_t, search_result_t, search_result_t, search_result_t >, key_matching<size_t> > search_joiner(flow_graph);
     function_node< flow::tuple< image_t, search_result_t, search_result_t, search_result_t >, image_t >
         highlight_func(flow_graph, unlimited, highlight_func_body(HIGHLIGHT_VALUE));
     broadcast_node< image_t > highlighted_image_broadcast(flow_graph);
-    function_node< image_t, image_t, rejecting > inverse_func(flow_graph, unlimited, inverse_func_body());
-    function_node< image_t, double, rejecting > avg_func(flow_graph, unlimited, avg_func_body());
-    join_node< flow::tuple< image_t, double > > output_join(flow_graph);
-    function_node< flow::tuple< image_t, double >, continue_msg >
+    function_node< image_t, image_t > inverse_func(flow_graph, unlimited, inverse_func_body());
+    function_node< image_t, avg_result_t > avg_func(flow_graph, unlimited, avg_func_body());
+    join_node< flow::tuple< image_t, avg_result_t >, key_matching<size_t> > output_join(flow_graph);
+    function_node< flow::tuple< image_t, avg_result_t >, continue_msg >
         results_func(flow_graph, serial, results_func_body(output));
     make_edge(image_generator, limiter);
     make_edge(limiter, image_broadcast);
