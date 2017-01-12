@@ -12,6 +12,7 @@ public:
     uint8_t getBrightness(size_t row, size_t col) const;
     size_t getWidth() const;
     size_t getHeight() const;
+    size_t getId() const;
     void generateBrightness();
 
     friend std::ostream& operator<<(std::ostream& output, const Image& image);
@@ -20,6 +21,7 @@ private:
     std::vector<uint8_t> _matrix;
     size_t _width;
     size_t _height;
+    size_t _id;
 };
 
 #endif // _IMAGE_H_

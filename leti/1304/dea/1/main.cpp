@@ -9,7 +9,8 @@
 #include "image.h"
 #include "program_settings.h"
 
-using JoinNodeType =tbb::flow::tuple<std::shared_ptr<Image>, std::vector<Pixel>, std::vector<Pixel>, std::vector<Pixel>>;
+using TaggedPixels = std::pair<size_t, std::vector<Pixel>>;
+using JoinNodeType = tbb::flow::tuple<std::shared_ptr<Image>, TaggedPixels, TaggedPixels, TaggedPixels>;
 
 void printHelp()
 {
@@ -17,7 +18,7 @@ void printHelp()
     std::cout << "-n NUMBER - count of images" << std::endl;
     std::cout << "-w NUMBER - width of images" << std::endl;
     std::cout << "-h NUMBER - height of images" << std::endl;
-    std::cout << "-l NUMBER - flow limit" << std::endl;
+    std::cout << "-l NUMBER - max count of simultaneously processed images" << std::endl;
     std::cout << "-b NUMBER - certain brightness" << std::endl;
     std::cout << "-f FILE_NAME - log file" << std::endl;
     std::cout << "-----------------------" << std::endl;
@@ -87,7 +88,7 @@ int main(int argc, const char** argv)
 
     tbb::flow::broadcast_node<std::shared_ptr<Image>> broadcast_origin_image_node(graph);
 
-    tbb::flow::function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_min_brightness_node(graph, tbb::flow::unlimited, [](std::shared_ptr<Image> image) {
+    tbb::flow::function_node<std::shared_ptr<Image>, TaggedPixels> find_min_brightness_node(graph, tbb::flow::unlimited, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         uint8_t min_value = image->getBrightness(0, 0);
         uint8_t curr_value;
@@ -108,10 +109,10 @@ int main(int argc, const char** argv)
                 }
             }
         }
-        return pixels;
+        return TaggedPixels(image->getId(), pixels);
     });
 
-    tbb::flow::function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_max_brightness_node(graph, tbb::flow::unlimited, [](std::shared_ptr<Image> image) {
+    tbb::flow::function_node<std::shared_ptr<Image>, TaggedPixels> find_max_brightness_node(graph, tbb::flow::unlimited, [](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         uint8_t max_value = image->getBrightness(0, 0);
         uint8_t curr_value;
@@ -132,10 +133,10 @@ int main(int argc, const char** argv)
                 }
             }
         }
-        return pixels;
+        return TaggedPixels(image->getId(), pixels);
     });
 
-    tbb::flow::function_node<std::shared_ptr<Image>, std::vector<Pixel>> find_certain_brightness_node(graph, tbb::flow::unlimited, [&settings](std::shared_ptr<Image> image) {
+    tbb::flow::function_node<std::shared_ptr<Image>, TaggedPixels> find_certain_brightness_node(graph, tbb::flow::unlimited, [&settings](std::shared_ptr<Image> image) {
         std::vector<Pixel> pixels;
         uint8_t brightness = settings.certain_brightness;
         for (size_t row = 0; row < image->getHeight(); ++row)
@@ -148,16 +149,21 @@ int main(int argc, const char** argv)
                 }
             }
         }
-        return pixels;
+        return TaggedPixels(image->getId(), pixels);
     });
 
-    tbb::flow::join_node<JoinNodeType> join_selected_pixels_node(graph);
+    tbb::flow::join_node<JoinNodeType, tbb::flow::tag_matching> join_selected_pixels_node(graph,
+        [](std::shared_ptr<Image> image) -> size_t { return image->getId(); },
+        [](const TaggedPixels& pixels) -> size_t { return pixels.first; },
+        [](const TaggedPixels& pixels) -> size_t { return pixels.first; },
+        [](const TaggedPixels& pixels) -> size_t { return pixels.first; }
+    );
 
     tbb::flow::function_node<JoinNodeType, std::shared_ptr<Image>> highlight_node(graph, tbb::flow::unlimited, [](JoinNodeType info) {
         auto matrix = tbb::flow::get<0>(info);
-        highlight(matrix, tbb::flow::get<1>(info));
-        highlight(matrix, tbb::flow::get<2>(info));
-        highlight(matrix, tbb::flow::get<3>(info));
+        highlight(matrix, tbb::flow::get<1>(info).second);
+        highlight(matrix, tbb::flow::get<2>(info).second);
+        highlight(matrix, tbb::flow::get<3>(info).second);
         return matrix;
     });
 

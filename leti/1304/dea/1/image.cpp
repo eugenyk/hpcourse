@@ -27,6 +27,11 @@ size_t Image::getHeight() const
     return _height;
 }
 
+size_t Image::getId() const
+{
+    return _id;
+}
+
 void Image::generateBrightness()
 {
     std::random_device rd;
