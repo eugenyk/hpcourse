@@ -197,16 +197,13 @@ public:
 
     continue_msg operator()(const flow::tuple< image_t, double > & input) {
         if (_out) {
-            spin_mutex::scoped_lock lock(_write_lock);
             _out << setprecision(2) << fixed << get<0>(input).id << ": " << get<1>(input) << endl;
         }
         return continue_msg();
     }
 private:
     ofstream& _out;
-    static spin_mutex _write_lock;
 };
-spin_mutex results_func_body::_write_lock;
 
 
 constexpr size_t HIGHLIGHT_VALUE = 255;
@@ -258,18 +255,18 @@ int main(int argc, char *argv[]) {
     source_node< image_t > image_generator(flow_graph, image_generator_body(images_count, images_width, images_height), false);
     limiter_node< image_t > limiter(flow_graph, parallel_limit, 0);
     broadcast_node< image_t > image_broadcast(flow_graph);
-    function_node< image_t, search_result_t > min_search_func(flow_graph, unlimited, min_search_func_body());
-    function_node< image_t, search_result_t > max_search_func(flow_graph, unlimited, max_search_func_body());
-    function_node< image_t, search_result_t > value_search_func(flow_graph, unlimited, value_search_func_body(search_value));
+    function_node< image_t, search_result_t, rejecting > min_search_func(flow_graph, unlimited, min_search_func_body());
+    function_node< image_t, search_result_t, rejecting > max_search_func(flow_graph, unlimited, max_search_func_body());
+    function_node< image_t, search_result_t, rejecting > value_search_func(flow_graph, unlimited, value_search_func_body(search_value));
     join_node< flow::tuple< image_t, search_result_t, search_result_t, search_result_t > > search_joiner(flow_graph);
     function_node< flow::tuple< image_t, search_result_t, search_result_t, search_result_t >, image_t >
         highlight_func(flow_graph, unlimited, highlight_func_body(HIGHLIGHT_VALUE));
     broadcast_node< image_t > highlighted_image_broadcast(flow_graph);
-    function_node< image_t, image_t > inverse_func(flow_graph, unlimited, inverse_func_body());
-    function_node< image_t, double > avg_func(flow_graph, unlimited, avg_func_body());
+    function_node< image_t, image_t, rejecting > inverse_func(flow_graph, unlimited, inverse_func_body());
+    function_node< image_t, double, rejecting > avg_func(flow_graph, unlimited, avg_func_body());
     join_node< flow::tuple< image_t, double > > output_join(flow_graph);
     function_node< flow::tuple< image_t, double >, continue_msg >
-        results_func(flow_graph, unlimited, results_func_body(output));
+        results_func(flow_graph, serial, results_func_body(output));
     make_edge(image_generator, limiter);
     make_edge(limiter, image_broadcast);
     make_edge(image_broadcast, min_search_func);
