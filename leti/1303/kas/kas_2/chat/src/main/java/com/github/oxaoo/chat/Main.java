@@ -1,5 +1,8 @@
 package com.github.oxaoo.chat;
 
+
+import com.github.oxaoo.chat.proto.Message;
+
 /**
  * @author Alexander Kuleshov
  * @version 1.0
@@ -7,6 +10,8 @@ package com.github.oxaoo.chat;
  */
 public class Main {
     public static void main(String[] args) {
-        System.out.println("hello world");
+        Message.ChatMessage.Builder message = Message.ChatMessage.newBuilder();
+        message.setText("Hello world").setSender("Ivan");
+        System.out.println(message.toString());
     }
 }
