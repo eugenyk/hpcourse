@@ -9,14 +9,14 @@ QObject(parent),chatMessage(_chatMesage),vectorParticipant(_vectorParticipant)
 }
 
 void RunnableSendMessageToAllClients::run(){
-    EncodedChatMessage encodedChatMessage;
-       ChatParticipant *participant;
+    EncodedChatMessage encodedChatMessage= EncodeChatMessage::encodeChatMessage(chatMessage);;
+    ChatParticipant *participant;
    // foreach (ChatParticipant *participant,*vectorParticipant){
     for(int i=0;i<vectorParticipant->size();i++){
        //qDebug()<<"SD_SenAll:"<<i;
       //QThread::sleep(1);
        participant=(*vectorParticipant)[i];
-       encodedChatMessage= EncodeChatMessage::encodeChatMessage(chatMessage);
+       //encodedChatMessage= EncodeChatMessage::encodeChatMessage(chatMessage);
 
        if(participant->getIsReadAllMessage())
        emit participant->signalSend(encodedChatMessage);
