@@ -1,6 +1,7 @@
 import protobuf.Message;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -28,6 +29,7 @@ public class ChatClient {
      */
     private class ReadHandler implements CompletionHandler<Integer, Message.Msg> {
         private ByteBuffer buffer;
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
 
         public ReadHandler() {
             buffer = ByteBuffer.allocate(2048);
@@ -48,9 +50,16 @@ public class ChatClient {
                 client.connectionLost();
                 return;
             }
-            ByteArrayInputStream input = new ByteArrayInputStream(getBytes(buffer));
+            try {
+                data.write(getBytes(buffer));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            ByteArrayInputStream input = new ByteArrayInputStream(data.toByteArray());
+
             try {
                 attachment = Message.Msg.parseDelimitedFrom(input);
+                data.reset();
                 if (attachment != null) {
                     client.showMessage(attachment);
                 }

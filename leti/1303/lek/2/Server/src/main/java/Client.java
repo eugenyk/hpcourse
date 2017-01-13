@@ -1,8 +1,12 @@
 import protobuf.Message;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.Channels;
+import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -12,21 +16,58 @@ public class Client implements Comparable {
     private static AtomicInteger idCounter = new AtomicInteger(0);
     private final int id;
     private final AsynchronousSocketChannel socketChannel;
+    private final Server server;
+    private Message.Msg message;
 
-    /**
-     * Read message
-     *
-     * @return message
-     */
-    public Message.Msg read() {
+    private class ReadHandler implements CompletionHandler<Integer, Message.Msg> {
+        private ByteBuffer buffer;
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
 
-        try {
-            Message.Msg msg = Message.Msg.parseDelimitedFrom(Channels.newInputStream(socketChannel));
-            return msg;
-        } catch (IOException e) {
-            return null;
+        public ReadHandler() {
+            buffer = ByteBuffer.allocate(2048);
+            socketChannel.read(buffer, message, this);
         }
 
+        private byte[] getBytes(ByteBuffer buffer) {
+            buffer.flip();
+            int limit = buffer.limit();
+            System.out.println(limit);
+            byte[] received = new byte[limit];
+            buffer.get(received, 0, limit).clear();
+            return received;
+        }
+
+        public void completed(Integer result, Message.Msg attachment) {
+            if (result == -1) {
+                server.disconnect(Client.this);
+                return;
+            }
+            try {
+                data.write(getBytes(buffer));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            ByteArrayInputStream input = new ByteArrayInputStream(data.toByteArray());
+
+            try {
+                attachment = Message.Msg.parseDelimitedFrom(input);
+                data.reset();
+                if (attachment != null) {
+                    server.broadcast(attachment, id);
+                } else {
+                    // Disconnect.
+                    server.disconnect(Client.this);
+                }
+            } catch (IOException e) {
+                System.out.println("Big message");
+            }
+
+            socketChannel.read(buffer, message, this);
+        }
+
+        public void failed(Throwable exc, Message.Msg attachment) {
+            server.disconnect(Client.this);
+        }
     }
 
     /**
@@ -35,15 +76,7 @@ public class Client implements Comparable {
      * @param server
      */
     public void start(Server server) {
-        while (true) {
-            Message.Msg msg = read();
-            if (msg != null) {
-                server.broadcast(msg, id);
-            } else {
-                // Disconnect.
-                server.disconnect(this);
-            }
-        }
+        new ReadHandler();
     }
 
     /**
@@ -59,9 +92,10 @@ public class Client implements Comparable {
         }
     }
 
-    public Client(final AsynchronousSocketChannel socketChannel) {
+    public Client(final AsynchronousSocketChannel socketChannel, Server server) {
         this.socketChannel = socketChannel;
         id = idCounter.getAndIncrement();
+        this.server = server;
     }
 
     public int getId() {

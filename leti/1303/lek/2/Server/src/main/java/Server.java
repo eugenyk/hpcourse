@@ -33,7 +33,7 @@ public class Server {
                 logger.info(new StringBuffer("Accepted a connection from ")
                         .append(socket.getRemoteAddress()).toString());
                 socketChannel.accept(null, this);
-                Client client = new Client(socket);
+                Client client = new Client(socket, Server.this);
                 clients.add(client);
                 client.start(Server.this);
             } catch (IOException e) {
