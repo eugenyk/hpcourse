@@ -1,10 +1,13 @@
 import protobuf.Message;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.Channels;
+import java.nio.channels.CompletionHandler;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Future;
@@ -17,33 +20,52 @@ public class ChatClient {
     private final Config config = new Config();
     private final String name;
     private AsynchronousSocketChannel socketChannel;
-    private Thread waiter;
     private final Client client;
+    private Message.Msg message;
 
     /**
      * Class for waiting messages.
      */
-    private class Waiter implements Runnable {
-        public boolean read() {
+    private class ReadHandler implements CompletionHandler<Integer, Message.Msg> {
+        private ByteBuffer buffer;
 
+        public ReadHandler() {
+            buffer = ByteBuffer.allocate(2048);
+            socketChannel.read(buffer, message, this);
+        }
+
+        private byte[] getBytes(ByteBuffer buffer) {
+            buffer.flip();
+            int limit = buffer.limit();
+            byte[] received = new byte[limit];
+            buffer.get(received, 0, limit).clear();
+            return received;
+        }
+
+        public void completed(Integer result, Message.Msg attachment) {
+            if (result == -1) {
+                disconnect();
+                client.connectionLost();
+                return;
+            }
+            ByteArrayInputStream input = new ByteArrayInputStream(getBytes(buffer));
             try {
-                Message.Msg msg = Message.Msg.parseDelimitedFrom(Channels.newInputStream(socketChannel));
-                if (msg != null) {
-                    client.showMessage(msg);
-                    return true;
+                attachment = Message.Msg.parseDelimitedFrom(input);
+                if (attachment != null) {
+                    client.showMessage(attachment);
                 }
             } catch (IOException e) {
                 // Disconnect.
                 disconnect();
                 client.connectionLost();
-                return false;
             }
-            return false;
+
+            socketChannel.read(buffer, message, this);
         }
 
-        public void run() {
-            while (read()) {
-            }
+        public void failed(Throwable exc, Message.Msg attachment) {
+            disconnect();
+            client.connectionLost();
         }
     }
 
@@ -55,7 +77,7 @@ public class ChatClient {
     /**
      * Start client
      *
-     * @return succes flag
+     * @return success flag
      */
     public boolean start() {
 
@@ -64,9 +86,7 @@ public class ChatClient {
             SocketAddress serverAddress = new InetSocketAddress(config.getHost(), config.getPort());
             Future<Void> result = socketChannel.connect(serverAddress);
             result.get();
-            Waiter waiterTask = new Waiter();
-            waiter = new Thread(waiterTask);
-            waiter.start();
+            new ReadHandler();
             return true;
         } catch (Exception e) {
             return false;
@@ -79,7 +99,6 @@ public class ChatClient {
                 socketChannel.shutdownOutput();
                 socketChannel.close();
             }
-            waiter.interrupt();
         } catch (IOException e1) {
             e1.printStackTrace();
         }
@@ -108,6 +127,4 @@ public class ChatClient {
             disconnect();
         }
     }
-
-
 }
