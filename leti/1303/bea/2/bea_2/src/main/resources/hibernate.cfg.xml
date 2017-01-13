@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+    <session-factory>
+        <property name="show_sql">false</property>
+        <property name="format_sql">false</property>
+        <property name="dialect">com.enigmabridge.hibernate.dialect.SQLiteDialect</property>
+        <property name="connection.driver_class">org.sqlite.JDBC</property>
+        <property name="connection.url">jdbc:sqlite:notes.db</property>
+        <property name="hibernate.hbm2ddl.auto">update</property>
+
+        <mapping class="server.entities.model.User"/>
+        <mapping class="server.entities.model.Note"/>
+        <mapping class="server.entities.model.AccessRight"/>
+    </session-factory>
+</hibernate-configuration>
