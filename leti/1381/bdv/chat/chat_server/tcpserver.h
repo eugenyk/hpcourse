@@ -21,6 +21,7 @@ private:
     int port;
     int max_threads;
     std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets;
+    QMutex c_mutex;
 
 protected:
     void incomingConnection(qintptr socketDescriptor);

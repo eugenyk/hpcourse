@@ -1,9 +1,10 @@
 #include "readandhandle.h"
 
-ReadAndHandle::ReadAndHandle(QTcpSocket* socket, std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets)
+ReadAndHandle::ReadAndHandle(QTcpSocket* socket, std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets, QMutex* container_mutex)
 {
     this->socket = socket;
     this->sockets = sockets;
+    this->c_mutex = container_mutex;
 }
 
 void ReadAndHandle::run()
@@ -68,22 +69,28 @@ void ReadAndHandle::run()
 
 std::string ReadAndHandle::find_name_by_sock(QTcpSocket* sock, QMutex **mutex)
 {
+    c_mutex->lock();
     for(auto it = sockets.begin(); it != sockets.end(); it++)
         if(std::get<1>(*it) == sock)
         {
             mutex[0] = std::get<2>(*it);
+            c_mutex->unlock();
             return std::get<0>(*it);
         }
+    c_mutex->unlock();
     return "";
 }
 
 QTcpSocket* ReadAndHandle::find_sock_by_name(std::string name, QMutex** mutex)
 {
+    c_mutex->lock();
     for(auto it = sockets.begin(); it != sockets.end(); it++)
         if(std::get<0>(*it) == name)
         {
             mutex[0] = std::get<2>(*it);
+            c_mutex->unlock();
             return std::get<1>(*it);
         }
+    c_mutex->unlock();
     return 0;
 }

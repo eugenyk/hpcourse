@@ -20,7 +20,7 @@ class ReadAndHandle : public QObject, public QRunnable
 public:
     //считывает с сокета, находит в списке указатель на сокет получателя по имени и отправляет
     ReadAndHandle(QTcpSocket *socket,
-                  std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets);
+                  std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets, QMutex* container_mutex);
 
 signals:
     void deleting_socket_from_store(QTcpSocket* socket);
@@ -29,6 +29,7 @@ signals:
 private:
     QTcpSocket* socket;
     std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets;
+    QMutex* c_mutex;
 
     void delete_name_sock(QTcpSocket *sock);
     std::string find_name_by_sock(QTcpSocket* sock, QMutex **mutex);
