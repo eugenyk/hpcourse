@@ -1,11 +1,12 @@
 #include "Image.h"
 #include <ctime>
 #include<iostream>
-
+int Image::countForId = 0;
 Image::Image(const int size)
 {
 	
 	img = new int[size*size];
+	id = countForId++;
 	this->size = size;
 	
 	for (int i = 0; i < size*size; i++)
@@ -15,7 +16,10 @@ Image::Image(const int size)
 	}
 	
 }
-
+int Image::getId()
+{
+	return id;
+}
 void  Image::highliting(int index)
 {
 	
@@ -28,7 +32,7 @@ void  Image::highliting(int index)
 	if ((index + size <= size*size) && (index%size != 1)) img[index + size - 1] = 0;
 	if ((index  > size) && (index%size != 0)) img[index -size + 1] = 0;
 	if ((index  > size) && (index%size != 1)) img[index - size - 1] = 0;
-	
+
 }
 int Image::getV(int i, int j)
 {

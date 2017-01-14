@@ -53,7 +53,7 @@ int main(int argc, char ** argv)
 	srand(time(NULL));
 	Arguments inputArg=Parser(argc, argv);
 	std::ofstream fout(inputArg.LogFileName, std::fstream::out | std::fstream::trunc);
-	
+	using dataImg = std::pair<size_t, std::vector<size_t>>;
 		using namespace tbb;
 		flow::graph graph;
 		int currStep=0;
@@ -78,7 +78,7 @@ int main(int argc, char ** argv)
 		flow::broadcast_node<std::shared_ptr<Image>> broadcastNodeFL(graph);
 		flow::function_node<
 			std::shared_ptr<Image>,
-			std::vector<size_t>> minFunctionNode(graph, flow::unlimited,
+			dataImg> minFunctionNode(graph, flow::unlimited,
 				[](std::shared_ptr<Image> cusrImg) {
 			int min = 0;
 			min= cusrImg->img[0] ;
@@ -93,11 +93,11 @@ int main(int argc, char ** argv)
 				}
 			}
 			
-			return indexes;
+			return dataImg(cusrImg->getId(), indexes);
 		});
 		flow::function_node<
 			std::shared_ptr<Image>,
-			std::vector<size_t>> maxFunctionNode(graph, flow::unlimited,
+			dataImg> maxFunctionNode(graph, flow::unlimited,
 				[](std::shared_ptr<Image> cusrImg) {
 			int max = 0;
 			max = cusrImg->img[0];
@@ -111,14 +111,14 @@ int main(int argc, char ** argv)
 					indexes.emplace_back(i);
 				}
 			}
-			return indexes;
+			return dataImg(cusrImg->getId(), indexes);
 		});
 
 
 
 		flow::function_node<
 			std::shared_ptr<Image>,
-			std::vector<size_t>> compareFunctionNode(graph, flow::unlimited,
+			dataImg> compareFunctionNode(graph, flow::unlimited,
 				[inputArg](std::shared_ptr<Image> cusrImg) {
 			std::vector<size_t> indexes;
 			for (int i = 0; i < cusrImg->size*cusrImg->size; i++)
@@ -128,16 +128,22 @@ int main(int argc, char ** argv)
 					indexes.emplace_back(i);
 				}
 			}
-			return indexes;
+			return dataImg(cusrImg->getId(), indexes);
 		});
 
 		using SelectionPixelsT = flow::tuple<
 			std::shared_ptr<Image>,
-			std::vector<size_t>,
-			std::vector<size_t>,
-			std::vector<size_t>>;
+			dataImg,
+			dataImg,
+			dataImg>;
 
-		flow::join_node<SelectionPixelsT> joinNode(graph);
+		flow::join_node<SelectionPixelsT, tbb::flow::tag_matching> joinNode(graph, 
+			[](std::shared_ptr<Image> image) -> size_t { return image->getId(); },
+			[](const dataImg& pixels) -> size_t { return pixels.first; },
+			[](const dataImg& pixels) -> size_t { return pixels.first; },
+			[](const dataImg& pixels) -> size_t { return pixels.first; }
+			
+			);
 
 		flow::function_node<
 			SelectionPixelsT,
@@ -151,9 +157,9 @@ int main(int argc, char ** argv)
 			};
 
 			auto matrix = flow::get<0>(selectPix);
-			highlighter(matrix, flow::get<1>(selectPix));
-			highlighter(matrix, flow::get<2>(selectPix));
-			highlighter(matrix, flow::get<3>(selectPix));
+			highlighter(matrix, flow::get<1>(selectPix).second);
+			highlighter(matrix, flow::get<2>(selectPix).second);
+			highlighter(matrix, flow::get<3>(selectPix).second);
 
 			return matrix;
 		});
