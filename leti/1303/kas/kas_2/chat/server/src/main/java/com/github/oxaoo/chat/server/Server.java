@@ -1,5 +1,18 @@
 package com.github.oxaoo.chat.server;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.concurrent.*;
 
 /**
@@ -8,30 +21,87 @@ import java.util.concurrent.*;
  * @since 12.01.2017
  */
 public class Server {
-    private static int DEFAULT_POOL_SIZE = 10;
+    private static final Logger LOG = LoggerFactory.getLogger(Server.class);
 
-    private ThreadPoolExecutor poolExecutor;
+    private final ThreadPoolExecutor poolExecutor;
+    private InetSocketAddress listenAddress;
+    private Selector selector;
 
-    public static void main(String[] args) {
-        int poolSize = DEFAULT_POOL_SIZE;
+    private boolean isRun;
 
-        if (args.length > 0) {
-            try {
-                poolSize = Integer.parseInt(args[0]);
-            } catch (NumberFormatException ignore) {}
-            if (poolSize < 1)
-                poolSize = DEFAULT_POOL_SIZE;
-            else if (poolSize > Integer.MAX_VALUE / 2)
-                poolSize = Integer.MAX_VALUE / 2;
-        }
-
-        final Server server = new Server();
-        server.start(poolSize);
-    }
-
-    void start(int poolSize) {
+    public Server(int poolSize) {
         int maxPullSize = poolSize * 2;
         this.poolExecutor = new ThreadPoolExecutor(poolSize, maxPullSize, 0, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<Runnable>());
+    }
+
+    public void start(String host, int port) throws IOException {
+        this.listenAddress = new InetSocketAddress(host, port);
+        ServerSocketChannel serverChanel = ServerSocketChannel.open();
+        serverChanel.configureBlocking(false); //non-blocking
+        this.selector = Selector.open();
+
+        serverChanel.socket().bind(this.listenAddress);
+        serverChanel.register(this.selector, SelectionKey.OP_ACCEPT);
+
+        LOG.info("Start server on [{}:{}]", host, port);
+        this.isRun = true;
+        this.listenEvent();
+    }
+
+    public void shutdown() {
+        //todo implement...
+        this.isRun = false;
+    }
+
+    //todo handle the throws
+    private void listenEvent() throws IOException {
+        while (this.isRun) {
+            this.selector.select();
+            Set<SelectionKey> keys = this.selector.selectedKeys();
+            for (SelectionKey key : keys) {
+                if (!key.isValid()) continue;
+                if (key.isAcceptable()) this.acceptConnection(key);
+                else if (key.isReadable()) this.readMessage(key);
+            }
+        }
+    }
+
+    private void acceptConnection(SelectionKey key) throws IOException {
+        LOG.info("Accept the connection");
+        ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
+        SocketChannel channel = serverChannel.accept();
+        if (channel == null) {
+            LOG.warn("Accept socket channel is null");
+            return;
+        }
+        channel.configureBlocking(false);
+        SocketAddress remoteAddress = channel.socket().getRemoteSocketAddress();
+        LOG.debug("Connect from: {}", remoteAddress.toString());
+        channel.register(this.selector, SelectionKey.OP_READ); //register for reading
+    }
+
+    private void readMessage(SelectionKey key) throws IOException {
+        LOG.info("Read the input message");
+        SocketChannel channel = (SocketChannel) key.channel();
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        int numRead = -1;
+        numRead = channel.read(buffer);
+
+        if (numRead < 0) {
+            SocketAddress remoteAddress = channel.socket().getRemoteSocketAddress();
+            LOG.debug("Connection closed by client: {}", remoteAddress.toString());
+            channel.close();
+            key.cancel();
+            return;
+        }
+
+        byte[] data = new byte[numRead];
+        System.arraycopy(buffer.array(), 0, data, 0, numRead);
+        LOG.info("Got message: {}", new String(data));
+    }
+
+    private void handle(Runnable task) {
+        this.poolExecutor.execute(task);
     }
 }
