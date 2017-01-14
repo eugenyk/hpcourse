@@ -31,7 +31,6 @@ public class Client implements Comparable {
         private byte[] getBytes(ByteBuffer buffer) {
             buffer.flip();
             int limit = buffer.limit();
-            System.out.println(limit);
             byte[] received = new byte[limit];
             buffer.get(received, 0, limit).clear();
             return received;
@@ -59,7 +58,7 @@ public class Client implements Comparable {
                     server.disconnect(Client.this);
                 }
             } catch (IOException e) {
-                System.out.println("Big message");
+                System.out.println("Not full message");
             }
 
             socketChannel.read(buffer, message, this);

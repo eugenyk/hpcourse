@@ -64,9 +64,7 @@ public class ChatClient {
                     client.showMessage(attachment);
                 }
             } catch (IOException e) {
-                // Disconnect.
-                disconnect();
-                client.connectionLost();
+                System.out.println("Not full message");
             }
 
             socketChannel.read(buffer, message, this);
