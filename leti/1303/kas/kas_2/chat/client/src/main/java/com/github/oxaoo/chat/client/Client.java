@@ -1,5 +1,6 @@
 package com.github.oxaoo.chat.client;
 
+import com.github.oxaoo.chat.common.proto.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,5 +34,13 @@ public class Client {
         clientChannel.write(buffer);
         buffer.clear();
         LOG.info("Send the message: {}", msg);
+    }
+
+    public void sendMessage(Message.ChatMessage message) throws IOException {
+        byte[] msgByte = message.toByteArray();
+        ByteBuffer buffer = ByteBuffer.wrap(msgByte);
+        clientChannel.write(buffer);
+        buffer.clear();
+        LOG.info("Send the message: {}", message.toString());
     }
 }

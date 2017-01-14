@@ -12,6 +12,7 @@
     <modules>
         <module>server</module>
         <module>client</module>
+        <module>common</module>
     </modules>
 
     <properties>
@@ -46,31 +47,12 @@
                 <artifactId>slf4j-log4j12</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.github.oxaoo</groupId>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>com.github.os72</groupId>
-                <artifactId>protoc-jar-maven-plugin</artifactId>
-                <version>3.1.0.2</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <protocVersion>3.1.0</protocVersion>
-                            <inputDirectories>
-                                <include>src/main/protobuf</include>
-                            </inputDirectories>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
-
 </project>

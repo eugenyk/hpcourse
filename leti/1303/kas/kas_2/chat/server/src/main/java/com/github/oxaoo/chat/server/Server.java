@@ -1,5 +1,6 @@
 package com.github.oxaoo.chat.server;
 
+import com.github.oxaoo.chat.common.proto.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,9 +12,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Alexander Kuleshov
@@ -24,7 +26,6 @@ public class Server {
     private static final Logger LOG = LoggerFactory.getLogger(Server.class);
 
     private final ThreadPoolExecutor poolExecutor;
-    private InetSocketAddress listenAddress;
     private Selector selector;
 
     private boolean isRun;
@@ -36,12 +37,12 @@ public class Server {
     }
 
     public void start(String host, int port) throws IOException {
-        this.listenAddress = new InetSocketAddress(host, port);
+        final InetSocketAddress listenAddress = new InetSocketAddress(host, port);
         ServerSocketChannel serverChanel = ServerSocketChannel.open();
         serverChanel.configureBlocking(false); //non-blocking
         this.selector = Selector.open();
 
-        serverChanel.socket().bind(this.listenAddress);
+        serverChanel.socket().bind(listenAddress);
         serverChanel.register(this.selector, SelectionKey.OP_ACCEPT);
 
         LOG.info("Start server on [{}:{}]", host, port);
@@ -94,7 +95,8 @@ public class Server {
 
         byte[] data = new byte[numRead];
         System.arraycopy(buffer.array(), 0, data, 0, numRead);
-        LOG.info("Got message: {}", new String(data));
+        Message.ChatMessage message = Message.ChatMessage.parseFrom(data);
+        LOG.info("Got message: {}", message.toString().replaceAll("\n", "; "));
     }
 
     private void handle(Runnable task) {

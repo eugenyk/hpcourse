@@ -1,7 +1,7 @@
-package com.github.oxaoo.chat;
+package com.github.oxaoo.chat.common;
 
 
-import com.github.oxaoo.chat.proto.Message;
+import com.github.oxaoo.chat.common.proto.Message;
 
 /**
  * @author Alexander Kuleshov

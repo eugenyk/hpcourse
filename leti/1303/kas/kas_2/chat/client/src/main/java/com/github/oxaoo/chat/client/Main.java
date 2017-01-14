@@ -1,5 +1,6 @@
 package com.github.oxaoo.chat.client;
 
+import com.github.oxaoo.chat.common.proto.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,14 +29,13 @@ public class Main {
             return;
         }
 
-        String[] msgs = {"Hello", "World", "From", "Client"};
-        for (String msg : msgs) {
-            try {
-                client.sendMessage(msg);
-                Thread.sleep(1000);
-            } catch (IOException e) {
-                LOG.error("Error while send message to server: {}", e.toString());
-            } catch (InterruptedException ignore) {}
+        Message.ChatMessage.Builder message = Message.ChatMessage.newBuilder();
+        message.setText("Hello world").setSender("Ivan");
+
+        try {
+            client.sendMessage(message.build());
+        } catch (IOException e) {
+            LOG.error("Error while send message to server: {}", e.toString());
         }
 
         try {
