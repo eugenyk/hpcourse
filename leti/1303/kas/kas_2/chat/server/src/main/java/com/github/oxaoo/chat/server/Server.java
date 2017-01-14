@@ -64,6 +64,7 @@ public class Server {
                 if (key.isAcceptable()) this.acceptConnection(key);
                 else if (key.isReadable()) this.readMessage(key);
             }
+            keys.clear();
         }
     }
 
@@ -71,10 +72,6 @@ public class Server {
         LOG.info("Accept the connection");
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel channel = serverChannel.accept();
-        if (channel == null) {
-            LOG.warn("Accept socket channel is null");
-            return;
-        }
         channel.configureBlocking(false);
         SocketAddress remoteAddress = channel.socket().getRemoteSocketAddress();
         LOG.debug("Connect from: {}", remoteAddress.toString());
@@ -85,8 +82,7 @@ public class Server {
         LOG.info("Read the input message");
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
-        int numRead = -1;
-        numRead = channel.read(buffer);
+        int numRead = channel.read(buffer);
 
         if (numRead < 0) {
             SocketAddress remoteAddress = channel.socket().getRemoteSocketAddress();
