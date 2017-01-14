@@ -9,9 +9,19 @@
 #include "tbb/task_group.h"
 #include "tbb/flow_graph.h"
 
-using CommandLineArguments = std::tuple<uint8_t, size_t, size_t, std::string>;
+struct CommandLineArguments
+{
+    uint8_t searchedValue = 0;
+    size_t parallelism = 5;
+    size_t matrixCount = 100;
+    size_t matrixWidth = 100;
+    size_t matrixHeight = 100;
+    bool shouldPrint = false;
+    std::string logFilePath = "./result.log";
+};
 
-void printUsage(std::ostream& out) {
+void printUsage(std::ostream& out)
+{
     out << " Usage: \n";
     out << " -b searched value \n";
     out << " -l parallelism \n";
@@ -19,88 +29,169 @@ void printUsage(std::ostream& out) {
     out << " -n image count \n";
 }
 
-CommandLineArguments parseCommandLineArguments(int argc, const char** argv) {
-    uint8_t searchedValue = 0;
-    size_t parallelism = 5;
-    size_t matrixCount = 100;
-    std::string logFilePath = "./result.log";
+CommandLineArguments parseCommandLineArguments(int argc, const char** argv)
+{
+    CommandLineArguments arguments;
     bool errorEncountered = false;
 
-    for (size_t i = 1; i < argc; i += 2) {
-        std::cout << std::string(argv[i]) << " " << std::string(argv[i + 1]) << std::endl;
-        if (std::strcmp(argv[i], "-b") == 0) {
-            searchedValue = (uint8_t) std::stoi(argv[i + 1]);
-        } else if (std::strcmp(argv[i], "-n") == 0) {
-            matrixCount = (size_t) std::stoi(argv[i + 1]);
-        } else if (std::strcmp(argv[i], "-l") == 0) {
-            parallelism = (size_t) std::stoi(argv[i + 1]);
-        } else if (std::strcmp(argv[i], "-f") == 0) {
-            logFilePath = argv[i + 1];
-        } else {
+    for (size_t i = 1; i < argc; i += 2)
+    {
+        if (std::strcmp(argv[i], "-b") == 0)
+        {
+            arguments.searchedValue = (uint8_t) std::stoi(argv[i + 1]);
+        }
+        else if (std::strcmp(argv[i], "-n") == 0)
+        {
+            arguments.matrixCount = (size_t) std::stoi(argv[i + 1]);
+        }
+        else if (std::strcmp(argv[i], "-l") == 0)
+        {
+            arguments.parallelism = (size_t) std::stoi(argv[i + 1]);
+        }
+        else if (std::strcmp(argv[i], "-f") == 0)
+        {
+            arguments.logFilePath = argv[i + 1];
+        }
+        else if (std::strcmp(argv[i], "-w") == 0)
+        {
+            arguments.matrixWidth = (size_t) std::stoi(argv[i + 1]);
+        }
+        else if (std::strcmp(argv[i], "-h") == 0)
+        {
+            arguments.matrixHeight = (size_t) std::stoi(argv[i + 1]);
+        }
+        else if (std::strcmp(argv[i], "-v") == 0)
+        {
+            arguments.shouldPrint = true;
+            --i;
+        }
+        else
+        {
             errorEncountered = true;
         }
     }
 
-    if (errorEncountered) {
+    if (errorEncountered)
+    {
         printUsage(std::cout);
         std::terminate();
     }
 
-    return CommandLineArguments{searchedValue, parallelism, matrixCount, logFilePath};
+    return arguments;
 }
 
-class Matrix {
+class Matrix
+{
 public:
+    using Value = uint8_t;
     using Shape = std::pair<size_t, size_t>;
 
     Matrix(const Shape& shape) :
             m_shape(shape),
-            m_matrix(shape.first * shape.second, 0) {
+            m_matrix(shape.first * shape.second, 0)
+    {
     }
 
-    const std::pair<size_t, size_t>& getShape() const {
+    const std::pair<size_t, size_t>& getShape() const
+    {
         return m_shape;
     }
 
-    const size_t getLength() const {
+    const size_t getLength() const
+    {
         return m_shape.first * m_shape.second;
     }
 
-    const std::vector<uint8_t>& getMatrix() const {
+    const std::vector<Value>& getMatrix() const
+    {
         return m_matrix;
     }
 
-    std::vector<uint8_t>& getMatrix() {
+    std::vector<Value>& getMatrix()
+    {
         return m_matrix;
     }
 
-    void operator>>(std::ostream& out) const {
-        for (size_t i = 0; i < m_shape.first; ++i) {
-            for (size_t j = 0; j < m_shape.second; ++j) {
+    void operator>>(std::ostream& out) const
+    {
+        for (size_t i = 0; i < m_shape.first; ++i)
+        {
+            for (size_t j = 0; j < m_shape.second; ++j)
+            {
                 out << std::setw(3) << (int) m_matrix[i * m_shape.second + j] << " ";
             }
             out << "\n";
         }
     }
 
-    template<class Generator>
-    Generator& operator<<(Generator& g) {
+    template <class Generator>
+    Generator& operator<<(Generator& g)
+    {
         std::transform(m_matrix.begin(),
                        m_matrix.end(),
                        m_matrix.begin(),
-                       [&g](std::uint8_t val) { return g(); });
+                       [&g](Value val)
+                       { return g(); });
         return g;
     }
 
 private:
     Shape m_shape;
-    std::vector<std::uint8_t> m_matrix;
+    std::vector<Value> m_matrix;
 };
 
-template<class Number>
-class RandomNumberGenerator {
+class TaskDescription
+{
 public:
-    Number operator()() {
+    size_t getTaskId() const
+    {
+        return m_taskId;
+    }
+
+    void setTaskId(size_t taskId)
+    {
+        m_taskId = taskId;
+    }
+
+    const Matrix::Shape& getShape() const
+    {
+        return m_shape;
+    }
+
+    void setShape(const Matrix::Shape& shape)
+    {
+        m_shape = shape;
+    }
+
+private:
+    size_t m_taskId;
+    Matrix::Shape m_shape;
+};
+
+template <class IdType>
+class IdGenerator
+{
+
+public:
+    IdGenerator(IdType id) : id(id)
+    {
+    }
+
+    IdType operator()()
+    {
+        return id++;
+    }
+
+private:
+    IdType id;
+};
+
+template <class Number>
+class RandomNumberGenerator
+{
+public:
+    Number operator()()
+    {
         return rd(re);
     }
 
@@ -110,160 +201,210 @@ private:
     std::uniform_int_distribution<Number> rd;
 };
 
-int main(int argc, const char** argv) {
-    uint8_t searchedValue;
-    size_t parallelism;
-    size_t matrixCount;
-    std::string logFilePath;
+using IdType = size_t;
+using MatrixPtr = std::shared_ptr<Matrix>;
+using MatrixWithId = std::pair<IdType, MatrixPtr>;
+using ParticialResults = std::pair<IdType, std::vector<size_t>>;
 
-    std::tie(searchedValue, parallelism, matrixCount, logFilePath) = parseCommandLineArguments(argc, argv);
+int main(int argc, const char** argv)
+{
+    CommandLineArguments arguments = parseCommandLineArguments(argc, argv);
 
-    auto outputStream = std::fstream(logFilePath, std::fstream::out | std::fstream::trunc);
+    auto outputStream = std::fstream(arguments.logFilePath, std::fstream::out | std::fstream::trunc);
 
     using namespace tbb;
     flow::graph graph;
 
-    size_t currentTaskId = 0;
-    flow::source_node<Matrix::Shape> taskSourceNode(graph,
-                                                    [&currentTaskId, matrixCount](Matrix::Shape& shape) mutable {
-                                                        shape.first = 100;
-                                                        shape.second = 100;
-                                                        return currentTaskId++ < matrixCount;
-                                                    });
-    flow::limiter_node<Matrix::Shape> limiterNode(graph, parallelism);
+    IdGenerator<size_t> idGenerator(0);
+    flow::source_node<TaskDescription> taskSourceNode(graph,
+                                                      [&arguments, &idGenerator](TaskDescription& task)
+                                                      {
+                                                          size_t currentTaskId = idGenerator();
+                                                          Matrix::Shape matrixShape(arguments.matrixWidth,
+                                                                                    arguments.matrixHeight);
+
+                                                          task.setTaskId(currentTaskId);
+                                                          task.setShape(matrixShape);
+
+                                                          return currentTaskId++ < arguments.matrixCount;
+                                                      });
+    flow::limiter_node<TaskDescription> limiterNode(graph, arguments.parallelism);
 
     flow::function_node<
-            Matrix::Shape,
-            std::shared_ptr<Matrix>> generateMatrixNode(graph,
-                                                        flow::unlimited,
-                                                        [](const Matrix::Shape& shape) {
-                                                            RandomNumberGenerator<std::uint8_t> generator;
-                                                            auto matrix = std::shared_ptr<Matrix>(new Matrix(shape));
-                                                            *matrix << generator;
+            TaskDescription,
+            MatrixWithId> generateMatrixNode(graph,
+                                             flow::unlimited,
+                                             [](const TaskDescription& task)
+                                             {
+                                                 RandomNumberGenerator<Matrix::Value> generator;
+                                                 auto matrix = std::make_shared<Matrix>(task.getShape());
+                                                 *matrix << generator;
 
-                                                            return matrix;
-                                                        });
+                                                 return std::make_pair(task.getTaskId(), matrix);
+                                             });
 
-    flow::broadcast_node<std::shared_ptr<Matrix>> broadcastNode(graph);
-
-    flow::function_node<
-            std::shared_ptr<Matrix>,
-            std::vector<size_t>> minValue(graph, flow::unlimited,
-                                          [](std::shared_ptr<Matrix> inputMatrix) {
-                                              const auto& data = inputMatrix->getMatrix();
-                                              uint8_t min = data[0];
-
-                                              std::vector<size_t> indexes;
-                                              for (size_t i = 1; i < inputMatrix->getLength(); i++) {
-                                                  auto currentValue = data[i];
-                                                  if (currentValue < min) {
-                                                      min = currentValue;
-                                                      indexes.clear();
-                                                      indexes.emplace_back(i);
-                                                      continue;
-                                                  } else if (currentValue == min) {
-                                                      indexes.emplace_back(i);
-                                                  }
-                                              }
-
-                                              return indexes;
-                                          });
+    flow::broadcast_node<MatrixWithId> broadcastNode(graph);
 
     flow::function_node<
-            std::shared_ptr<Matrix>,
-            std::vector<size_t>> maxValue(graph, flow::unlimited,
-                                          [](std::shared_ptr<Matrix> inputMatrix) {
-                                              const auto& data = inputMatrix->getMatrix();
-                                              uint8_t max = data[0];
+            MatrixWithId,
+            ParticialResults> minValue(graph, flow::unlimited,
+                                       [](const MatrixWithId& task)
+                                       {
+                                           const auto& inputMatrix = task.second;
+                                           const auto& data = inputMatrix->getMatrix();
 
-                                              std::vector<size_t> indexes;
-                                              for (size_t i = 1; i < inputMatrix->getLength(); i++) {
-                                                  auto currentValue = data[i];
-                                                  if (currentValue > max) {
-                                                      max = currentValue;
-                                                      indexes.clear();
-                                                      indexes.emplace_back(i);
-                                                      continue;
-                                                  } else if (currentValue == max) {
-                                                      indexes.emplace_back(i);
-                                                  }
-                                              }
+                                           auto min = data[0];
+                                           std::vector<size_t> indexes{min};
 
-                                              return indexes;
-                                          });
+                                           for (size_t i = 1; i < inputMatrix->getLength(); i++)
+                                           {
+                                               auto currentValue = data[i];
+                                               if (currentValue < min)
+                                               {
+                                                   min = currentValue;
+                                                   indexes.clear();
+                                                   indexes.emplace_back(i);
+                                                   continue;
+                                               }
+                                               else if (currentValue == min)
+                                               {
+                                                   indexes.emplace_back(i);
+                                               }
+                                           }
+
+                                           return std::make_pair(task.first, std::move(indexes));
+                                       });
 
     flow::function_node<
-            std::shared_ptr<Matrix>,
-            std::vector<size_t>> equalToValue(graph, flow::unlimited,
-                                              [searchedValue](std::shared_ptr<Matrix> inputMatrix) {
-                                                  const auto& data = inputMatrix->getMatrix();
-                                                  uint8_t max = data[0];
+            MatrixWithId,
+            ParticialResults> maxValue(graph, flow::unlimited,
+                                       [](const MatrixWithId& task)
+                                       {
+                                           const auto& inputMatrix = task.second;
+                                           const auto& data = inputMatrix->getMatrix();
 
-                                                  std::vector<size_t> indexes;
-                                                  for (size_t i = 1; i < inputMatrix->getLength(); i++) {
-                                                      auto currentValue = data[i];
-                                                      if (currentValue == searchedValue) {
-                                                          indexes.emplace_back(i);
-                                                      }
-                                                  }
+                                           auto max = data[0];
+                                           std::vector<size_t> indexes{max};
 
-                                                  return indexes;
-                                              });
+                                           for (size_t i = 1; i < inputMatrix->getLength(); i++)
+                                           {
+                                               auto currentValue = data[i];
+                                               if (currentValue > max)
+                                               {
+                                                   max = currentValue;
+                                                   indexes.clear();
+                                                   indexes.emplace_back(i);
+                                                   continue;
+                                               }
+                                               else if (currentValue == max)
+                                               {
+                                                   indexes.emplace_back(i);
+                                               }
+                                           }
+
+                                           return std::make_pair(task.first, std::move(indexes));
+                                       });
+
+    flow::function_node<
+            MatrixWithId,
+            ParticialResults> equalToValue(graph, flow::unlimited,
+                                           [&arguments](const MatrixWithId& task)
+                                           {
+                                               const auto& inputMatrix = task.second;
+                                               const auto& data = inputMatrix->getMatrix();
+
+                                               std::vector<size_t> indexes;
+
+                                               for (size_t i = 0; i < inputMatrix->getLength(); i++)
+                                               {
+                                                   auto currentValue = data[i];
+                                                   if (currentValue == arguments.searchedValue)
+                                                   {
+                                                       indexes.emplace_back(i);
+                                                   }
+                                               }
+
+                                               return std::make_pair(task.first, std::move(indexes));
+                                           });
 
 
     using HighlightInput =flow::tuple<
-            std::shared_ptr<Matrix>,
-            std::vector<size_t>,
-            std::vector<size_t>,
-            std::vector<size_t>>;
+            MatrixWithId,
+            ParticialResults,
+            ParticialResults,
+            ParticialResults>;
 
-    flow::join_node<HighlightInput> joinNode(graph);
+    flow::join_node<HighlightInput, flow::tag_matching> joinNode(
+            graph,
+            [](const MatrixWithId& matrixWithId) { return matrixWithId.first; },
+            [](const ParticialResults& results) { return results.first; },
+            [](const ParticialResults& results) { return results.first; },
+            [](const ParticialResults& results) { return results.first; });
 
-    flow::function_node<
-            HighlightInput,
-            std::shared_ptr<Matrix>> highlight_node(graph, flow::unlimited, [](HighlightInput highlightInput) {
+    flow::function_node<HighlightInput, std::shared_ptr<Matrix>> highlight_node(
+            graph,
+            flow::unlimited,
+            [](HighlightInput highlightInput)
+            {
+                auto highlighter = [](MatrixPtr matrix, const std::vector<size_t>& indexes)
+                {
+                    auto& data = matrix->getMatrix();
+                    auto shape = matrix->getShape();
+                    auto length = matrix->getLength();
 
-        auto highlighter = [](std::shared_ptr<Matrix> matrix, const std::vector<size_t>& indexes) {
-            auto& data = matrix->getMatrix();
-            auto shape = matrix->getShape();
-            auto length = matrix->getLength();
+                    size_t rows = shape.first;
+                    size_t columns = shape.second;
 
-            size_t rows = shape.first;
-            size_t columns = shape.second;
+                    for (auto index : indexes)
+                    {
+                        auto row = index / columns;
+                        auto column = index % columns;
 
-            for (auto index : indexes) {
-                auto row = index / columns;
-                auto column = index % columns;
+                        if (row + 1 != rows)
+                        {
+                            if (column != 0)
+                            {
+                                data[(row + 1) * columns + column - 1] = 0;
+                            }
+                            data[(row + 1) * columns + column] = 0;
+                            if (column + 1 != columns)
+                            {
+                                data[(row + 1) * columns + column + 1] = 0;
+                            }
+                        }
 
-                if (row + 1 != rows) {
-                    if (column != 0) {
-                        data[(row + 1) * columns + column - 1] = 0;
+                        if (column != 0)
+                        {
+                            data[row * columns + column - 1] = 0;
+                        }
+                        data[row * columns + column] = 0;
+                        if (column + 1 != columns)
+                        {
+                            data[row * columns + column + 1] = 0;
+                        }
+
+                        if (row != 0)
+                        {
+                            if (column != 0)
+                            {
+                                data[(row - 1) * rows + column - 1] = 0;
+                            }
+                            data[(row - 1) * columns + column] = 0;
+                            if (column + 1 != columns)
+                            {
+                                data[(row - 1) * columns + column + 1] = 0;
+                            }
+                        }
                     }
-                    data[(row + 1) * columns + column] = 0;
-                    if (column + 1 != columns) {
-                        data[(row + 1) * columns + column + 1] = 0;
-                    }
-                }
+                };
 
-                if (column != 0)data[row * columns + column - 1] = 0;
-                data[row * columns + column] = 0;
-                if (column + 1 != columns)data[row * columns + column + 1] = 0;
+                auto matrix = flow::get<0>(highlightInput).second;
+                highlighter(matrix, flow::get<1>(highlightInput).second);
+                highlighter(matrix, flow::get<2>(highlightInput).second);
+                highlighter(matrix, flow::get<3>(highlightInput).second);
 
-                if (row != 0) {
-                    if (column != 0)data[(row - 1) * rows + column - 1] = 0;
-                    data[(row - 1) * columns + column] = 0;
-                    if (column + 1 != columns)data[(row - 1) * columns + column + 1] = 0;
-                }
-            }
-        };
-
-        auto matrix = flow::get<0>(highlightInput);
-        highlighter(matrix, flow::get<1>(highlightInput));
-        highlighter(matrix, flow::get<2>(highlightInput));
-        highlighter(matrix, flow::get<3>(highlightInput));
-
-        return matrix;
-    });
+                return matrix;
+            });
 
     flow::broadcast_node<std::shared_ptr<Matrix>> broadcastNode1(graph);
 
@@ -271,15 +412,17 @@ int main(int argc, const char** argv) {
             std::shared_ptr<Matrix>,
             std::shared_ptr<Matrix>> inverseNode(graph,
                                                  flow::unlimited,
-                                                 [](std::shared_ptr<Matrix> matrix) {
+                                                 [](std::shared_ptr<Matrix> matrix)
+                                                 {
                                                      std::shared_ptr<Matrix> inverseMatrix = std::make_shared<Matrix>(
                                                              matrix->getShape());
 
                                                      auto& input = matrix->getMatrix();
                                                      auto& output = inverseMatrix->getMatrix();
 
-                                                     for (size_t i = 0; i < matrix->getLength(); ++i) {
-                                                         output[i] = std::numeric_limits<uint8_t>::max() - input[i];
+                                                     for (size_t i = 0; i < matrix->getLength(); ++i)
+                                                     {
+                                                         output[i] = std::numeric_limits<Matrix::Value>::max() - input[i];
                                                      }
 
                                                      return inverseMatrix;
@@ -289,12 +432,14 @@ int main(int argc, const char** argv) {
             std::shared_ptr<Matrix>,
             double> meanNode(graph,
                              flow::unlimited,
-                             [](std::shared_ptr<Matrix> matrix) {
+                             [](std::shared_ptr<Matrix> matrix)
+                             {
                                  const auto& data = matrix->getMatrix();
                                  auto length = matrix->getLength();
 
                                  double mean = 0.0;
-                                 for (size_t i = 0; i < length; ++i) {
+                                 for (size_t i = 0; i < length; ++i)
+                                 {
                                      mean += data[i];
                                  }
                                  return mean / length;
@@ -302,18 +447,24 @@ int main(int argc, const char** argv) {
 
     flow::function_node<std::shared_ptr<Matrix>> matrixDebugOutput(graph,
                                                                    flow::serial,
-                                                                   [](std::shared_ptr<Matrix> matrix) {
-                                                                       *matrix >> std::cout;
-                                                                       std::cout << "\n";
+                                                                   [&arguments](MatrixPtr matrix)
+                                                                   {
+                                                                       if (arguments.shouldPrint)
+                                                                       {
+                                                                           *matrix >> std::cout;
+                                                                           std::cout << "\n";
+                                                                       }
                                                                    });
 
     flow::function_node<double> doubleOutputNode(graph,
                                                  flow::serial,
-                                                 [&outputStream](double mean) {
+                                                 [&outputStream](double mean)
+                                                 {
                                                      outputStream << std::setprecision(10) << mean << "\n";
                                                  });
 
-    flow::function_node<std::shared_ptr<Matrix>> decrementer(graph, flow::serial, [](std::shared_ptr<Matrix> val) {});
+    flow::function_node<std::shared_ptr<Matrix>> decrementer(graph, flow::serial, [](std::shared_ptr<Matrix> val)
+    {});
 
     flow::make_edge(taskSourceNode, limiterNode);
     flow::make_edge(limiterNode, generateMatrixNode);
