@@ -49,7 +49,7 @@ public class MessageIncomingHandler implements CompletionHandler<Integer, Void> 
             }
 
             this.inputBuffer.clear();
-            this.socketChannel.read(this.inputBuffer, null, this); //todo maybe delete?!
+            this.socketChannel.read(this.inputBuffer, null, this);
         }
     }
 

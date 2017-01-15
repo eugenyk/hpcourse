@@ -25,9 +25,7 @@ public class Client {
     public Client(String serverHost, int serverPort) throws IOException, ExecutionException, InterruptedException {
         InetSocketAddress hostAddress = new InetSocketAddress(serverHost, serverPort);
         this.clientChannel = AsynchronousSocketChannel.open();
-        Future<Void> future = this.clientChannel.connect(hostAddress);
-        //todo without get
-        future.get();
+        this.clientChannel.connect(hostAddress);
         LOG.info("Client connect to server");
         this.listenIncoming();
     }
@@ -39,12 +37,9 @@ public class Client {
     public void sendMessage(Message.ChatMessage message) throws IOException {
         byte[] msgByte = message.toByteArray();
         ByteBuffer buffer = ByteBuffer.wrap(msgByte);
-        Future<Integer> result = clientChannel.write(buffer);
-        while (!result.isDone()) {
-            LOG.info("...");
-        }
+        clientChannel.write(buffer);
         buffer.clear();
-        LOG.info("Send the message: {}", message.toString());
+        LOG.info("Send the message: {}", message.toString().replaceAll("\n", "; "));
     }
 
     private void listenIncoming() {

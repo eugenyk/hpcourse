@@ -47,7 +47,6 @@ public class Main {
     }
 
     private static int getPort(String[] args) {
-        //todo get free port
         int port = DEFAULT_PORT;
         if (args.length > 1) {
             try {

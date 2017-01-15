@@ -53,7 +53,7 @@ public class ReadMessageHandler implements CompletionHandler<Integer, Void> {
             }
 
             this.inputBuffer.clear();
-            this.socketChannel.read(this.inputBuffer, null, this); //todo maybe remove?!
+            this.socketChannel.read(this.inputBuffer, null, this);
         }
     }
 
