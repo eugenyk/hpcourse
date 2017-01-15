@@ -6,16 +6,15 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author Alexander Kuleshov
@@ -25,81 +24,44 @@ import java.util.concurrent.TimeUnit;
 public class Server {
     private static final Logger LOG = LoggerFactory.getLogger(Server.class);
 
-    private final ThreadPoolExecutor poolExecutor;
-    private Selector selector;
+    private final int poolSize;
 
-    private boolean isRun;
+    private Set<AsynchronousSocketChannel> clients = new CopyOnWriteArraySet<>();
+//    private Set<AsynchronousSocketChannel> clients = new ConcurrentSkipListSet<>();
 
     public Server(int poolSize) {
-        int maxPullSize = poolSize * 2;
-        this.poolExecutor = new ThreadPoolExecutor(poolSize, maxPullSize, 0, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<Runnable>());
+        this.poolSize = poolSize;
     }
 
     public void start(String host, int port) throws IOException {
-        final InetSocketAddress listenAddress = new InetSocketAddress(host, port);
-        ServerSocketChannel serverChanel = ServerSocketChannel.open();
-        serverChanel.configureBlocking(false); //non-blocking
-        this.selector = Selector.open();
+        ExecutorService threadPool = Executors.newFixedThreadPool(this.poolSize);
+        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(threadPool);
+        AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open(group);
+        InetSocketAddress listenAddress = new InetSocketAddress(host, port);
 
-        serverChanel.socket().bind(listenAddress);
-        serverChanel.register(this.selector, SelectionKey.OP_ACCEPT);
+        listener.bind(listenAddress);
 
+        AcceptConnectionHandler acceptCompletionHandler = new AcceptConnectionHandler(listener, this);
+        listener.accept(null, acceptCompletionHandler);
         LOG.info("Start server on [{}:{}]", host, port);
-        this.isRun = true;
-        this.listenEvent();
     }
 
-    public void shutdown() {
-        //todo implement...
-        this.isRun = false;
+    public void addClient(AsynchronousSocketChannel client) {
+        this.clients.add(client);
     }
 
-    //todo handle the throws
-    private void listenEvent() throws IOException {
-        while (this.isRun) {
-            this.selector.select();
-            Set<SelectionKey> keys = this.selector.selectedKeys();
-            for (SelectionKey key : keys) {
-                if (!key.isValid()) continue;
-                if (key.isAcceptable()) this.acceptConnection(key);
-                else if (key.isReadable()) this.readMessage(key);
+    public void removeClient(AsynchronousSocketChannel client) {
+        this.clients.remove(client);
+    }
+
+    public void broadcastMessage(AsynchronousSocketChannel sender, Message.ChatMessage message) {
+        for (AsynchronousSocketChannel client : this.clients) {
+//            if (client != sender) {
+            if (client != null) {
+                byte[] msgByte = message.toByteArray();
+                ByteBuffer buffer = ByteBuffer.wrap(msgByte);
+                client.write(buffer, null, new WriteMockHandler());
             }
-            keys.clear();
         }
-    }
-
-    private void acceptConnection(SelectionKey key) throws IOException {
-        LOG.info("Accept the connection");
-        ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
-        SocketChannel channel = serverChannel.accept();
-        channel.configureBlocking(false);
-        SocketAddress remoteAddress = channel.socket().getRemoteSocketAddress();
-        LOG.debug("Connect from: {}", remoteAddress.toString());
-        channel.register(this.selector, SelectionKey.OP_READ); //register for reading
-    }
-
-    private void readMessage(SelectionKey key) throws IOException {
-        LOG.info("Read the input message");
-        SocketChannel channel = (SocketChannel) key.channel();
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        int numRead = channel.read(buffer);
-
-        if (numRead < 0) {
-            SocketAddress remoteAddress = channel.socket().getRemoteSocketAddress();
-            LOG.debug("Connection closed by client: {}", remoteAddress.toString());
-            channel.close();
-            key.cancel();
-            return;
-        }
-
-        byte[] data = new byte[numRead];
-        System.arraycopy(buffer.array(), 0, data, 0, numRead);
-        Message.ChatMessage message = Message.ChatMessage.parseFrom(data);
-        LOG.info("Got message: {}", message.toString().replaceAll("\n", "; "));
-    }
-
-    private void handle(Runnable task) {
-        this.poolExecutor.execute(task);
     }
 }

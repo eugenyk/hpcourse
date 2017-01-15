@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author Alexander Kuleshov
@@ -27,15 +28,27 @@ public class Main {
         } catch (IOException e) {
             LOG.error("Error while create connection. Cause: {}", e.toString());
             return;
+        } catch (InterruptedException | ExecutionException e) {
+            return;
         }
 
-        Message.ChatMessage.Builder message = Message.ChatMessage.newBuilder();
-        message.setText("Hello world").setSender("Ivan");
+        String[] texts = {"Message 1", "Message 2", "Message 3"};
+        String[] senders = {"Ivan", "Petr", "Alex"};
+        for (int i = 0; i < 3; i++) {
+            Message.ChatMessage.Builder message = Message.ChatMessage.newBuilder();
+            message.setText(texts[i]).setSender(senders[i]);
 
-        try {
-            client.sendMessage(message.build());
-        } catch (IOException e) {
-            LOG.error("Error while send message to server: {}", e.toString());
+            try {
+                client.sendMessage(message.build());
+            } catch (IOException e) {
+                LOG.error("Error while send message to server: {}", e.toString());
+            }
+
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
         try {

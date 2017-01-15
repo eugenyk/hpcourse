@@ -17,7 +17,7 @@ public class Main {
 
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         final int poolSize = getPoolSize(args);
         final int port = getPort(args);
         final String host = getHost(args);
@@ -29,6 +29,8 @@ public class Main {
         } catch (IOException e) {
             LOG.error("Error while starting server. Cause: {}", e.toString());
         }
+
+        Thread.currentThread().join();
     }
 
 

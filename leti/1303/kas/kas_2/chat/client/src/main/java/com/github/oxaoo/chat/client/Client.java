@@ -7,7 +7,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  * @author Alexander Kuleshov
@@ -17,30 +20,37 @@ import java.nio.channels.SocketChannel;
 public class Client {
     private static final Logger LOG = LoggerFactory.getLogger(Client.class);
 
-    private final SocketChannel clientChannel;
+    private final AsynchronousSocketChannel clientChannel;
 
-    public Client(String serverHost, int serverPort) throws IOException {
+    public Client(String serverHost, int serverPort) throws IOException, ExecutionException, InterruptedException {
         InetSocketAddress hostAddress = new InetSocketAddress(serverHost, serverPort);
-        clientChannel = SocketChannel.open(hostAddress);
+        this.clientChannel = AsynchronousSocketChannel.open();
+        Future<Void> future = this.clientChannel.connect(hostAddress);
+        //todo without get
+        future.get();
+        LOG.info("Client connect to server");
+        this.listenIncoming();
     }
 
     public void closeConnection() throws IOException {
         clientChannel.close();
     }
 
-    public void sendMessage(String msg) throws IOException {
-        byte[] msgByte = msg.getBytes();
-        ByteBuffer buffer = ByteBuffer.wrap(msgByte);
-        clientChannel.write(buffer);
-        buffer.clear();
-        LOG.info("Send the message: {}", msg);
-    }
-
     public void sendMessage(Message.ChatMessage message) throws IOException {
         byte[] msgByte = message.toByteArray();
         ByteBuffer buffer = ByteBuffer.wrap(msgByte);
-        clientChannel.write(buffer);
+        Future<Integer> result = clientChannel.write(buffer);
+        while (!result.isDone()) {
+            LOG.info("...");
+        }
         buffer.clear();
         LOG.info("Send the message: {}", message.toString());
+    }
+
+    private void listenIncoming() {
+        LOG.info("Begin listen incoming message from server...");
+        ByteBuffer inputBuffer = ByteBuffer.allocate(1024);
+        MessageIncomingHandler messageIncomingHandler = new MessageIncomingHandler(this.clientChannel, inputBuffer);
+        this.clientChannel.read(inputBuffer, null, messageIncomingHandler);
     }
 }
