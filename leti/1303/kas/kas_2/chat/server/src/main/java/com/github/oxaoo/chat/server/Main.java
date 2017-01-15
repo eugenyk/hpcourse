@@ -29,8 +29,6 @@ public class Main {
         } catch (IOException e) {
             LOG.error("Error while starting server. Cause: {}", e.toString());
         }
-
-        Thread.currentThread().join();
     }
 
 

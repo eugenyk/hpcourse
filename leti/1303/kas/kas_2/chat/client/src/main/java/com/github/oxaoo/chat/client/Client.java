@@ -33,7 +33,7 @@ public class Client {
     }
 
     public void closeConnection() throws IOException {
-        clientChannel.close();
+        this.clientChannel.shutdownOutput();
     }
 
     public void sendMessage(Message.ChatMessage message) throws IOException {

@@ -11,10 +11,10 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Alexander Kuleshov
@@ -27,7 +27,6 @@ public class Server {
     private final int poolSize;
 
     private Set<AsynchronousSocketChannel> clients = new CopyOnWriteArraySet<>();
-//    private Set<AsynchronousSocketChannel> clients = new ConcurrentSkipListSet<>();
 
     public Server(int poolSize) {
         this.poolSize = poolSize;
@@ -44,6 +43,8 @@ public class Server {
         AcceptConnectionHandler acceptCompletionHandler = new AcceptConnectionHandler(listener, this);
         listener.accept(null, acceptCompletionHandler);
         LOG.info("Start server on [{}:{}]", host, port);
+
+        this.prepareTermination(group);
     }
 
     public void addClient(AsynchronousSocketChannel client) {
@@ -60,8 +61,16 @@ public class Server {
             if (client != null) {
                 byte[] msgByte = message.toByteArray();
                 ByteBuffer buffer = ByteBuffer.wrap(msgByte);
-                client.write(buffer, null, new WriteMockHandler());
+                client.write(buffer);
             }
+        }
+    }
+
+    private void prepareTermination(AsynchronousChannelGroup group) {
+        try {
+            group.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+        } catch (InterruptedException e) {
+            LOG.error("Error while termination server");
         }
     }
 }
