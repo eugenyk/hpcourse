@@ -21,9 +21,16 @@ public class MessageIncomingHandler implements CompletionHandler<Integer, Void> 
     private AsynchronousSocketChannel socketChannel;
     private ByteBuffer inputBuffer;
 
+    private Client client;
+
     public MessageIncomingHandler(AsynchronousSocketChannel socketChannel, ByteBuffer inputBuffer) {
         this.socketChannel = socketChannel;
         this.inputBuffer = inputBuffer;
+    }
+
+    public MessageIncomingHandler(AsynchronousSocketChannel socketChannel, ByteBuffer inputBuffer, Client client) {
+        this(socketChannel, inputBuffer);
+        this.client = client;
     }
 
     @Override
@@ -44,6 +51,7 @@ public class MessageIncomingHandler implements CompletionHandler<Integer, Void> 
             try {
                 Message.ChatMessage message = Message.ChatMessage.parseFrom(data);
                 LOG.info("Got message from sever: {}", message.toString().replaceAll("\n", "; "));
+                this.appendToForm(message);
             } catch (InvalidProtocolBufferException e) {
                 LOG.error("Error while parse protobuf message. Cause: {}", e.toString());
             }
@@ -56,6 +64,13 @@ public class MessageIncomingHandler implements CompletionHandler<Integer, Void> 
     @Override
     public void failed(Throwable exc, Void attachment) {
 
+    }
+
+    private void appendToForm(Message.ChatMessage message) {
+        if (client.getMainForm() != null) {
+            String formedMsg = message.getData() + "| " + message.getSender() + "| " + message.getText();
+            client.getMainForm().appendMessage(formedMsg);
+        }
     }
 
 }

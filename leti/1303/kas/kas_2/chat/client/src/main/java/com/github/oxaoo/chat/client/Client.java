@@ -1,5 +1,6 @@
 package com.github.oxaoo.chat.client;
 
+import com.github.oxaoo.chat.client.ui.MainForm;
 import com.github.oxaoo.chat.common.proto.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +23,20 @@ public class Client {
 
     private final AsynchronousSocketChannel clientChannel;
 
+    private MainForm mainForm;
+
     public Client(String serverHost, int serverPort) throws IOException, ExecutionException, InterruptedException {
         InetSocketAddress hostAddress = new InetSocketAddress(serverHost, serverPort);
         this.clientChannel = AsynchronousSocketChannel.open();
         this.clientChannel.connect(hostAddress);
         LOG.info("Client connect to server");
         this.listenIncoming();
+    }
+
+    public Client(String serverHost, int serverPort, MainForm mainForm)
+            throws InterruptedException, ExecutionException, IOException {
+        this(serverHost, serverPort);
+        this.mainForm = mainForm;
     }
 
     public void closeConnection() throws IOException {
@@ -45,7 +54,11 @@ public class Client {
     private void listenIncoming() {
         LOG.info("Begin listen incoming message from server...");
         ByteBuffer inputBuffer = ByteBuffer.allocate(1024);
-        MessageIncomingHandler messageIncomingHandler = new MessageIncomingHandler(this.clientChannel, inputBuffer);
+        MessageIncomingHandler messageIncomingHandler = new MessageIncomingHandler(this.clientChannel, inputBuffer, this);
         this.clientChannel.read(inputBuffer, null, messageIncomingHandler);
+    }
+
+    public MainForm getMainForm() {
+        return mainForm;
     }
 }
