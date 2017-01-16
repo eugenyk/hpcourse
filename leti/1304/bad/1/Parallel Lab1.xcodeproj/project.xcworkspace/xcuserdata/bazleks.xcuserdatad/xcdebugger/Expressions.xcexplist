@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "ApplicationArguments::findKey(char*, char const**):main.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "sizeof(const char)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ApplicationArguments::findKey(char*, int, char const**):main.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "argv[i]">
+            </PersistentString>
+            <PersistentString
+               value = "argv[i] == key">
+            </PersistentString>
+            <PersistentString
+               value = "strcmp(key, argv[i])">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ApplicationArguments::extract(int, char const**):main.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "findKey(&quot;-f&quot;, argc, argv)">
+            </PersistentString>
+            <PersistentString
+               value = "argv[2]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>
