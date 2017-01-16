@@ -1,0 +1,19 @@
+#ifndef ENCODECHATMESSAGE_H
+#define ENCODECHATMESSAGE_H
+
+#include "message.pb.h"
+
+struct EncodedChatMessage{
+    
+};
+
+class EncodeChatMessage
+{
+public:
+
+    EncodeChatMessage();
+    void encodeChatMessage(ChatMessage &_chatMessage);
+    
+};
+
+#endif // ENCODECHATMESSAGE_H
