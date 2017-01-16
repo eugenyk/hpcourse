@@ -1,0 +1,3 @@
+[submodule "external/tbb"]
+	path = external/tbb
+	url = https://github.com/wjakob/tbb
