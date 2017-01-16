@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		306A09AF1E2CC574007A2F54 /* libtbb.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 306A09AE1E2CC574007A2F54 /* libtbb.dylib */; };
+		306A09B01E2CC57A007A2F54 /* libtbb.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 306A09AE1E2CC574007A2F54 /* libtbb.dylib */; };
 		30B63BA11E2BF92800DB85AA /* Main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BA01E2BF92800DB85AA /* Main.cpp */; };
-		30B63BAF1E2C019400DB85AA /* libtbb.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 30B63BAE1E2C019400DB85AA /* libtbb.dylib */; };
-		30B63BB01E2C01FD00DB85AA /* libtbb.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 30B63BAE1E2C019400DB85AA /* libtbb.dylib */; };
 		30B63BB61E2C16B700DB85AA /* ApplicationArguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BB41E2C16B700DB85AA /* ApplicationArguments.cpp */; };
 		30B63BBB1E2C428000DB85AA /* Pixmap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BBA1E2C428000DB85AA /* Pixmap.cpp */; };
 		30B63BBE1E2C438200DB85AA /* Pixel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BBC1E2C438200DB85AA /* Pixel.cpp */; };
@@ -23,16 +23,16 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				30B63BB01E2C01FD00DB85AA /* libtbb.dylib in CopyFiles */,
+				306A09B01E2CC57A007A2F54 /* libtbb.dylib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		306A09AE1E2CC574007A2F54 /* libtbb.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbb.dylib; path = "../../../../../../Tools/intel-tbb/lib/libtbb.dylib"; sourceTree = "<group>"; };
 		30B63B9D1E2BF92800DB85AA /* Parallel Lab1 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Parallel Lab1"; sourceTree = BUILT_PRODUCTS_DIR; };
 		30B63BA01E2BF92800DB85AA /* Main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Main.cpp; sourceTree = "<group>"; };
-		30B63BAE1E2C019400DB85AA /* libtbb.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbb.dylib; path = "../../Tools/intel-tbb/lib/libtbb.dylib"; sourceTree = "<group>"; };
 		30B63BB41E2C16B700DB85AA /* ApplicationArguments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ApplicationArguments.cpp; sourceTree = "<group>"; };
 		30B63BB51E2C16B700DB85AA /* ApplicationArguments.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ApplicationArguments.hpp; sourceTree = "<group>"; };
 		30B63BB91E2C426D00DB85AA /* Pixmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Pixmap.h; sourceTree = "<group>"; };
@@ -47,7 +47,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				30B63BAF1E2C019400DB85AA /* libtbb.dylib in Frameworks */,
+				306A09AF1E2CC574007A2F54 /* libtbb.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,7 +83,7 @@
 		30B63BA71E2BFC3800DB85AA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				30B63BAE1E2C019400DB85AA /* libtbb.dylib */,
+				306A09AE1E2CC574007A2F54 /* libtbb.dylib */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

@@ -12,8 +12,7 @@ public:
     Pixmap(int w, int h) {
         this->width = w;
         this->height = h;
-        this->pixels = std::vector<Pixel*>(w * h);
-        for(int i = 0; i < pixels.size(); i++) {
+        for(int i = 0; i < w * h; i++) {
             this->pixels.push_back(new Pixel());
         }
     }

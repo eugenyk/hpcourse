@@ -22,6 +22,8 @@ int main(int argc, const char * argv[]) {
     
     print_application_arguments(arguments);
     
+    std::cout << std::endl;
+    
     tbb::flow::graph graph;
     tbb::flow::broadcast_node<Pixmap*> node_step1_broadcast { graph } ;
     
