@@ -1,0 +1,12 @@
+﻿<Window x:Class="AsyncClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="350" Width="525">
+    <StackPanel>
+        <Label Content="Имя" HorizontalAlignment="Right" FontSize="16" Margin="10"></Label>
+        <TextBox Name="Name" Width="100" TextAlignment="Right" HorizontalAlignment="Right" TextWrapping="Wrap"></TextBox>
+        <Label Content="Сообщение" HorizontalAlignment="Right" FontSize="16" Margin="10, 10, 10, 10"></Label>
+        <TextBox Name="Message" Width="400" TextAlignment="Right" HorizontalAlignment="Right" TextWrapping="Wrap"></TextBox>
+        <Button Click="SendMessage" Content="Отправить" HorizontalAlignment="Right" Margin="10, 40, 10, 10" FontSize="16"></Button>
+    </StackPanel>
+</Window>

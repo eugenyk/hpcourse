@@ -1,0 +1,345 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		27009F4D1E043526004F39DF /* libMagick++-6.Q16.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27009F4C1E043526004F39DF /* libMagick++-6.Q16.dylib */; };
+		27009F4F1E04352E004F39DF /* libMagick++-6.Q16.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 27009F4E1E04352E004F39DF /* libMagick++-6.Q16.dylib */; };
+		27009F551E05597E004F39DF /* utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27009F531E05597E004F39DF /* utils.cpp */; };
+		27009F5B1E0561A4004F39DF /* flow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27009F5A1E0561A4004F39DF /* flow.cpp */; };
+		276E87F31DEA02120075E393 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 276E87F21DEA02120075E393 /* main.cpp */; };
+		276E87F61DEA02930075E393 /* libtbb.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 276E87F51DEA02930075E393 /* libtbb.dylib */; };
+		276E87F71DEA02A40075E393 /* libtbb.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 276E87F51DEA02930075E393 /* libtbb.dylib */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8DD76F690486A84900D96B5E /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				276E87F71DEA02A40075E393 /* libtbb.dylib in CopyFiles */,
+				27009F4F1E04352E004F39DF /* libMagick++-6.Q16.dylib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		27009F4C1E043526004F39DF /* libMagick++-6.Q16.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libMagick++-6.Q16.dylib"; path = "../../../../../../../../../../usr/local/lib/libMagick++-6.Q16.dylib"; sourceTree = "<group>"; };
+		27009F4E1E04352E004F39DF /* libMagick++-6.Q16.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libMagick++-6.Q16.dylib"; path = "../../../../../../../../../../usr/local/lib/libMagick++-6.Q16.dylib"; sourceTree = "<group>"; };
+		27009F531E05597E004F39DF /* utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cpp; path = ../src/utils.cpp; sourceTree = "<group>"; };
+		27009F5A1E0561A4004F39DF /* flow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = flow.cpp; path = ../src/flow.cpp; sourceTree = "<group>"; };
+		27009F5C1E0561B0004F39DF /* flow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = flow.h; path = ../src/flow.h; sourceTree = "<group>"; };
+		276E87F21DEA02120075E393 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../src/main.cpp; sourceTree = "<group>"; };
+		276E87F51DEA02930075E393 /* libtbb.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbb.dylib; path = ../../../../../../../../../../usr/local/lib/libtbb.dylib; sourceTree = "<group>"; };
+		27873E931E06B0CB007CF8D8 /* commandline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = commandline.h; path = ../src/commandline.h; sourceTree = "<group>"; };
+		27873E941E06B0CB007CF8D8 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../src/utils.h; sourceTree = "<group>"; };
+		8DD76F6C0486A84900D96B5E /* parallel_preorder */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = parallel_preorder; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8DD76F660486A84900D96B5E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				276E87F61DEA02930075E393 /* libtbb.dylib in Frameworks */,
+				27009F4D1E043526004F39DF /* libMagick++-6.Q16.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08FB7794FE84155DC02AAC07 /* parallel_preorder */ = {
+			isa = PBXGroup;
+			children = (
+				27009F4E1E04352E004F39DF /* libMagick++-6.Q16.dylib */,
+				08FB7795FE84155DC02AAC07 /* Source */,
+				1AB674ADFE9D54B511CA2CBB /* Products */,
+				276E87F41DEA02930075E393 /* Frameworks */,
+			);
+			name = parallel_preorder;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				27873E931E06B0CB007CF8D8 /* commandline.h */,
+				27009F531E05597E004F39DF /* utils.cpp */,
+				27873E941E06B0CB007CF8D8 /* utils.h */,
+				27009F5A1E0561A4004F39DF /* flow.cpp */,
+				27009F5C1E0561B0004F39DF /* flow.h */,
+				276E87F21DEA02120075E393 /* main.cpp */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8DD76F6C0486A84900D96B5E /* parallel_preorder */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		276E87F41DEA02930075E393 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				27009F4C1E043526004F39DF /* libMagick++-6.Q16.dylib */,
+				276E87F51DEA02930075E393 /* libtbb.dylib */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8DD76F620486A84900D96B5E /* parallel_preorder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1DEB923108733DC60010E9CD /* Build configuration list for PBXNativeTarget "parallel_preorder" */;
+			buildPhases = (
+				8DD76F640486A84900D96B5E /* Sources */,
+				8DD76F660486A84900D96B5E /* Frameworks */,
+				8DD76F690486A84900D96B5E /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = parallel_preorder;
+			productInstallPath = "$(HOME)/bin";
+			productName = parallel_preorder;
+			productReference = 8DD76F6C0486A84900D96B5E /* parallel_preorder */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0810;
+			};
+			buildConfigurationList = 1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "ImageProcessing" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 08FB7794FE84155DC02AAC07 /* parallel_preorder */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8DD76F620486A84900D96B5E /* parallel_preorder */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8DD76F640486A84900D96B5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				276E87F31DEA02120075E393 /* main.cpp in Sources */,
+				27009F551E05597E004F39DF /* utils.cpp in Sources */,
+				27009F5B1E0561A4004F39DF /* flow.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1DEB923208733DC60010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					"/usr/local/include/ImageMagick-6",
+				);
+				INSTALL_PATH = "$(HOME)/bin";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/lib,
+				);
+				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
+				ZERO_LINK = NO;
+			};
+			name = Debug;
+		};
+		1DEB923308733DC60010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					"/usr/local/include/ImageMagick-6",
+				);
+				INSTALL_PATH = "$(HOME)/bin";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/lib,
+				);
+				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		1DEB923608733DC60010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ENABLE_TESTABILITY = YES;
+				GCC_ENABLE_CPP_RTTI = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_VERSION = 4.0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				SYMROOT = "/tmp/tbb-$(USER)";
+			};
+			name = Debug;
+		};
+		1DEB923708733DC60010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				GCC_ENABLE_CPP_RTTI = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_VERSION = 4.0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				SYMROOT = "/tmp/tbb-$(USER)";
+			};
+			name = Release;
+		};
+		A1F593C60B8F0E6E00073279 /* Debug64 */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					"/usr/local/include/ImageMagick-6",
+				);
+				INSTALL_PATH = "$(HOME)/bin";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/lib,
+				);
+				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
+				ZERO_LINK = NO;
+			};
+			name = Debug64;
+		};
+		A1F593C70B8F0E6E00073279 /* Release64 */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					"/usr/local/include/ImageMagick-6",
+				);
+				INSTALL_PATH = "$(HOME)/bin";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/lib,
+				);
+				PRODUCT_NAME = parallel_preorder;
+				SYMROOT = "$(SRCROOT)/../build/";
+				ZERO_LINK = NO;
+			};
+			name = Release64;
+		};
+		A1F593C80B8F0E6E00073279 /* Debug64 */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ENABLE_TESTABILITY = YES;
+				GCC_ENABLE_CPP_RTTI = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_VERSION = 4.0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-m64",
+				);
+				OTHER_LDFLAGS = "-m64";
+				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				SYMROOT = "/tmp/tbb-$(USER)";
+			};
+			name = Debug64;
+		};
+		A1F593C90B8F0E6E00073279 /* Release64 */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				GCC_ENABLE_CPP_RTTI = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_VERSION = 4.0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-m64",
+				);
+				OTHER_LDFLAGS = "-m64";
+				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				SYMROOT = "/tmp/tbb-$(USER)";
+			};
+			name = Release64;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB923108733DC60010E9CD /* Build configuration list for PBXNativeTarget "parallel_preorder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB923208733DC60010E9CD /* Debug */,
+				A1F593C60B8F0E6E00073279 /* Debug64 */,
+				1DEB923308733DC60010E9CD /* Release */,
+				A1F593C70B8F0E6E00073279 /* Release64 */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "ImageProcessing" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB923608733DC60010E9CD /* Debug */,
+				A1F593C80B8F0E6E00073279 /* Debug64 */,
+				1DEB923708733DC60010E9CD /* Release */,
+				A1F593C90B8F0E6E00073279 /* Release64 */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}

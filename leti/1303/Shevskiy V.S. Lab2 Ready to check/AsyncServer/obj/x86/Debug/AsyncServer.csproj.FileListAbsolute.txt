@@ -1,0 +1,11 @@
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\bin\Debug\AsyncServer.exe
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\bin\Debug\AsyncServer.pdb
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\MainWindow.baml
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\MainWindow.g.cs
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\App.g.cs
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\AsyncServer_MarkupCompile.cache
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\AsyncServer.g.resources
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\AsyncServer.Properties.Resources.resources
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\AsyncServer.csproj.GenerateResource.Cache
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\AsyncServer.exe
+c:\users\владос\documents\visual studio 2010\Projects\AsyncServer\obj\x86\Debug\AsyncServer.pdb

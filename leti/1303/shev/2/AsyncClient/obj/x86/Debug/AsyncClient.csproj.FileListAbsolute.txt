@@ -1,0 +1,11 @@
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\bin\Debug\AsyncClient.exe
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\bin\Debug\AsyncClient.pdb
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\MainWindow.baml
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\MainWindow.g.cs
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\App.g.cs
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\AsyncClient_MarkupCompile.cache
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\AsyncClient.g.resources
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\AsyncClient.Properties.Resources.resources
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\AsyncClient.csproj.GenerateResource.Cache
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\AsyncClient.exe
+c:\users\владос\documents\visual studio 2010\Projects\AsyncClient\obj\x86\Debug\AsyncClient.pdb
