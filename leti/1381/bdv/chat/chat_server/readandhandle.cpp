@@ -1,6 +1,6 @@
 #include "readandhandle.h"
 
-ReadAndHandle::ReadAndHandle(QTcpSocket* socket, std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets, QMutex* container_mutex)
+ReadAndHandle::ReadAndHandle(QTcpSocket* socket, std::vector<std::tuple<std::string, QTcpSocket *, QMutex *> >* sockets, QMutex* container_mutex)
 {
     this->socket = socket;
     this->sockets = sockets;
@@ -9,6 +9,9 @@ ReadAndHandle::ReadAndHandle(QTcpSocket* socket, std::vector<std::tuple<std::str
 
 void ReadAndHandle::run()
 {
+    emit need_move_to_thread(socket, QThread::currentThread());
+    std::cout << "Socket-sender moved to thread of thread pool" << std::endl;
+
     char buffer[256];
     int n = socket->read(buffer, 255);
     if(n < 1) return;
@@ -21,76 +24,115 @@ void ReadAndHandle::run()
     if(msg.msgtype() == ChatMessage::Command::ChatMessage_Command_DISC)
     {
         std::cout << "Client disconnected" << std::endl;
-        emit deleting_socket_from_store(socket);
+        delete_user(socket);
         return;
     }
     //если пришло сообщение с инициализацией имени клиента
     if(msg.msgtype() == ChatMessage::Command::ChatMessage_Command_INIT)
     {
-        //std::string name = s.substr(1);
         std::string name = msg.name();
         std::cout << "Client " << name << " connected." << std::endl;
-        char* data = new char[name.size()];
-        memcpy(data, name.data(), name.size()*sizeof(char));
-        emit setting_username(socket, data, name.size());
-        return;
+        add_username(socket, name);
     }
     //если пришло сообщение для другого клиента
     if(msg.msgtype() == ChatMessage::Command::ChatMessage_Command_SEND)
     {
         std::string name = msg.name();
-        QMutex* rec_mutex;
-        QMutex* snd_mutex;
-        QTcpSocket* rec_sock = find_sock_by_name(name, &rec_mutex);
+        QMutex* mutex;
+        QTcpSocket* rec_sock = find_sock_by_name(name);
         if(rec_sock != 0)
         {
-            name = find_name_by_sock(socket, &snd_mutex);
+            emit need_move_to_thread(rec_sock, QThread::currentThread());
+            std::cout << "Socket-receiver moved to thread of thread pool" << std::endl;
+            name = find_name_by_sock(socket);
+            mutex = find_mutex_by_sock(rec_sock);
             msg.set_name(name);
             msg.SerializeToString(&s);
-            int wdesc = rec_sock->socketDescriptor();
-            rec_mutex->lock();
-            write(wdesc, s.data(), s.size());
-            rec_mutex->unlock();
+            mutex->lock();
+            rec_sock->write(s.data(), s.size());
+            mutex->unlock();
+            rec_sock->moveToThread(QApplication::instance()->thread());
+            std::cout << "Socket-receiver moved to main thread" << std::endl;
         }
         else
         {
             std::cout << "Cant find client" << std::endl;
-            find_name_by_sock(socket, &snd_mutex);
+            mutex = find_mutex_by_sock(socket);
             msg.set_name("SERVER");
             msg.set_message("Cant find client.");
             msg.SerializeToString(&s);
-            int wdesc = socket->socketDescriptor();
-            snd_mutex->lock();
-            write(wdesc, s.data(), s.size());
-            snd_mutex->unlock();
+            mutex->lock();
+            socket->write(s.data(), s.size());
+            mutex->unlock();
+        }
+    }
+    socket->moveToThread(QCoreApplication::instance()->thread());
+    std::cout << "Socket-sender moved to main thread" << std::endl;
+}
+
+void ReadAndHandle::add_username(QTcpSocket* sock, std::string name)
+{
+    QMutexLocker locker(c_mutex);
+    for(auto it = sockets->begin(); it != sockets->end(); it++)
+    {
+        if(std::get<1>(*it) == sock)
+        {
+            std::get<0>(*it) = name;
+            return;
         }
     }
 }
 
-std::string ReadAndHandle::find_name_by_sock(QTcpSocket* sock, QMutex **mutex)
+void ReadAndHandle::delete_user(QTcpSocket* sock)
 {
-    c_mutex->lock();
-    for(auto it = sockets.begin(); it != sockets.end(); it++)
+    QMutexLocker locker(c_mutex);
+    QMutex* mutex;
+    for(auto it = sockets->begin(); it != sockets->end(); it++)
+    {
         if(std::get<1>(*it) == sock)
         {
-            mutex[0] = std::get<2>(*it);
-            c_mutex->unlock();
-            return std::get<0>(*it);
+            mutex = std::get<2>(*it);
+            sockets->erase(it);
+            break;
         }
-    c_mutex->unlock();
+    }
+    locker.unlock();
+    mutex->lock();
+    sock->close();
+    delete sock;
+    mutex->unlock();
+    delete mutex;
+}
+
+QMutex* ReadAndHandle::find_mutex_by_sock(QTcpSocket* sock)
+{
+    QMutexLocker locker(c_mutex);
+    for(auto it = sockets->begin(); it != sockets->end(); it++)
+    {
+        if(std::get<1>(*it) == sock)
+            return std::get<2>(*it);
+    }
+    return 0;
+}
+
+std::string ReadAndHandle::find_name_by_sock(QTcpSocket* sock)
+{
+    QMutexLocker locker(c_mutex);
+    for(auto it = sockets->begin(); it != sockets->end(); it++)
+    {
+        if(std::get<1>(*it) == sock)
+            return std::get<0>(*it);
+    }
     return "";
 }
 
-QTcpSocket* ReadAndHandle::find_sock_by_name(std::string name, QMutex** mutex)
+QTcpSocket* ReadAndHandle::find_sock_by_name(std::string name)
 {
-    c_mutex->lock();
-    for(auto it = sockets.begin(); it != sockets.end(); it++)
+    QMutexLocker locker(c_mutex);
+    for(auto it = sockets->begin(); it != sockets->end(); it++)
+    {
         if(std::get<0>(*it) == name)
-        {
-            mutex[0] = std::get<2>(*it);
-            c_mutex->unlock();
             return std::get<1>(*it);
-        }
-    c_mutex->unlock();
+    }
     return 0;
 }

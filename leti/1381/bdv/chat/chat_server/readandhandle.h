@@ -1,6 +1,7 @@
 #ifndef READANDHANDLE_H
 #define READANDHANDLE_H
 
+#include <QApplication>
 #include <QRunnable>
 #include <QTcpSocket>
 #include <QThreadPool>
@@ -20,20 +21,24 @@ class ReadAndHandle : public QObject, public QRunnable
 public:
     //считывает с сокета, находит в списке указатель на сокет получателя по имени и отправляет
     ReadAndHandle(QTcpSocket *socket,
-                  std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets, QMutex* container_mutex);
+                  std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> >* sockets, QMutex* container_mutex);
 
 signals:
-    void deleting_socket_from_store(QTcpSocket* socket);
-    void setting_username(QTcpSocket* soctet, char* name, int size);
+    void need_move_to_thread(QTcpSocket* socket, QThread* thread);
 
 private:
     QTcpSocket* socket;
-    std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> > sockets;
+    std::vector<std::tuple<std::string, QTcpSocket*, QMutex*> >* sockets;
     QMutex* c_mutex;
 
-    void delete_name_sock(QTcpSocket *sock);
-    std::string find_name_by_sock(QTcpSocket* sock, QMutex **mutex);
-    QTcpSocket* find_sock_by_name(std::string name, QMutex **mutex);
+    //добавление и удаление из контейнера
+    void add_username(QTcpSocket* sock, std::string name);
+    void delete_user(QTcpSocket* sock);
+
+    //поиск в контейнере
+    std::string find_name_by_sock(QTcpSocket* sock);
+    QTcpSocket* find_sock_by_name(std::string name);
+    QMutex* find_mutex_by_sock(QTcpSocket* sock);
 
 protected:
     void run();

@@ -33,7 +33,7 @@ void TcpServer::incomingConnection(qintptr socketDescriptor)
     c_mutex.unlock();
     std::cout << "Incoming connection " << std::endl;
     socket->setSocketDescriptor(socketDescriptor);
-    connect(socket, SIGNAL(readyRead()), this, SLOT(ready_read()));
+    connect(socket, SIGNAL(readyRead()), this, SLOT(ready_read()), Qt::DirectConnection);
 }
 
 void TcpServer::start(int portnum)
@@ -52,53 +52,15 @@ void TcpServer::start(int portnum)
 void TcpServer::ready_read()
 {
     QTcpSocket* socket = (QTcpSocket*)QObject::sender();
-    ReadAndHandle* mytask = new ReadAndHandle(socket, sockets, &c_mutex);
+    ReadAndHandle* mytask = new ReadAndHandle(socket, &sockets, &c_mutex);
     mytask->setAutoDelete(true);
 
-    connect(mytask, SIGNAL(setting_username(QTcpSocket*,char*,int)), this, SLOT(set_username(QTcpSocket*,char*,int)));
-    connect(mytask, SIGNAL(deleting_socket_from_store(QTcpSocket*)), this, SLOT(close_socket(QTcpSocket*)));
+    connect(mytask, SIGNAL(need_move_to_thread(QTcpSocket*,QThread*)),
+            this, SLOT(moveToThread(QTcpSocket*,QThread*)), Qt::BlockingQueuedConnection);
     pool->start(mytask);
 }
 
-
-void TcpServer::close_socket(QTcpSocket* socket)
+void TcpServer::moveToThread(QTcpSocket* socket, QThread* thread)
 {
-    QMutex* m;
-    socket->close();
-    delete_socket_from_store(socket, &m);
-    delete socket;
-    delete m;
-}
-
-void TcpServer::delete_socket_from_store(QTcpSocket* sock, QMutex** mut)
-{
-    c_mutex.lock();
-    for(auto it = sockets.begin(); it != sockets.end(); it++)
-    {
-        if(std::get<1>(*it) == sock)
-        {
-            mut[0] = std::get<2>(*it);
-            sockets.erase(it);
-            c_mutex.unlock();
-            break;
-        }
-    }
-    c_mutex.unlock();
-}
-
-void TcpServer::set_username(QTcpSocket* socket, char* name, int size)
-{
-    std::string s(name, size);
-    delete[] name;
-    c_mutex.lock();
-    for(auto it = sockets.begin(); it != sockets.end(); it++)
-    {
-        if(std::get<1>(*it) == socket)
-        {
-            std::get<0>(*it) = s;
-            c_mutex.unlock();
-            break;
-        }
-    }
-    c_mutex.unlock();
+    socket->moveToThread(thread);
 }

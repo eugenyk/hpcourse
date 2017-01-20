@@ -9,7 +9,7 @@
 #include <vector>
 //#include <tbb/concurrent_vector.h>
 #include <iostream>
-
+#include <QtConcurrent/QtConcurrent>
 #include "readandhandle.h"
 
 class TcpServer : public QTcpServer
@@ -30,15 +30,10 @@ public:
     explicit TcpServer(int max_threads, QObject *parent = 0);
     ~TcpServer();
     void start(int portnum);
-    void delete_socket_from_store(QTcpSocket *sock, QMutex** mut);
-    std::string find_name_by_sock(QTcpSocket* sock);
-    QTcpSocket* find_sock_by_name(std::string name);
 
 public slots:
+    void moveToThread(QTcpSocket* socket, QThread* thread);
     void ready_read();
-    void close_socket(QTcpSocket* socket);
-    void set_username(QTcpSocket* socket, char* name, int size);
-
 };
 
 #endif // TCPSERVER_H
