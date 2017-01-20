@@ -196,17 +196,17 @@ void calc_flow(const config& conf) {
     auto min_func = [](const Image& image) -> points_t {
         return image.get_bright_points(false);
     };
-    function_node<Image, points_t, rejecting> min_node(g, unlimited, min_func);
+    function_node<Image, points_t, queueing> min_node(g, serial, min_func);
 
     auto max_func = [](const Image& image) -> points_t {
         return image.get_bright_points(true);
     };
-    function_node<Image, points_t, rejecting> max_node(g, unlimited, max_func);
+    function_node<Image, points_t, queueing> max_node(g, serial, max_func);
 
     auto equal_func = [brightness](const Image& image) -> points_t {
         return image.find_points(brightness);
     };
-    function_node<Image, points_t, rejecting> equal_node(g, unlimited, equal_func);
+    function_node<Image, points_t, queueing> equal_node(g, serial, equal_func);
 
     join_node<tuple<Image, points_t, points_t, points_t>, queueing> join(g);
 
@@ -223,7 +223,7 @@ void calc_flow(const config& conf) {
     auto mean_func = [](const Image& image)->float {
         return image.mean();
     };
-    function_node<Image, float, rejecting> mean_node(g, unlimited, mean_func);
+    function_node<Image, float, queueing> mean_node(g, serial, mean_func);
 
     auto invert_func = [](const Image& image)->Image {
         Image result(image);
@@ -246,7 +246,7 @@ void calc_flow(const config& conf) {
         mtx.unlock();
         return continue_msg();
     };
-    function_node<float, continue_msg, rejecting> output(g, unlimited, output_func);
+    function_node<float, continue_msg, queueing> output(g, serial, output_func);
 
     make_edge(source, limit);
     make_edge(limit, broadcast);
@@ -272,7 +272,6 @@ void calc_flow(const config& conf) {
         make_edge(continue_node, limit.decrement);
     }
 
-    source.activate();
     g.wait_for_all();
     log.close();
 }
