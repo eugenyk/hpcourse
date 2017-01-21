@@ -1,42 +1,10 @@
 #include "mainwindow.h"
 
-
-bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg)
-{
-    if(rec_data == "--")
-        return false;
-    int name_size = (int)rec_data[0];
-    rec_data.erase(rec_data.begin());
-    name = rec_data.substr(0, name_size);
-    msg = rec_data.erase(0, name_size);
-    return true;
-}
-
-void setnameandmsg(std::string& snd_data, std::string name, std::string msg)
-{
-    snd_data = "0" + name + msg;
-    char name_size = name.size();
-    snd_data[0] = name_size;
-}
-
-void* listen_tcp(void* _args)
-{
-    struct listening_thread_args* args = (struct listening_thread_args*) _args;
-    while(true)
-    {
-        std::string rec_data = args->tcp.receive();
-        std::string snd_name, msg;
-        getnameandmsg(rec_data, snd_name, msg);
-        rec_data = "From " + snd_name + ": " + msg + "\n";
-        args->text->setText((args->text->text().toStdString() + rec_data).c_str());
-        args->widget->update();
-    }
-    pthread_exit(0);
-}
-
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
 {
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
     la = new QGridLayout(0);
     name_info = new QLabel("Enter your name");
     la->addWidget(name_info, 0, 0, 1, 1);
@@ -50,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
     scroll->setWidgetResizable(true);
     scroll->setWidget(text);
     la->addWidget(scroll, 1, 0, 1, 3);
-    rec_info = new QLabel("Receiver ID");
+    rec_info = new QLabel("Receiver name");
     la->addWidget(rec_info, 2, 0, 1, 1);
     rec_id = new QLineEdit();
     la->addWidget(rec_id, 2, 1, 1, 1);
@@ -61,13 +29,25 @@ MainWindow::MainWindow(QWidget *parent)
     send = new QPushButton("Send");
     la->addWidget(send, 3, 2, 1, 1);
 
+    rec_info->setVisible(false);
+    rec_id->setVisible(false);
+    msg_info->setVisible(false);
+    msg->setVisible(false);
+    send->setVisible(false);
+
     this->setLayout(la);
 
     connect(connect_btn, SIGNAL(released()), this, SLOT(connect_to_srv()));
+    connect(scroll->verticalScrollBar(), SIGNAL(rangeChanged(int,int)), this, SLOT(slide_max(int,int)));
+    connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(disconnect_from_srv()));
+
+    tcp_client = new TcpClient();
 }
 
 MainWindow::~MainWindow()
 {
+    delete tcp_client;
+
     delete send;
     delete msg;
     delete msg_info;
@@ -79,30 +59,25 @@ MainWindow::~MainWindow()
     delete name;
     delete connect_btn;
     delete la;
-    pthread_cancel(listening_thread);
-    tcp_client.send("-");
-    tcp_client.close_();
-    delete args;
+
+    google::protobuf::ShutdownProtobufLibrary();
 }
 
 void MainWindow::connect_to_srv()
 {
-    connect_btn->setVisible(false);
-    name_info->setText("Your name:");
-    name->setReadOnly(true);
+    connect(tcp_client->getSocket(), SIGNAL(connected()), this, SLOT(connected_to_srv()));
+    tcp_client->connect_(32165);
+}
 
-    if(tcp_client.connect_(32165))
-    {
-        tcp_client.send(name->text().toStdString());
-        text->setText("Welcome, " + name->text() + "\n");
-
-        args = new struct listening_thread_args;
-        args->widget = this;
-        args->text = text;
-        args->tcp = tcp_client;
-        pthread_create(&listening_thread, 0, listen_tcp, (void *)args);
-        connect(send, SIGNAL(released()), this, SLOT(send_text()));
-    }
+void MainWindow::disconnect_from_srv()
+{
+    ChatMessage msg;
+    msg.set_msgtype(ChatMessage::Command::ChatMessage_Command_DISC);
+    msg.set_name(name->text().toStdString());
+    std::string s;
+    msg.SerializeToString(&s);
+    tcp_client->send(s);
+    tcp_client->close_();
 }
 
 void MainWindow::send_text()
@@ -111,7 +86,49 @@ void MainWindow::send_text()
     text->setText(text->text() + "To " + rec_id->text() + ": " + msg->text() + "\n");
     rec_name = rec_id->text().toStdString();
     msg_ = msg->text().toStdString();
-    setnameandmsg(snd_data, rec_name, msg_);
-    tcp_client.send(snd_data);
-    msg->setText("");
+    ChatMessage msg;
+    msg.set_msgtype(ChatMessage::Command::ChatMessage_Command_SEND);
+    msg.set_name(rec_name);
+    msg.set_message(msg_);
+    msg.SerializeToString(&snd_data);
+    tcp_client->send(snd_data);
+    this->msg->setText("");
+}
+
+void MainWindow::slide_max(int min, int max)
+{
+    QScrollBar* bar = scroll->verticalScrollBar();
+    bar->setValue(max);
+}
+
+void MainWindow::read_message()
+{
+    std::string rec_data = tcp_client->receive();
+    ChatMessage msg;
+    msg.ParseFromString(rec_data);
+    rec_data = "From " + msg.name() + ": " + msg.message() + "\n";
+    text->setText((text->text().toStdString() + rec_data).c_str());
+    update();
+}
+
+void MainWindow::connected_to_srv()
+{
+    rec_info->setVisible(true);
+    rec_id->setVisible(true);
+    msg_info->setVisible(true);
+    msg->setVisible(true);
+    send->setVisible(true);
+
+    connect_btn->setVisible(false);
+    name_info->setText("Your name:");
+    name->setReadOnly(true);
+    text->setText("Welcome, " + name->text() + "\n");
+    ChatMessage msg;
+    msg.set_msgtype(ChatMessage::Command::ChatMessage_Command_INIT);
+    msg.set_name(name->text().toStdString());
+    std::string s;
+    msg.SerializeToString(&s);
+    tcp_client->send(s);
+    connect(tcp_client->getSocket(), SIGNAL(readyRead()), this, SLOT(read_message()));
+    connect(send, SIGNAL(released()), this, SLOT(send_text()));
 }

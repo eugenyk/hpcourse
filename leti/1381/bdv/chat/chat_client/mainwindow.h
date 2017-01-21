@@ -2,32 +2,23 @@
 #define MAINWINDOW_H
 
 #include <QWidget>
+#include <QApplication>
 #include <QScrollArea>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QScrollBar>
+#include <QThreadPool>
 #include "tcpclient.h"
-
-#include <pthread.h>
-
-struct listening_thread_args
-{
-    QWidget* widget;
-    QLabel* text;
-    TcpClient tcp;
-};
-
-bool getnameandmsg(std::string rec_data, std::string& name, std::string& msg);
-void setnameandmsg(std::string& snd_data, std::string name, std::string msg);
-void* listen_tcp(void* _args);
+#include "../protobuff/chatmessage.pb.h"
 
 class MainWindow : public QWidget
 {
     Q_OBJECT
 
 private:
-    TcpClient tcp_client;
+    TcpClient* tcp_client;
     QLabel* name_info;
     QLineEdit* name;
     QPushButton* connect_btn;
@@ -51,7 +42,12 @@ public:
 
 public slots:
     void connect_to_srv();
+    void disconnect_from_srv();
+    void connected_to_srv();
     void send_text();
+    void slide_max(int min, int max);
+    void read_message();
+
 };
 
 #endif // MAINWINDOW_H
