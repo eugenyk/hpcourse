@@ -1,16 +1,14 @@
-#ifndef MINIMUM_H
-#define MINIMUM_H
+#ifndef MAXIMUM_H
+#define MAXIMUM_H
 
 #include  <utility>
 #include "CImage.h"
-
 
 using namespace std;
 
 typedef pair< unsigned int, CImage *> FoundElement;
 
-
-struct Minimum {
+struct Maximum {
 	
 	
 	 FoundElement* operator()(CImage * img)
@@ -22,7 +20,7 @@ struct Minimum {
 		{
 			for(unsigned int j=0; j<img->N; j++)
 			{
-				if(img->matrix[i][j]< m) 
+				if(img->matrix[i][j]> m) 
 				{
 					m=img->matrix[i][j];
 					//p= i;
@@ -37,5 +35,4 @@ struct Minimum {
 	 }
 	
 };
-
 #endif
