@@ -1,353 +1,255 @@
-#include <iostream>
-#include <vector>
-#include <random>
-#include <iomanip>
-#include <fstream>
-#include <chrono>
-#include <memory>
-#include <algorithm>
+#include "Arguments.h"
+#include "Image.h"
 #include "tbb/task_group.h"
 #include "tbb/flow_graph.h"
+#include "time.h"
+#include <fstream>
+Arguments Parser(int argc, char * argv[])  // Считывает аргументы командной строки
+{
+	int bright = -1;
+	int countParaleImg = -1;
+	int countImg = -1;
+	std::string LogFileName ="";
+	if (argc < 3)
+	{
+		std::cout << "Usage: -b <value> -l <value> -f <value> -n <value>" << std::endl
+			<< "-b (brightness [0, 255])"
+			<< std::endl << " -l (limit of parallel images)" << std::endl
+			<< " -f (brightness log path)" << std::endl
+			<< " -n (limit of images)" << std::endl;
 
-using CommandLineArguments = std::tuple<uint8_t, size_t, size_t, std::string>;
+	}
+	for (int i = 0; i < argc; i++) {
+		std::string currArg = argv[i];
 
-void printUsage(std::ostream& out) {
-	out << " Usage: \n";
-	out << " -b searched value \n";
-	out << " -l parallelism \n";
-	out << " -f log path \n";
-	out << " -n image count \n";
+		if (currArg == "-b")
+		{
+			if (i + 1 < argc) bright = atoi(argv[i + 1]);
+		}
+		else if (currArg == "-l") {
+			if (i + 1 < argc) countParaleImg = atoi(argv[i + 1]);
+		}
+		else if (currArg == "-f")
+		{
+			if (i + 1 < argc) LogFileName = argv[i + 1];
+		}
+		else if (currArg == "-n")
+		{
+			if (i + 1 < argc) countImg = atoi(argv[i + 1]);
+		}
+
+	}
+	if (bright == -1) { std::cout << "argument -b is null: using default -b = 123 " << std::endl; bright = 123; }
+	if (countParaleImg == -1) { std::cout << "argument -l is null: using default -b = 4 " << std::endl; countParaleImg = 4; }
+	if (countImg == -1) { std::cout << "argument -n is null: using default -b = 4 " << std::endl; countImg = 4; }
+
+	
+	return Arguments(bright, countParaleImg, LogFileName, countImg);
+
 }
 
-CommandLineArguments parseCommandLineArguments(int argc, const char** argv) {
-	uint8_t searchedValue = 0;
-	size_t parallelism = 5;
-	size_t matrixCount = 100;
-	std::string logFilePath = "./result.log";
-	bool errorEncountered = false;
+int main(int argc, char ** argv)
+{
+	srand(time(NULL));
+	Arguments inputArg=Parser(argc, argv);
+	std::ofstream fout(inputArg.LogFileName, std::fstream::out | std::fstream::trunc); // открытие потока на вывод в файл
+	using dataImg = std::pair<size_t, std::vector<size_t>>;
 
-	for (size_t i = 1; i < argc; i += 2) {
-		std::cout << std::string(argv[i]) << " " << std::string(argv[i + 1]) << std::endl;
-		if (std::strcmp(argv[i], "-b") == 0) {
-			searchedValue = (uint8_t)std::stoi(argv[i + 1]);
-		}
-		else if (std::strcmp(argv[i], "-n") == 0) {
-			matrixCount = (size_t)std::stoi(argv[i + 1]);
-		}
-		else if (std::strcmp(argv[i], "-l") == 0) {
-			parallelism = (size_t)std::stoi(argv[i + 1]);
-		}
-		else if (std::strcmp(argv[i], "-f") == 0) {
-			logFilePath = argv[i + 1];
-		}
-		else {
-			errorEncountered = true;
-		}
-	}
+		using namespace tbb;
+		flow::graph graph; // наш граф
+		int currStep=0; // кол-во переданных на обработку изображений
 
-	if (errorEncountered) {
-		printUsage(std::cout);
-		std::terminate();
-	}
-
-	return CommandLineArguments{ searchedValue, parallelism, matrixCount, logFilePath };
-}
-
-class Matrix {
-public:
-	using Shape = std::pair<size_t, size_t>;
-
-	Matrix(const Shape& shape) :
-		m_shape(shape),
-		m_matrix(shape.first * shape.second, 0) {
-	}
-
-	const std::pair<size_t, size_t>& getShape() const {
-		return m_shape;
-	}
-
-	const size_t getLength() const {
-		return m_shape.first * m_shape.second;
-	}
-
-	const std::vector<uint8_t>& getMatrix() const {
-		return m_matrix;
-	}
-
-	std::vector<uint8_t>& getMatrix() {
-		return m_matrix;
-	}
-
-	void operator >> (std::ostream& out) const {
-		for (size_t i = 0; i < m_shape.first; ++i) {
-			for (size_t j = 0; j < m_shape.second; ++j) {
-				out << std::setw(3) << (int)m_matrix[i * m_shape.second + j] << " ";
-			}
-			out << "\n";
-		}
-	}
-
-	template<class Generator>
-	Generator& operator<<(Generator& g) {
-		std::transform(m_matrix.begin(),
-			m_matrix.end(),
-			m_matrix.begin(),
-			[&g](std::uint8_t val) { return g(); });
-		return g;
-	}
-
-private:
-	Shape m_shape;
-	std::vector<std::uint8_t> m_matrix;
-};
-
-template<class Number>
-class RandomNumberGenerator {
-public:
-	Number operator()() {
-		return rd(re);
-	}
-
-private:
-	std::default_random_engine re = std::default_random_engine(
-		(unsigned int)std::chrono::high_resolution_clock::now().time_since_epoch().count());
-	std::uniform_int_distribution<Number> rd;
-};
-
-int main(int argc, const char** argv) {
-	uint8_t searchedValue;
-	size_t parallelism;
-	size_t matrixCount;
-	std::string logFilePath;
-
-	std::tie(searchedValue, parallelism, matrixCount, logFilePath) = parseCommandLineArguments(argc, argv);
-
-	auto outputStream = std::fstream(logFilePath, std::fstream::out | std::fstream::trunc);
-
-	using namespace tbb;
-	flow::graph graph;
-
-	size_t currentTaskId = 0;
-	flow::source_node<Matrix::Shape> taskSourceNode(graph,
-		[&currentTaskId, matrixCount](Matrix::Shape& shape) mutable {
-		shape.first = 100;
-		shape.second = 100;
-		return currentTaskId++ < matrixCount;
-	});
-	flow::limiter_node<Matrix::Shape> limiterNode(graph, parallelism);
-
-	flow::function_node<
-		Matrix::Shape,
-		std::shared_ptr<Matrix>> generateMatrixNode(graph,
-			flow::unlimited,
-			[](const Matrix::Shape& shape) {
-		RandomNumberGenerator<std::uint8_t> generator;
-		auto matrix = std::shared_ptr<Matrix>(new Matrix(shape));
-		*matrix << generator;
-
-		return matrix;
-	});
-
-	flow::broadcast_node<std::shared_ptr<Matrix>> broadcastNode(graph);
-
-	flow::function_node<
-		std::shared_ptr<Matrix>,
-		std::vector<size_t>> minValue(graph, flow::unlimited,
-			[](std::shared_ptr<Matrix> inputMatrix) {
-		const auto& data = inputMatrix->getMatrix();
-		uint8_t min = data[0];
-
-		std::vector<size_t> indexes;
-		for (size_t i = 1; i < inputMatrix->getLength(); i++) {
-			auto currentValue = data[i];
-			if (currentValue < min) {
-				min = currentValue;
-				indexes.clear();
-				indexes.emplace_back(i);
-				continue;
-			}
-			else if (currentValue == min) {
-				indexes.emplace_back(i);
-			}
-		}
-
-		return indexes;
-	});
-
-	flow::function_node<
-		std::shared_ptr<Matrix>,
-		std::vector<size_t>> maxValue(graph, flow::unlimited,
-			[](std::shared_ptr<Matrix> inputMatrix) {
-		const auto& data = inputMatrix->getMatrix();
-		uint8_t max = data[0];
-
-		std::vector<size_t> indexes;
-		for (size_t i = 1; i < inputMatrix->getLength(); i++) {
-			auto currentValue = data[i];
-			if (currentValue > max) {
-				max = currentValue;
-				indexes.clear();
-				indexes.emplace_back(i);
-				continue;
-			}
-			else if (currentValue == max) {
-				indexes.emplace_back(i);
-			}
-		}
-
-		return indexes;
-	});
-
-	flow::function_node<
-		std::shared_ptr<Matrix>,
-		std::vector<size_t>> equalToValue(graph, flow::unlimited,
-			[searchedValue](std::shared_ptr<Matrix> inputMatrix) {
-		const auto& data = inputMatrix->getMatrix();
-		uint8_t max = data[0];
-
-		std::vector<size_t> indexes;
-		for (size_t i = 1; i < inputMatrix->getLength(); i++) {
-			auto currentValue = data[i];
-			if (currentValue == searchedValue) {
-				indexes.emplace_back(i);
-			}
-		}
-
-		return indexes;
-	});
+		flow::source_node<Arguments> sourceNode(graph,  // основная нода - источник
+			[currStep, inputArg](Arguments &argm) mutable {
+			if (currStep < argm.countImg)
+			{	
+				argm.setArg(inputArg); // установка аргументов
+				currStep++;
+				return true;
+			}else return false;
+		});
 
 
-	using HighlightInput = flow::tuple<
-		std::shared_ptr<Matrix>,
-		std::vector<size_t>,
-		std::vector<size_t>,
-		std::vector<size_t>>;
+		flow::limiter_node<Arguments> limiterNode(graph, inputArg.countParaleImg); // делаем ограничение на кол-во параллельно обрабатываемых изображений
 
-	flow::join_node<HighlightInput> joinNode(graph);
 
-	flow::function_node<
-		HighlightInput,
-		std::shared_ptr<Matrix>> highlight_node(graph, flow::unlimited, [](HighlightInput highlightInput) {
+		flow::function_node<            // нода, которая генерирует нашу матрицу
+			Arguments,
+			std::shared_ptr<Image>> generateMatrixNode(graph,
+				flow::unlimited, // может обрабатываться неограниченным числом потоков
+				[](const Arguments& argm) {
+			auto currImg = std::shared_ptr<Image>(new Image(50)); // создаем изображение 50x50
+			return currImg;
+		});
 
-		auto highlighter = [](std::shared_ptr<Matrix> matrix, const std::vector<size_t>& indexes) {
-			auto& data = matrix->getMatrix();
-			auto shape = matrix->getShape();
-			auto length = matrix->getLength();
 
-			size_t rows = shape.first;
-			size_t columns = shape.second;
 
-			for (auto index : indexes) {
-				auto row = index / columns;
-				auto column = index % columns;
+		flow::broadcast_node<std::shared_ptr<Image>> broadcastNodeFL(graph); // нода - передатчик изображения
 
-				if (row + 1 != rows) {
-					if (column != 0) {
-						data[(row + 1) * columns + column - 1] = 0;
-					}
-					data[(row + 1) * columns + column] = 0;
-					if (column + 1 != columns) {
-						data[(row + 1) * columns + column + 1] = 0;
-					}
-				}
 
-				if (column != 0)data[row * columns + column - 1] = 0;
-				data[row * columns + column] = 0;
-				if (column + 1 != columns)data[row * columns + column + 1] = 0;
-
-				if (row != 0) {
-					if (column != 0)data[(row - 1) * rows + column - 1] = 0;
-					data[(row - 1) * columns + column] = 0;
-					if (column + 1 != columns)data[(row - 1) * columns + column + 1] = 0;
+		flow::function_node<     // находит пиксели с минимальным значением яркости
+			std::shared_ptr<Image>,
+			dataImg> minFunctionNode(graph, flow::unlimited,
+				[](std::shared_ptr<Image> cusrImg) {
+			int min = 0;
+			min= cusrImg->img[0] ;
+			std::vector<size_t> indexes;
+			for (int i = 0; i < cusrImg->size*cusrImg->size; i++)
+			{
+				if (cusrImg->img[i] <= min)
+				{
+					if (min != cusrImg->img[i])indexes.clear();
+					min = cusrImg->img[i];
+					indexes.emplace_back(i);
 				}
 			}
-		};
+			
+			return dataImg(cusrImg->getId(), indexes);
+		});
 
-		auto matrix = flow::get<0>(highlightInput);
-		highlighter(matrix, flow::get<1>(highlightInput));
-		highlighter(matrix, flow::get<2>(highlightInput));
-		highlighter(matrix, flow::get<3>(highlightInput));
 
-		return matrix;
-	});
+		flow::function_node<  // находит пиксели с максимальным значением яркости
+			std::shared_ptr<Image>,
+			dataImg> maxFunctionNode(graph, flow::unlimited,
+				[](std::shared_ptr<Image> cusrImg) {
+			int max = 0;
+			max = cusrImg->img[0];
+			std::vector<size_t> indexes;
+			for (int i = 0; i < cusrImg->size*cusrImg->size; i++)
+			{
+				if (cusrImg->img[i] >= max)
+				{
+					if (max!= cusrImg->img[i])indexes.clear();
+					max = cusrImg->img[i];
+					indexes.emplace_back(i);
+				}
+			}
+			return dataImg(cusrImg->getId(), indexes);
+		});
 
-	flow::broadcast_node<std::shared_ptr<Matrix>> broadcastNode1(graph);
 
-	flow::function_node<
-		std::shared_ptr<Matrix>,
-		std::shared_ptr<Matrix>> inverseNode(graph,
-			flow::unlimited,
-			[](std::shared_ptr<Matrix> matrix) {
-		std::shared_ptr<Matrix> inverseMatrix = std::make_shared<Matrix>(
-			matrix->getShape());
 
-		auto& input = matrix->getMatrix();
-		auto& output = inverseMatrix->getMatrix();
+		flow::function_node<   // находит пиксели, значение яркости которых равно заданному
+			std::shared_ptr<Image>,
+			dataImg> compareFunctionNode(graph, flow::unlimited,
+				[inputArg](std::shared_ptr<Image> cusrImg) {
+			std::vector<size_t> indexes;
+			for (int i = 0; i < cusrImg->size*cusrImg->size; i++)
+			{
+				if (cusrImg->img[i] == inputArg.bright)
+				{
+					indexes.emplace_back(i);
+				}
+			}
+			return dataImg(cusrImg->getId(), indexes);
+		});
 
-		for (size_t i = 0; i < matrix->getLength(); ++i) {
-			output[i] = std::numeric_limits<uint8_t>::max() - input[i];
-		}
+		using SelectionPixelsT = flow::tuple<  // объединение векторов с данными
+			std::shared_ptr<Image>,
+			dataImg,
+			dataImg,
+			dataImg>;
 
-		return inverseMatrix;
-	});
+		flow::join_node<SelectionPixelsT, tbb::flow::tag_matching> joinNode(graph,  // распределительная нода
+			[](std::shared_ptr<Image> image) -> size_t { return image->getId(); },
+			[](const dataImg& pixels) -> size_t { return pixels.first; },
+			[](const dataImg& pixels) -> size_t { return pixels.first; },
+			[](const dataImg& pixels) -> size_t { return pixels.first; }
+			
+			);
 
-	flow::function_node<
-		std::shared_ptr<Matrix>,
-		double> meanNode(graph,
-			flow::unlimited,
-			[](std::shared_ptr<Matrix> matrix) {
-		const auto& data = matrix->getMatrix();
-		auto length = matrix->getLength();
+		flow::function_node<   //  выделяющая нода
+			SelectionPixelsT,
+			std::shared_ptr<Image>> selectionPixelFunctionNode(graph, flow::unlimited, [](SelectionPixelsT selectPix) {
 
-		double mean = 0.0;
-		for (size_t i = 0; i < length; ++i) {
-			mean += data[i];
-		}
-		return mean / length;
-	});
+			auto highlighter = [](std::shared_ptr<Image> currImg, const std::vector<size_t>& indexes) {
+				for (auto index : indexes)
+				{
+					currImg->highliting(index);
+				}
+			};
 
-	flow::function_node<std::shared_ptr<Matrix>> matrixDebugOutput(graph,
-		flow::serial,
-		[](std::shared_ptr<Matrix> matrix) {
-		*matrix >> std::cout;
-		std::cout << "\n";
-	});
+			auto matrix = flow::get<0>(selectPix);
+			highlighter(matrix, flow::get<1>(selectPix).second);
+			highlighter(matrix, flow::get<2>(selectPix).second);
+			highlighter(matrix, flow::get<3>(selectPix).second);
 
-	flow::function_node<double> doubleOutputNode(graph,
-		flow::serial,
-		[&outputStream](double mean) {
-		outputStream << std::setprecision(10) << mean << "\n";
-	});
+			return matrix;
+		});
 
-	flow::function_node<std::shared_ptr<Matrix>> decrementer(graph, flow::serial, [](std::shared_ptr<Matrix> val) {});
 
-	flow::make_edge(taskSourceNode, limiterNode);
+
+
+		flow::broadcast_node<std::shared_ptr<Image>> broadcastNodeSP(graph);  // нода - передатчик изображения
+
+		flow::function_node<   // нода, инвертирующая изображение
+			std::shared_ptr<Image>,
+			std::shared_ptr<Image>> inverseNode(graph,
+				flow::unlimited,
+				[](std::shared_ptr<Image> currImg) {
+		
+			std::shared_ptr<Image> inverse=std::make_shared<Image>(currImg->size);
+			for (int i = 0; i < currImg->size*currImg->size; i++) {
+				inverse->img[i] = 256 - currImg->img[i];
+			}
+
+			return inverse;
+		});
+
+
+		flow::function_node<   // нода, находящая среднюю яркость
+			std::shared_ptr<Image>,
+			double> averageFunctinNode(graph,
+				flow::unlimited,
+				[](std::shared_ptr<Image> currImg) {
+			
+			double averageBrigh = 0.0;
+			for (size_t i = 0; i < currImg->size*currImg->size; i++) {
+				averageBrigh += currImg->img[i];
+			}
+			averageBrigh= averageBrigh / (currImg->size*currImg->size);
+			return averageBrigh;
+		});
+
+
+		flow::function_node<double> logResultFunctionNode(graph, // запись в лог
+			flow::serial,
+			[&fout](double averageBrigh) {
+			fout  << averageBrigh << "\n";
+		});
+
+		flow::function_node<std::shared_ptr<Image>> preLimitFunctionNode(graph, flow::serial, [](std::shared_ptr<Image> currImg) {}); // переход к декременту
+
+
+  	flow::make_edge(sourceNode, limiterNode);
 	flow::make_edge(limiterNode, generateMatrixNode);
-	flow::make_edge(generateMatrixNode, broadcastNode);
-	flow::make_edge(broadcastNode, minValue);
-	flow::make_edge(broadcastNode, maxValue);
-	flow::make_edge(broadcastNode, equalToValue);
+	flow::make_edge(generateMatrixNode, broadcastNodeFL);
+	flow::make_edge(broadcastNodeFL, minFunctionNode);
+	flow::make_edge(broadcastNodeFL, maxFunctionNode);
+	flow::make_edge(broadcastNodeFL, compareFunctionNode);
 
-	flow::make_edge(broadcastNode, flow::input_port<0>(joinNode));
-	flow::make_edge(minValue, flow::input_port<1>(joinNode));
-	flow::make_edge(maxValue, flow::input_port<2>(joinNode));
-	flow::make_edge(equalToValue, flow::input_port<3>(joinNode));
 
-	flow::make_edge(joinNode, highlight_node);
-	flow::make_edge(highlight_node, broadcastNode1);
+	flow::make_edge(broadcastNodeFL, flow::input_port<0>(joinNode)); // передача изображения
+	flow::make_edge(minFunctionNode, flow::input_port<1>(joinNode));
+	flow::make_edge(maxFunctionNode, flow::input_port<2>(joinNode));
+	flow::make_edge(compareFunctionNode, flow::input_port<3>(joinNode));
 
-	flow::make_edge(broadcastNode1, decrementer);
-	flow::make_edge(decrementer, limiterNode.decrement);
+	flow::make_edge(joinNode, selectionPixelFunctionNode);
 
-	flow::make_edge(broadcastNode1, meanNode);
-	flow::make_edge(broadcastNode1, inverseNode);
+	flow::make_edge(selectionPixelFunctionNode, broadcastNodeSP);
 
-	flow::make_edge(inverseNode, matrixDebugOutput);
-	flow::make_edge(meanNode, doubleOutputNode);
+	flow::make_edge(broadcastNodeSP, preLimitFunctionNode);
+	flow::make_edge(preLimitFunctionNode, limiterNode.decrement);
+
+	flow::make_edge(broadcastNodeSP, averageFunctinNode);
+	flow::make_edge(broadcastNodeSP, inverseNode);
+
+	flow::make_edge(averageFunctinNode, logResultFunctionNode);
 
 	graph.wait_for_all();
 
-	outputStream.close();
+	fout.close();
 
+	system("pause");
 	return 0;
 }
