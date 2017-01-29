@@ -5,12 +5,15 @@
 class RandomImage {
 	size_t height_;
 	size_t width_;
+	size_t id_;
 	size_t* array_;
+	static size_t number_of_instances_;
 
 public:
 	RandomImage(size_t height, size_t width) :
 		height_(height),
 		width_(width),
+		id_(number_of_instances_++),
 		array_(new size_t[height_ * width_])
 	{
 	    for (size_t i = 0; i < height * width; ++i) {
@@ -28,6 +31,7 @@ public:
 			}
 		}
 	}
+	size_t get_id() { return id_; }
 	size_t& at(size_t i, size_t j) {
 		return array_[i * width_ + j];
 	}

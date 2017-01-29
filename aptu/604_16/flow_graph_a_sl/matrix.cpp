@@ -12,6 +12,8 @@
 const size_t HEIGHT = 500;
 const size_t WIDTH = 500;
 
+size_t RandomImage::number_of_instances_ = 0;
+
 typedef std::shared_ptr<RandomImage> ImagePtr;
 
 struct Args {
@@ -68,27 +70,29 @@ bool source_function(ImagePtr& img_ptr) {
     return false;
 }
 
-std::vector<std::pair<size_t, size_t>> find_min(ImagePtr image)
+typedef std::pair<size_t, std::vector<std::pair<size_t, size_t>>> key_and_pos;
+
+key_and_pos find_min(ImagePtr image)
 {
-    return image->find_min_elements();
+    return std::make_pair(image->get_id(), image->find_min_elements());
 }
-std::vector<std::pair<size_t, size_t>> find_max(ImagePtr image)
+key_and_pos find_max(ImagePtr image)
 {
-    return image->find_max_elements();
+    return std::make_pair(image->get_id(), image->find_max_elements());
 }
-std::vector<std::pair<size_t, size_t>> eq_function(ImagePtr image)
+key_and_pos eq_function(ImagePtr image)
 {
-    return image->find_eq_elements(args.brightness);
+    return std::make_pair(image->get_id(), image->find_eq_elements(args.brightness));
 }
 
-ImagePtr marking_function(std::tuple< std::vector<std::pair<size_t, size_t>>, 
-                                      std::vector<std::pair<size_t, size_t>>, 
-                                      std::vector<std::pair<size_t, size_t>>, 
-                                      ImagePtr > tpl) {
+ImagePtr marking_function(std::tuple<key_and_pos, 
+                                     key_and_pos,
+                                     key_and_pos, 
+                                     ImagePtr> tpl) {
     ImagePtr image = std::get<3>(tpl);
-    image->mark_elements(std::get<0>(tpl));
-    image->mark_elements(std::get<1>(tpl));
-    image->mark_elements(std::get<2>(tpl));
+    image->mark_elements(std::get<0>(tpl).second);
+    image->mark_elements(std::get<1>(tpl).second);
+    image->mark_elements(std::get<2>(tpl).second);
     return image;
 }
 
@@ -107,6 +111,15 @@ double write_function(double mean) {
     return mean;
 }
 
+size_t get_image_key(ImagePtr image_ptr) {
+        return image_ptr->get_id();
+    };
+
+size_t get_pos_key (key_and_pos knp) {
+    return knp.first;
+};
+
+
 int main(int argc, char* argv[]) {
     using namespace tbb::flow;
     using namespace std::placeholders;
@@ -120,18 +133,22 @@ int main(int argc, char* argv[]) {
     limiter_node<ImagePtr> limiter_node_1(g, args.images_limit);
     broadcast_node<ImagePtr> broadcast_node_1(g);
 
-    function_node<ImagePtr, std::vector<std::pair<size_t, size_t>>> min_node(g, unlimited, find_min);
-    function_node<ImagePtr, std::vector<std::pair<size_t, size_t>>> max_node(g, unlimited, find_max);
-    function_node<ImagePtr, std::vector<std::pair<size_t, size_t>>> eq_node(g, unlimited, eq_function);
+    function_node<ImagePtr, key_and_pos> min_node(g, unlimited, find_min);
+    function_node<ImagePtr, key_and_pos> max_node(g, unlimited, find_max);
+    function_node<ImagePtr, key_and_pos> eq_node(g, unlimited, eq_function);
 
-    join_node<std::tuple<std::vector<std::pair<size_t, size_t>>,
-                         std::vector<std::pair<size_t, size_t>>, 
-                         std::vector<std::pair<size_t, size_t>>, 
-                         ImagePtr>, queueing> join_node_1(g);
+    join_node<std::tuple<key_and_pos,
+                         key_and_pos, 
+                         key_and_pos, 
+                         ImagePtr>, key_matching<size_t>> join_node_1(g,
+                                                                      get_pos_key,
+                                                                      get_pos_key,
+                                                                      get_pos_key,
+                                                                      get_image_key);
 
-    function_node<std::tuple<std::vector<std::pair<size_t, size_t>>,
-                             std::vector<std::pair<size_t, size_t>>,
-                             std::vector<std::pair<size_t, size_t>>,
+    function_node<std::tuple<key_and_pos,
+                             key_and_pos, 
+                             key_and_pos, 
                              ImagePtr>, ImagePtr> marking_node(g, unlimited, marking_function);
     
     broadcast_node<ImagePtr> broadcast_node_2(g);
@@ -172,7 +189,6 @@ int main(int argc, char* argv[]) {
 
     make_edge(write_node,       std::get<0>(join_node_2.input_ports()));
     make_edge(inverse_node,     std::get<1>(join_node_2.input_ports()));
-    make_edge(broadcast_node_2, std::get<2>(join_node_2.input_ports()));
 
     make_edge(join_node_2, deleter_node);
     make_edge(deleter_node, limiter_node_1.decrement);
