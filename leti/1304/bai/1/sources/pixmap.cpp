@@ -5,6 +5,7 @@
 
 #include "pixmap.hpp"
 #include <random>
+#include <fstream>
 
 lex::Pixmap::Pixmap() {}
 
@@ -91,4 +92,22 @@ const ::uint32_t lex::Pixmap::height() const {
 
 const ::uint8_t* const lex::Pixmap::data() const {
     return m_data.begin().base();
+}
+
+std::ofstream& operator<<(std::ofstream& out, const lex::Pixmap& pixmap) {
+    out << "Image:\n";
+    for(::uint32_t row = 0; row < pixmap.height(); row++) {
+        for(::uint32_t column = 0; column < pixmap.width(); column++) {
+            out << pixmap.at(row, column) << " ";
+        }
+        out << "\n";
+    }
+    return out;
+}
+
+std::ofstream& operator<<(std::ofstream& out, lex::Pixmap* pixmap) {
+    if(pixmap != nullptr) {
+        out << *pixmap;
+    }
+    return out;
 }

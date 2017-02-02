@@ -54,4 +54,7 @@ namespace lex {
 
 } // namespace lex
 
+std::ofstream& operator<<(std::ofstream& out, const lex::Pixmap& pixmap);
+std::ofstream& operator<<(std::ofstream& out, lex::Pixmap* pixmap);
+
 #endif /* __HPCOURSE_LAB1_PIXMAP_HPP__ */
