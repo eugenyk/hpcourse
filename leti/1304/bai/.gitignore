@@ -1,0 +1,13 @@
+#
+# Mac OS
+#
+
+**/.DS_Store
+
+#
+# Xcode
+#
+
+**/projects/Xcode/**/*.xcworkspace/**/xcuserdata/
+**/projects/Xcode/**/*.xcodeproj/**/xcuserdata/
+**/projects/Xcode/**/DerivedData/
