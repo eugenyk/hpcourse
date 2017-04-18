@@ -3,18 +3,18 @@
 
 class Value {
 public:
-    Value() : _value(0) { }
- 
-    void update(int value) {
-        _value = value;
-    }
- 
-    int get() const {
-        return _value;
-    }
+  Value() : _value(0) { }
+
+  void update(int value) {
+    _value = value;
+  }
+
+  int get() const {
+    return _value;
+  }
  
 private:
-    int _value;
+  int _value;
 };
  
 void* producer_routine(void* arg) {
@@ -53,6 +53,6 @@ int run_threads() {
 }
  
 int main() {
-    std::cout << run_threads() << std::endl;
-    return 0;
+  std::cout << run_threads() << std::endl;
+  return 0;
 }
