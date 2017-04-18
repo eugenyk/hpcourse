@@ -124,6 +124,7 @@ void* consumer_interruptor_routine(void* arg) {
   // NB: while _consumer_ is running, not producer.
   pthread_t consumer = *static_cast<pthread_t*>(arg);
   while (pthread_kill(consumer, 0) == 0) {
+    // SIGKILL is also nice, but it's harder to protect from.
     int result = pthread_cancel(consumer);
     if (result == ESRCH) break;
     assert(result == 0);
