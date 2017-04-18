@@ -4,6 +4,9 @@
 #include <stdexcept>
 #include <memory>
 #include <vector>
+#ifndef _WIN32
+#include <sys/signal.h>
+#endif
 
 struct NoMoreValuesError : std::runtime_error {
   NoMoreValuesError() : std::runtime_error("Value class was closed") {}
@@ -122,10 +125,7 @@ void* consumer_interruptor_routine(void* arg) {
   pthread_t consumer = *static_cast<pthread_t*>(arg);
   while (pthread_kill(consumer, 0) == 0) {
     int result = pthread_cancel(consumer);
-    if (result == ESRCH) {
-      std::cerr << "Consumer was killed for sure" << "\n";
-      break;
-    }
+    if (result == ESRCH) break;
     assert(result == 0);
   }
   return NULL;
