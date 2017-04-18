@@ -95,6 +95,10 @@ void* producer_routine(void* arg_) {
 }
  
 void* consumer_routine(void* arg) {
+  // No race condition, as there were no cancellation points before.
+  // TODO: is thread start a cancellation point itself?
+  pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
   // notify about start: TODO
   // allocate value for result
   std::unique_ptr<int> result(new int());
@@ -112,11 +116,18 @@ void* consumer_routine(void* arg) {
 }
  
 void* consumer_interruptor_routine(void* arg) {
-  static_cast<void>(arg);
-  // wait for consumer to start
- 
-  // interrupt consumer while producer is running                                          
-
+  // wait for consumer to start: TODO
+  // interrupt consumer while consumer is running
+  // NB: while _consumer_ is running, not producer.
+  pthread_t consumer = *static_cast<pthread_t*>(arg);
+  while (pthread_kill(consumer, 0) == 0) {
+    int result = pthread_cancel(consumer);
+    if (result == ESRCH) {
+      std::cerr << "Consumer was killed for sure" << "\n";
+      break;
+    }
+    assert(result == 0);
+  }
   return NULL;
 }
  
@@ -125,7 +136,7 @@ int run_threads() {
   // return sum of update values seen by consumer
   Value v;
   ProducerArg producer_arg;
-  pthread_t producer, consumer;
+  pthread_t producer, consumer, consumer_interruptor;
 
   for (int i = 0; i < 100000; i++) {
     producer_arg.data.push_back(i + 1);
@@ -134,6 +145,10 @@ int run_threads() {
   producer_arg.value = &v;
   pthread_create(&producer, NULL, producer_routine, &producer_arg);
   pthread_create(&consumer, NULL, consumer_routine, &v);
+  pthread_create(&consumer_interruptor, NULL, consumer_interruptor_routine, &consumer);
+
+  // Should be joined before consumer to avoid consumer's pthread_id reuse.
+  pthread_join(consumer_interruptor, NULL);
 
   void *consumer_return;
   pthread_join(consumer, &consumer_return);
