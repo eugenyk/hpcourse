@@ -196,26 +196,22 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     }
 
     private final class InternalNode extends Node {
-        private final AtomicReference<Node> left = new AtomicReference<>();
-        private final AtomicReference<Node> right = new AtomicReference<>();
+        private volatile Node left;
+        private volatile Node right;
         private final AtomicReference<State> state = new AtomicReference<>(State.CLEAN);
 
         private InternalNode(T key, Node left, Node right) {
-            super(new Value(ValueType.NORMAL, key));
-            this.left.set(left);
-            this.right.set(right);
+            this(new Value(ValueType.NORMAL, key), left, right);
         }
 
         private InternalNode(ValueType type, Node left, Node right) {
-            super(new Value(type, null));
-            this.left.set(left);
-            this.right.set(right);
+            this(new Value(type, null), left, right);
         }
 
         private InternalNode(Value value, Node left, Node right) {
             super(value);
-            this.left.set(left);
-            this.right.set(right);
+            this.left = left;
+            this.right = right;
         }
 
         private State getState() {
@@ -231,18 +227,18 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         }
 
         private Node getLeft() {
-            return left.get();
+            return left;
         }
 
         private Node getRight() {
-            return right.get();
+            return right;
         }
 
         private void setChild(Node newChild) {
             if (newChild.compareTo(this) < 0) {
-                left.set(newChild);
+                left = newChild;
             } else {
-                right.set(newChild);
+                right = newChild;
             }
         }
     }
