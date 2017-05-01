@@ -39,7 +39,7 @@ public class MySetTest {
 
     @Test
     public void multiThreadTest() {
-        for (int test = 0; test < 10; test++) {
+        for (int test = 0; test < 100; test++) {
             final MySet<Integer> mySet = new MySet<Integer>();
 
             List<Integer> nums = new ArrayList<Integer>();

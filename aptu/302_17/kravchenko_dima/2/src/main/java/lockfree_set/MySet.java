@@ -58,15 +58,31 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
      * {@inheritDoc}
      */
     public boolean contains(T value) {
-        MyPair<T> pair = search(value);
-        return (pair.right != tail && pair.right.getKey().equals(value));
+        Node<T> helper = head;
+        do {
+            helper = helper.next.getReference();
+            if (helper == tail) {
+                break;
+            }
+        } while (helper.next.isMarked() || helper.getKey() == null || helper.getKey().compareTo(value) < 0);
+        return (helper != tail && helper.getKey().equals(value) && !helper.next.isMarked());
     }
 
     /**
      * {@inheritDoc}
      */
     public boolean isEmpty() {
-        return head.next.getReference() == tail;
+        Node<T> helper = head;
+        do {
+            helper = helper.next.getReference();
+            if (!helper.next.isMarked()) {
+                return true;
+            }
+            if (helper == tail) {
+                break;
+            }
+        } while (true);
+        return false;
     }
 
     /**
