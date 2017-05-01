@@ -1,7 +1,7 @@
 public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
     private class Node {
         // 'next' is marked iff all of the following are true:
-        // 1. 'next' if the node is not going to change.
+        // 1. 'next' of the node is not going to change.
         // 2. The node is going to be deleted.
         // Invariant: no two consecutive nodes have 'next' marked.
         final AtomicMarkableReferenceWithWaitFreeGet<Node> next;
