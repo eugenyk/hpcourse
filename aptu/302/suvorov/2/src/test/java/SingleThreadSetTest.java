@@ -6,7 +6,7 @@ public class SingleThreadSetTest {
     private final LockFreeSet<Integer> s;
 
     public SingleThreadSetTest() {
-        s = new LockFreeSetImpl<>();
+        s = new LockFreeSetImpl<Integer>();
     }
 
     @Test
@@ -70,7 +70,7 @@ public class SingleThreadSetTest {
 
     @Test
     public void testStress() {
-        new StressTestUtil(StressTestUtil.DO_ALL, true)
+        new StressTestUtil(StressTestUtil.DO_ALL, true, false)
                 .stressTest(s, 0, 1000, 100000, 123);
     }
 }

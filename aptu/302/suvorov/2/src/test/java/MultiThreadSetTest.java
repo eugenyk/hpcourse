@@ -15,26 +15,32 @@ public class MultiThreadSetTest {
     private final LockFreeSet<Integer> s;
     private final StressTestUtil util;
 
-    public MultiThreadSetTest(int threads, int valsPerThread, int operations, boolean fillAll) {
-        this.s = new LockFreeSetImpl<>();
+    public MultiThreadSetTest(int threads, int valsPerThread, int operations, boolean initializeFull) {
+        this.s = constructSet();
         this.threads = threads;
         this.valsPerThread = valsPerThread;
-        this.util = new StressTestUtil(operations, false);
-        if (fillAll) {
+        this.util = new StressTestUtil(operations, false, initializeFull);
+        if (initializeFull) {
             for (int i = 0; i < threads * valsPerThread; i++) {
                 s.add(i);
             }
         }
     }
 
-    @Parameterized.Parameters(name = "{index}: threads={0}, vals_per_test={1}, ops={2}")
+    LockFreeSet<Integer> constructSet() {
+        return new LockFreeSetImpl<>();
+    }
+
+    @Parameterized.Parameters(name = "{index}: threads={0}, valsPerThread={1}, ops={2}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 { 1, 1000, StressTestUtil.DO_ALL, false },
                 { 2, 1, StressTestUtil.DO_ADD, false },
-                { 2, 1, StressTestUtil.DO_ADD | StressTestUtil.DO_CONTAINS, false },
                 { 2, 1, StressTestUtil.DO_REMOVE, true },
-                { 2, 1, StressTestUtil.DO_REMOVE | StressTestUtil.DO_CONTAINS, true },
+                { 2, 1, StressTestUtil.DO_ADD | StressTestUtil.DO_REMOVE, true },
+                { 2, 1, StressTestUtil.DO_ALL, false },
+                { 10, 1, StressTestUtil.DO_ALL, false },
+                { 10, 1000, StressTestUtil.DO_ALL, false },
         });
     }
 
@@ -49,7 +55,7 @@ public class MultiThreadSetTest {
             tasks.add(pool.submit(new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
-                    util.stressTest(s, valsPerThread * id, valsPerThread,  STEPS,123 + id);
+                    util.stressTest(s, valsPerThread * id, valsPerThread, STEPS,123 + id);
                     return null;
                 }
             }));

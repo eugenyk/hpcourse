@@ -14,19 +14,25 @@ class StressTestUtil {
 
     private ArrayList<Integer> operations;
     private boolean checkEmpty;
+    private boolean initializeFull;
 
-    StressTestUtil(int operations, boolean checkEmpty) {
+    StressTestUtil(int operations, boolean checkEmpty, boolean initializeFull) {
         this.operations = new ArrayList<>();
         for (int i = 0; i < 3; i++)
             if ((operations & (1 << i)) != 0) {
                 this.operations.add(1 << i);
             }
         this.checkEmpty = checkEmpty;
+        this.initializeFull = initializeFull;
     }
 
     void stressTest(LockFreeSet<Integer> s, int minVal, int valsCount, int steps, int seed) {
         Random rnd = new Random(seed);
         Set<Integer> stupidS = new HashSet<>();
+        if (initializeFull) {
+            for (int i = 0; i < valsCount; i++)
+                stupidS.add(minVal + i);
+        }
 
         for (int i = 0; i < steps; i++) {
             int op = operations.get(rnd.nextInt(operations.size()));
