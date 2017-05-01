@@ -2,10 +2,9 @@
 #include <iostream>
 
 #define NOT_STARTED 0
-#define STARTED 1
-#define OLD_VALUE 2
-#define NEW_VALUE 3
-#define FINISHED 4
+#define OLD_VALUE 1
+#define NEW_VALUE 2
+#define FINISHED 3
 
 volatile char state = NOT_STARTED;
 
@@ -42,9 +41,11 @@ void destroy() {
 }
 
 void* producer_routine(void* arg) {
-    while (state == NOT_STARTED);
-
-    state = OLD_VALUE;
+    pthread_mutex_lock(&lock);
+    while (state == NOT_STARTED) {
+        pthread_cond_wait(&flag_cond, &lock);
+    }
+    pthread_mutex_unlock(&lock);
 
     int x;
     while (std::cin >> x) {
@@ -71,7 +72,8 @@ void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
     pthread_mutex_lock(&lock);
-    state = STARTED;
+    state = OLD_VALUE;
+    pthread_cond_broadcast(&flag_cond);
     pthread_mutex_unlock(&lock);
 
     int* sum = new int(0);
@@ -98,10 +100,20 @@ void* consumer_routine(void* arg) {
 }
 
 void* consumer_interruptor_routine(void* arg) {
-    while (state == NOT_STARTED);
+    pthread_mutex_lock(&lock);
+    while (state == NOT_STARTED) {
+        pthread_cond_wait(&flag_cond, &lock);
+    }
+    pthread_mutex_unlock(&lock);
 
     while (state != FINISHED) {
-        pthread_cancel(*((pthread_t*) arg));
+        pthread_mutex_lock(&lock);
+
+        if (state != FINISHED) {
+            pthread_cancel(*((pthread_t*) arg));
+        }
+
+        pthread_mutex_unlock(&lock);
     }
 }
 
