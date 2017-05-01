@@ -11,6 +11,7 @@ volatile char state = NOT_STARTED;
 
 pthread_mutex_t lock;
 pthread_cond_t cond;
+pthread_cond_t flag_cond;
 
 class Value {
 public:
@@ -31,11 +32,13 @@ private:
 void init() {
     pthread_mutex_init(&lock, NULL);
     pthread_cond_init(&cond, NULL);
+    pthread_cond_init(&flag_cond, NULL);
 }
 
 void destroy() {
     pthread_mutex_destroy(&lock);
     pthread_cond_destroy(&cond);
+    pthread_cond_destroy(&flag_cond);
 }
 
 void* producer_routine(void* arg) {
@@ -67,7 +70,9 @@ void* producer_routine(void* arg) {
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
+    pthread_mutex_lock(&lock);
     state = STARTED;
+    pthread_mutex_unlock(&lock);
 
     int* sum = new int(0);
 
