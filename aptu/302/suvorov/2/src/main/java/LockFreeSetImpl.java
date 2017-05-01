@@ -1,25 +1,22 @@
-import java.util.concurrent.atomic.AtomicMarkableReference;
-import java.util.concurrent.atomic.AtomicReference;
-
 public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
     private class Node {
         // 'next' is marked iff all of the following are true:
         // 1. 'next' if the node is not going to change.
         // 2. The node is going to be deleted.
         // Invariant: no two consecutive nodes have 'next' marked.
-        final AtomicMarkableReference<Node> next;
+        final AtomicMarkableReferenceWithWaitFreeGet<Node> next;
         final T data;
 
         private Node(T data) {
-            this.next = new AtomicMarkableReference<>(null, false);
+            this.next = new AtomicMarkableReferenceWithWaitFreeGet<>(null, false);
             this.data = data;
         }
     }
 
-    private Node root;
+    private Node head;
 
     LockFreeSetImpl() {
-        root = new Node(null);
+        head = new Node(null);
     }
 
     public boolean add(T value) {
@@ -75,7 +72,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         assert nodes.length == 2;
         while (true) {
             Node prevPrev = null;
-            Node prev = root;
+            Node prev = head;
             boolean[] mark = new boolean[1];
             while (true) {
                 Node cur = prev.next.get(mark);
@@ -104,6 +101,6 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     public boolean isEmpty() {
         boolean[] mark = new boolean[1];
-        return root.next.get(mark) == null;
+        return head.next.get(mark) == null;
     }
 }
