@@ -40,6 +40,9 @@ public class MultiThreadSetTest {
                 { 2, 1, StressTestUtil.DO_ADD | StressTestUtil.DO_REMOVE, true },
                 { 2, 1, StressTestUtil.DO_ALL, false },
                 { 10, 1, StressTestUtil.DO_ALL, false },
+                { 10, 2, StressTestUtil.DO_ALL, false },
+                { 10, 5, StressTestUtil.DO_ALL, false },
+                { 10, 10, StressTestUtil.DO_ALL, false },
                 { 10, 1000, StressTestUtil.DO_ALL, false },
         });
     }
