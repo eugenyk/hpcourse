@@ -64,12 +64,24 @@ public class Set<T extends Comparable<T>> implements LockFreeSet<T> {
     }
 
     public boolean contains(T value) {
-        final Pair<Node<T>> result = search(value);
-        return result.right != tail && result.right.key.equals(value);
+        Node<T> it = head;
+
+        while (it != tail && (it.key == null || it.next.isMarked() || it.key.compareTo(value) < 0)) {
+            it = it.next.getReference();
+        }
+
+        return it != tail && it.key.equals(value);
     }
 
     public boolean isEmpty() {
-        return head.next.getReference() == tail;
+        // try to find any unmarked node
+        for (Node<T> it = head.next.getReference(); it != tail; it = it.next.getReference()) {
+            if (!it.next.isMarked()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private Pair<Node<T>> search(T key) {
