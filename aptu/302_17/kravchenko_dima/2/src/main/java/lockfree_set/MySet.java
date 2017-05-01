@@ -75,14 +75,14 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
         Node<T> helper = head;
         do {
             helper = helper.next.getReference();
-            if (!helper.next.isMarked()) {
-                return true;
-            }
             if (helper == tail) {
                 break;
             }
+            if (!helper.next.isMarked()) {
+                return false;
+            }
         } while (true);
-        return false;
+        return true;
     }
 
     /**
