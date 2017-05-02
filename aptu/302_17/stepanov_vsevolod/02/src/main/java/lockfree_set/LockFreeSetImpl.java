@@ -18,13 +18,11 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         while (true) {
             final Node<T> node = find(value);
             final Node<T> next = node.next.get(marked);
-
-            if (next != tail && next.value.equals(value)) {
+            if (next != tail && next.value.equals(value) && !next.next.isMarked()) {
                 return false;
             }
-
             newNode.next.set(next, false);
-            if (next == tail || next.value.compareTo(value) > 0) {
+            if (next == tail || next.value.compareTo(value) >= 0) {
                 if (node.next.compareAndSet(next, newNode, false, false)) {
                     return true;
                 }
@@ -45,11 +43,11 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             if (next.value.compareTo(value) < 0) {
                 continue;
             }
-            Node<T> nextNext = next.next.getReference();
-            if (!next.value.equals(value)) {
+            Node<T> nextNext = next.next.get(marked);
+            if (!next.value.equals(value) || marked[0]) {
                 return false;
             } else {
-                if (next.next.attemptMark(nextNext, true)) {
+                if (next.next.compareAndSet(nextNext, nextNext, false, true)) {
                     return true;
                 }
             }
