@@ -8,13 +8,13 @@ import java.util.Collection;
 import java.util.concurrent.*;
 
 @RunWith(Parameterized.class)
-public class MultiThreadSetTest {
+public class MultiThreadSetDisjointStressTest {
     private final int threads;
     private final int valsPerThread;
     private final LockFreeSet<Integer> s;
     private final StressTestUtil util;
 
-    public MultiThreadSetTest(int threads, int valsPerThread, int operations, boolean initializeFull) {
+    public MultiThreadSetDisjointStressTest(int threads, int valsPerThread, int operations, boolean initializeFull) {
         this.s = constructSet();
         this.threads = threads;
         this.valsPerThread = valsPerThread;
