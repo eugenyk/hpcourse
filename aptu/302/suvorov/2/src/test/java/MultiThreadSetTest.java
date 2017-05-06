@@ -9,7 +9,6 @@ import java.util.concurrent.*;
 
 @RunWith(Parameterized.class)
 public class MultiThreadSetTest {
-    private final int STEPS = 100000;
     private final int threads;
     private final int valsPerThread;
     private final LockFreeSet<Integer> s;
