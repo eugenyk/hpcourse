@@ -1,0 +1,21 @@
+Build Requirements:
+1. Java 1.8
+2. Apache Maven (version >= 3.2.5)
+3. Protobuf compiler 3.0.0
+
+To build program:
+1. Go to lek/2 directory
+mkdir directory
+2. Run maven
+mvn clean package
+
+Run server:
+Runnable class - Server in module Server.
+Command line option: java Server [number of threads].
+
+Run client:
+	Console client - ConsoleChatClient in module Client.
+	GUI client - GUIChatClient in module Client.
+
+Both server and client can have config file ([module]/src/main/resources/config.txt) with ip and port settings.
+If there is no config file default configuration is used.
