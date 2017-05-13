@@ -5,4 +5,4 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES main.cpp)
 add_executable(img_tbb ${SOURCE_FILES})
-target_link_libraries(img_tbb tbb boost_program_options)
+target_link_libraries(img_tbb tbb)

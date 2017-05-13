@@ -3,16 +3,32 @@
 #include <set>
 #include <tbb/flow_graph.h>
 #include <algorithm>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
 
-
-namespace po = boost::program_options;
 
 typedef std::tuple<int, int> point;
 typedef uint8_t u8;
 typedef std::vector<std::vector<u8>> image;
+
+image random_image() {
+    const static size_t maxw = 100;
+    const static size_t maxh = 100;
+
+    size_t h = std::max<size_t>(1, ((size_t) random()) % maxh);
+    size_t w = std::max<size_t>(1, ((size_t) random()) % maxw);
+
+    image img;
+
+    for (int i = 0; i < h; ++i) {
+        std::vector<u8> row;
+        for (int j = 0; j < w; ++j) {
+            u8 dot = (u8) random();
+            row.push_back(dot);
+        }
+        img.push_back(row);
+    }
+
+    return img;
+}
 
 template <typename T>
 struct tagged {
@@ -76,6 +92,7 @@ struct Min {
         const image& img = t_img.obj;
         std::set<point> min_set;
         u8 val = 255;
+
         for (int i = 0; i < img.size(); ++i)
             for (int j = 0; j < img[0].size(); ++j) {
                 if (img[i][j] == val)
@@ -132,7 +149,7 @@ struct Inverse {
             for (auto& p : r)
                 p = -p;
 
-        return t_img;
+        return tagged<image>(t_img.tag, img);
     }
 };
 
@@ -149,58 +166,39 @@ struct Mean {
     }
 };
 
-int main(int argc, char **argv) {
+struct Options {
     int brightness = -1;
     size_t limit = 1;
+} options;
 
-    po::options_description desc;
-    desc.add_options()
-            ("b,b", po::value<int>(), "brightness")
-            ("l,l", po::value<int>(), "limit")
-            ("f,f", po::value<std::string>(), "log")
-            ("i,i", po::value<std::vector<std::string>>()->multitoken(), "images");
-
-    po::positional_options_description pos;
-    pos.add("i,i", -1);
-
-    po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(pos).run(), vm);
-    po::notify(vm);
-
-    if (vm.count("b"))
-        brightness = vm["b"].as<int>();
-
-    if (vm.count("f"))
-        freopen(vm["f"].as<std::string>().c_str(), "w", stdout);
-
-    if (vm.count("l"))
-        limit = vm["l"].as<int>();
-
-    std::list<image> images;
-    if (vm.count("i")) {
-        for (std::string f : vm["i"].as<std::vector<std::string>>()) {
-            image img;
-            int w, h;
-            freopen(f.c_str(), "r", stdin);
-            std::cin >> h >> w;
-            for (int i = 0; i < h; ++i) {
-                std::vector<u8> row;
-                for (int j = 0; j < w; ++j) {
-                    int a;
-                    std::cin >> a;
-                    row.push_back(a);
-                }
-                img.push_back(row);
-            }
-            images.push_back(img);
+void parse_options(Options &options, int argc, char** argv) {
+    int i = 1;
+    while (i < argc) {
+        std::string arg = std::string(argv[i]);
+        if (arg == "-b") {
+            options.brightness = atoi(argv[i + 1]);
+            i += 2;
+        } else if (arg == "-l") {
+            options.limit = (size_t) atoi(argv[i + 1]);
+            i += 2;
+        } else if (arg == "-f") {
+            freopen(argv[i + 1], "w", stdout);
+            i += 2;
+        } else {
+            throw std::runtime_error("bad options");
         }
     }
+}
+
+
+int main(int argc, char **argv) {
+    parse_options(options, argc, argv);
 
     tbb::flow::graph graph;
-    tbb::flow::broadcast_node<tagged<image>> input(graph);
-    tbb::flow::function_node<tagged<image>, tagged<std::set<point>>> equiv_node(graph, limit, Equiv(brightness));
-    tbb::flow::function_node<tagged<image>, tagged<std::set<point>>> min_node(graph,limit, Min());
-    tbb::flow::function_node<tagged<image>, tagged<std::set<point>>> max_node(graph, limit, Max());
+    tbb::flow::limiter_node<tagged<image>> input(graph, options.limit);
+    tbb::flow::function_node<tagged<image>, tagged<std::set<point>>> equiv_node(graph, tbb::flow::unlimited, Equiv(options.brightness));
+    tbb::flow::function_node<tagged<image>, tagged<std::set<point>>> min_node(graph, tbb::flow::unlimited, Min());
+    tbb::flow::function_node<tagged<image>, tagged<std::set<point>>> max_node(graph, tbb::flow::unlimited, Max());
     tbb::flow::join_node<
             std::tuple<tagged<image>, tagged<std::set<point>>, tagged<std::set<point>>, tagged<std::set<point>>>,
             tbb::flow::key_matching<int>
@@ -208,9 +206,20 @@ int main(int argc, char **argv) {
 
     tbb::flow::function_node<std::tuple<tagged<image>, tagged<std::set<point>>, tagged<std::set<point>>, tagged<std::set<point>>>,
             tagged<image>
-    > highlight_node(graph, limit, Highlight());
-    tbb::flow::function_node<tagged<image>, tagged<image>> inverse_node(graph, limit, Inverse());
-    tbb::flow::function_node<tagged<image>, tagged<int>> mean_node(graph, limit, Mean());
+    > highlight_node(graph, tbb::flow::unlimited, Highlight());
+    tbb::flow::function_node<tagged<image>, tagged<image>> inverse_node(graph, tbb::flow::unlimited, Inverse());
+    tbb::flow::function_node<tagged<image>, tagged<int>> mean_node(graph, tbb::flow::unlimited, Mean());
+    tbb::flow::join_node<
+            std::tuple<tagged<image>, tagged<int>>,
+            tbb::flow::key_matching<int>
+    > join_node_notify(graph, get_tag<image>(), get_tag<int>());
+
+    tbb::flow::function_node<std::tuple<tagged<image>, tagged<int>>, tbb::flow::continue_msg>
+            notifier(graph, tbb::flow::unlimited, [] (std::tuple<tagged<image>, tagged<int>> o) ->
+                tbb::flow::continue_msg {
+                    return tbb::flow::continue_msg();
+                });
+
     tbb::flow::buffer_node<tagged<int>> mean_buffer(graph);
 
     tbb::flow::make_edge(input, equiv_node);
@@ -223,21 +232,29 @@ int main(int argc, char **argv) {
     tbb::flow::make_edge(max_node, tbb::flow::input_port<3>(join_node));
 
     tbb::flow::make_edge(join_node, highlight_node);
+
     tbb::flow::make_edge(highlight_node, inverse_node);
     tbb::flow::make_edge(highlight_node, mean_node);
     tbb::flow::make_edge(mean_node, mean_buffer);
 
-    int tag = 0;
-    for (image img : images)
-        input.try_put(tagged<image>(tag++, img));
+    tbb::flow::make_edge(inverse_node, tbb::flow::input_port<0>(join_node_notify));
+    tbb::flow::make_edge(mean_node, tbb::flow::input_port<1>(join_node_notify));
+    tbb::flow::make_edge(join_node_notify, notifier);
+    tbb::flow::make_edge(notifier, input.decrement);
+
+    const int N = 10000;
+
+    for (int i = 0; i < N; ++i) {
+        tagged<image> t_img = tagged<image>(i, random_image());
+        while (!input.try_put(t_img));
+    }
 
     graph.wait_for_all();
-    for (int i = 0; i < tag; ++i) {
+    for (int i = 0; i < N; ++i) {
         tagged<int> m;
         if (mean_buffer.try_get(m))
             std::cout << m.tag << ":" << m.obj << '\n';
     }
-
 
     return 0;
 }
