@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets="tbb_oss_init">
+  <PropertyGroup Label="Default initializers for properties">
+    <Linkage-tbb_oss Condition="'$(Linkage-tbb_oss)' == ''">dynamic</Linkage-tbb_oss>
+    <CallingConvention-tbb_oss Condition="'$(CallingConvention-tbb_oss)' == ''">cdecl</CallingConvention-tbb_oss>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>HAS_TBB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)../..//build/native/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)../..//build/native/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Label="Win32 and v140 and Release" Condition="'$(Platform.ToLower())' == 'win32' And '$(PlatformToolset.ToLower())' == 'v140' And ( $(Configuration.ToLower().IndexOf('debug')) == -1 )">
+    <Link>
+      <AdditionalDependencies>$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\v140\Release\tbbmalloc_proxy.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\v140\Release\tbbmalloc.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\v140\Release\tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Label="Win32 and v140 and Debug" Condition="'$(Platform.ToLower())' == 'win32' And '$(PlatformToolset.ToLower())' == 'v140' And ( $(Configuration.ToLower().IndexOf('debug')) &gt; -1 )">
+    <Link>
+      <AdditionalDependencies>$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\v140\Debug\tbbmalloc_proxy_debug.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\v140\Debug\tbbmalloc_debug.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\v140\Debug\tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Label="x64 and v140 and Release" Condition="'$(Platform.ToLower())' == 'x64' And '$(PlatformToolset.ToLower())' == 'v140' And ( $(Configuration.ToLower().IndexOf('debug')) == -1 )">
+    <Link>
+      <AdditionalDependencies>$(MSBuildThisFileDirectory)../..//build/native/lib/x64\v140\Release\tbbmalloc_proxy.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/x64\v140\Release\tbbmalloc.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/x64\v140\Release\tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Label="x64 and v140 and Debug" Condition="'$(Platform.ToLower())' == 'x64' And '$(PlatformToolset.ToLower())' == 'v140' And ( $(Configuration.ToLower().IndexOf('debug')) &gt; -1 )">
+    <Link>
+      <AdditionalDependencies>$(MSBuildThisFileDirectory)../..//build/native/lib/x64\v140\Debug\tbbmalloc_proxy_debug.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/x64\v140\Debug\tbbmalloc_debug.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/x64\v140\Debug\tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)\default-propertiesui.xml" />
+  </ItemGroup>
+  <UsingTask TaskName="tbb_oss_Contains" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll" TaskFactory="CodeTaskFactory">
+    <ParameterGroup>
+      <Text Output="false" ParameterType="System.String" />
+      <Library Output="false" Required="true" ParameterType="System.String" />
+      <Value Output="false" Required="true" ParameterType="System.String" />
+      <Result Output="true" ParameterType="System.String" />
+    </ParameterGroup>
+    <Task>
+      <Code>Result = ((Text ?? "").Split(';').Contains(Library) ) ? Value : String.Empty;</Code>
+    </Task>
+  </UsingTask>
+  <Target Name="tbb_oss_init">
+    <tbb_oss_Contains Text="Linkage-dynamic" Library="tbb_oss" Value="dynamic" Condition="'$(Linkage-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="Linkage-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="Linkage-static" Library="tbb_oss" Value="static" Condition="'$(Linkage-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="Linkage-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="Linkage-ltcg" Library="tbb_oss" Value="ltcg" Condition="'$(Linkage-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="Linkage-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="Linkage-sxs" Library="tbb_oss" Value="sxs" Condition="'$(Linkage-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="Linkage-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="CallingConvention-cdecl" Library="tbb_oss" Value="cdecl" Condition="'$(CallingConvention-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="CallingConvention-stdcall" Library="tbb_oss" Value="stdcall" Condition="'$(CallingConvention-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="CallingConvention-fastcall" Library="tbb_oss" Value="fastcall" Condition="'$(CallingConvention-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="CallingConvention-thiscall" Library="tbb_oss" Value="thiscall" Condition="'$(CallingConvention-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-tbb_oss" />
+    </tbb_oss_Contains>
+    <tbb_oss_Contains Text="CallingConvention-clrcall" Library="tbb_oss" Value="clrcall" Condition="'$(CallingConvention-tbb_oss)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-tbb_oss" />
+    </tbb_oss_Contains>
+  </Target>
+</Project>
