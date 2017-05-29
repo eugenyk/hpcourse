@@ -7,7 +7,6 @@ public class ThreadSafeSet<T extends Comparable<T>> implements LockFreeSet<T> {
     private static final int CLEAR = 0;
     private static final int REMOVE = 1;
     private static final int MOVE = 2;
-    private final Logger logger = Logger.getLogger(getClass().getName());
     private final Node<T> root = new Node<>();
 
     private Node<T> findPrev(T obj) {
@@ -67,7 +66,8 @@ public class ThreadSafeSet<T extends Comparable<T>> implements LockFreeSet<T> {
     }
 
     public boolean contains(T value) {
-        return findPrev(value).next.getReference() != null;
+        Node<T> node = findPrev(value).next.getReference();
+        return node != null && value.equals(node.obj);
     }
 
     public boolean isEmpty() {
