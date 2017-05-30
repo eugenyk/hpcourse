@@ -74,11 +74,14 @@ public class Set<T extends Comparable<T>> implements LockFreeSet<T> {
     }
 
     public boolean isEmpty() {
-        // try to find any unmarked node
-        for (Node<T> it = head.next.getReference(); it != tail; it = it.next.getReference()) {
-            if (!it.next.isMarked()) {
+        while (head.next.getReference() != tail) {
+            Node<T> next = head.next.getReference();
+
+            if (!next.next.isMarked()) {
                 return false;
             }
+
+            head.next.compareAndSet(next, next.next.getReference(), false, false);
         }
 
         return true;
@@ -108,7 +111,7 @@ public class Set<T extends Comparable<T>> implements LockFreeSet<T> {
 
             // check nodes are adjacent
             if (left_next == right) {
-                if (right.next.isMarked()) {
+                if (right != tail && right.next.isMarked()) {
                     continue;
                 }
 
@@ -117,7 +120,7 @@ public class Set<T extends Comparable<T>> implements LockFreeSet<T> {
 
             // remove marked nodes between left and right nodes
             if (left.next.compareAndSet(left_next, right, false, false)) {
-                if (right.next.isMarked()) {
+                if (right != tail && right.next.isMarked()) {
                     continue;
                 }
 
