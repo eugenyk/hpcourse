@@ -7,13 +7,10 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
     private final Node<T> head;
     private final Node<T> tail;
 
-    private AtomicInteger size;
-
     public MySet() {
         head = new Node<T>(null);
         tail = new Node<T>(null);
         head.next.set(tail, false);
-        size = new AtomicInteger(0);
     }
 
     /**
@@ -30,7 +27,6 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
             }
             newNode.next.set(pair.right, false);
             if (pair.left.next.compareAndSet(pair.right, newNode, false, false)) {
-                size.getAndIncrement();
                 return true;
             }
         } while (true);
@@ -49,7 +45,6 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
                 return false;
             rightNext = pair.right.next.getReference();
             if (pair.right.next.compareAndSet(rightNext, rightNext, false, true)) {
-                size.getAndDecrement();
                 break;
             }
         } while (true);
