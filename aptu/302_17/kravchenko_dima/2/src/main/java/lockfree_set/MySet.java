@@ -1,14 +1,19 @@
 package lockfree_set;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
 
     private final Node<T> head;
     private final Node<T> tail;
 
+    private AtomicInteger size;
+
     public MySet() {
         head = new Node<T>(null);
         tail = new Node<T>(null);
         head.next.set(tail, false);
+        size = new AtomicInteger(0);
     }
 
     /**
@@ -25,6 +30,7 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
             }
             newNode.next.set(pair.right, false);
             if (pair.left.next.compareAndSet(pair.right, newNode, false, false)) {
+                size.getAndIncrement();
                 return true;
             }
         } while (true);
@@ -43,11 +49,11 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
                 return false;
             rightNext = pair.right.next.getReference();
             if (pair.right.next.compareAndSet(rightNext, rightNext, false, true)) {
+                size.getAndDecrement();
                 break;
             }
         } while (true);
 
-        //boolean ref = pair.left.next.isMarked();
         if (!pair.left.next.compareAndSet(pair.right, rightNext, false, false)) {
             search(value); // see search -- it also does removes
         }
@@ -71,18 +77,26 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
     /**
      * {@inheritDoc}
      */
+    // this one is lock-free
     public boolean isEmpty() {
         Node<T> helper = head;
+
+        // delete all marked elements and see if only tail has left
         do {
             helper = helper.next.getReference();
             if (helper == tail) {
-                break;
+                return true;
             }
             if (!helper.next.isMarked()) {
                 return false;
+            } else {
+                if (!head.next.compareAndSet(helper, helper.next.getReference(), false, false)) {
+                    helper = head; // something changed, go to the beginning
+                }
             }
-        } while (true);
-        return true;
+        } while (helper.next.isMarked() || helper.getKey() == null);
+
+        throw new IllegalStateException("Can never happen");
     }
 
     /**
@@ -93,7 +107,7 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
      */
     private MyPair<T> search(T value) {
         Node<T> left = head;
-        Node<T> leftNext = null;
+        Node<T> leftNext = left.next.getReference();
         Node<T> right;
 
         do {
