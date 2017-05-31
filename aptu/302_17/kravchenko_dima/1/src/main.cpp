@@ -77,7 +77,8 @@ void* consumer_routine(void* arg)
     int result = 0;
     pthread_mutex_lock(&mutex);
     while (true) {
-        pthread_cond_wait(&can_consume, &mutex); // wait until we can consume
+        if (!updated)
+            pthread_cond_wait(&can_consume, &mutex); // wait until we can consume
         if (!produces)
             break;
         if (updated) {
