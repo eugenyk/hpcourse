@@ -42,13 +42,13 @@ public class MySet<T extends Comparable<T>> implements LockFreeSet<T> {
             if (pair.right == tail || !pair.right.getKey().equals(value))
                 return false;
             rightNext = pair.right.next.getReference();
-            if (pair.right.next.attemptMark(rightNext, true)) {
+            if (pair.right.next.compareAndSet(rightNext, rightNext, false, true)) {
                 break;
             }
         } while (true);
 
-        boolean ref = pair.left.next.isMarked();
-        if (!pair.left.next.compareAndSet(pair.right, rightNext, ref, ref)) {
+        //boolean ref = pair.left.next.isMarked();
+        if (!pair.left.next.compareAndSet(pair.right, rightNext, false, false)) {
             search(value); // see search -- it also does removes
         }
         return true;
