@@ -1,4 +1,6 @@
 #include <iostream>
+#include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -18,24 +20,25 @@ private:
     int _value;
 };
 
-int numc, *nums;
+vector<int> nums;
 pthread_mutex_t value_mutex;
-pthread_cond_t value_cond;
+pthread_cond_t value_cond, consumer_cond;
 enum {
-    NOTHING, PRODUCED, FINISHED, CONSUMED
+    NOTHING, STARTED, PRODUCED, FINISHED, CONSUMED
 } status;
 
 void *producer_routine(void *arg) {
     Value *value = (Value *) arg;
 
-    for (int i = 0; i < numc; i++) {
+    for (int i = 0; i < nums.size(); i++) {
         pthread_mutex_lock(&value_mutex);
 
-        while (status != CONSUMED) {
+        while (!(i == 0 || (i != 0 && status == CONSUMED))) {
             pthread_cond_wait(&value_cond, &value_mutex);
         }
+
         value->update(nums[i]);
-        status = (i == numc - 1 ? FINISHED : PRODUCED);
+        status = (i == nums.size() - 1 ? FINISHED : PRODUCED);
         pthread_cond_signal(&value_cond);
 
         pthread_mutex_unlock(&value_mutex);
@@ -50,18 +53,22 @@ void *consumer_routine(void *arg) {
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-    status = CONSUMED;
-    pthread_cond_broadcast(&value_cond);
+    if (status == NOTHING) {
+        status = STARTED;
+    }
+    pthread_cond_signal(&consumer_cond);
 
     pthread_mutex_lock(&value_mutex);
     while (1) {
         while (status != PRODUCED && status != FINISHED) {
             pthread_cond_wait(&value_cond, &value_mutex);
         }
+
         *acc += value->get();
         if (status == FINISHED) {
             break;
         }
+
         status = CONSUMED;
         pthread_cond_signal(&value_cond);
     }
@@ -73,7 +80,7 @@ void *consumer_routine(void *arg) {
 void *consumer_interruptor_routine(void *arg) {
     pthread_mutex_lock(&value_mutex);
     while (status == NOTHING) {
-        pthread_cond_wait(&value_cond, &value_mutex);
+        pthread_cond_wait(&consumer_cond, &value_mutex);
     }
     pthread_mutex_unlock(&value_mutex);
 
@@ -92,6 +99,7 @@ int run_threads() {
 
     pthread_mutex_init(&value_mutex, NULL);
     pthread_cond_init(&value_cond, NULL);
+    pthread_cond_init(&consumer_cond, NULL);
 
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -111,26 +119,23 @@ int run_threads() {
     delete value;
     pthread_attr_destroy(&attr);
     pthread_cond_destroy(&value_cond);
+    pthread_cond_destroy(&consumer_cond);
     pthread_mutex_destroy(&value_mutex);
 
     return return_value;
 }
 
-void parse_nums(int argc, char *args[]) {
-    numc = argc - 1;
-    nums = new int[numc];
-    for (int i = 0; i < numc; i++) {
-        nums[i] = atoi(args[i + 1]);
+void read_nums() {
+    int num;
+    string line;
+    getline(cin, line);
+    istringstream iss(line);
+    while (iss >> num) {
+        nums.push_back(num);
     }
 }
 
-void delete_nums() {
-    delete nums;
-}
-
-int main(int argc, char *args[]) {
-    parse_nums(argc, args);
+int main() {
+    read_nums();
     cout << run_threads() << endl;
-    delete_nums();
-    pthread_exit(0);
 }
