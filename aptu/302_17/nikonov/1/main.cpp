@@ -61,7 +61,7 @@ public:
 
     bool is_alive() {
         pthread_mutex_lock(&_mutex);
-        bool res = !_finished;
+        bool res = !_finished || _updated;
         pthread_mutex_unlock(&_mutex);
         return res;
     }
