@@ -91,14 +91,13 @@ void* consumer_routine(void* arg) {
 }
  
 void* consumer_interruptor_routine(void* arg) {
-	pthread_t cons = (pthread_t) arg;
   // wait for consumer to start
  	wait_for_start();
   // interrupt consumer while producer is running 
+	pthread_t cons = (pthread_t) arg;
   while (state != State::TERMINATED) {
   	int rc = pthread_cancel(cons);
  	if (rc == 0) {
- 		std::cout << "success!" << std::endl;
  		break;
  	}
   }                                         
