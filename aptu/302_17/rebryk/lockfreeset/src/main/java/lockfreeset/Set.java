@@ -98,6 +98,7 @@ public class Set<T extends Comparable<T>> implements LockFreeSet<T> {
             // find left and right nodes such that:
             // 1) left.key < key <= right.key
             // 2) left and right nodes aren't marked
+            // 3) the right node is the immediate successor of the left node
             while (it != tail && (it.key == null || it.next.isMarked() || it.key.compareTo(key) < 0)) {
                 if (!it.next.isMarked()) {
                     left = it;
