@@ -1,0 +1,313 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		306A09AF1E2CC574007A2F54 /* libtbb.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 306A09AE1E2CC574007A2F54 /* libtbb.dylib */; };
+		306A09B01E2CC57A007A2F54 /* libtbb.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 306A09AE1E2CC574007A2F54 /* libtbb.dylib */; };
+		30B63BA11E2BF92800DB85AA /* Main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BA01E2BF92800DB85AA /* Main.cpp */; };
+		30B63BB61E2C16B700DB85AA /* ApplicationArguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BB41E2C16B700DB85AA /* ApplicationArguments.cpp */; };
+		30B63BBB1E2C428000DB85AA /* Pixmap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BBA1E2C428000DB85AA /* Pixmap.cpp */; };
+		30B63BBE1E2C438200DB85AA /* Pixel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BBC1E2C438200DB85AA /* Pixel.cpp */; };
+		30B63BC01E2C441400DB85AA /* LabUtils.h in Sources */ = {isa = PBXBuildFile; fileRef = 30B63BBF1E2C441400DB85AA /* LabUtils.h */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		30B63B9B1E2BF92800DB85AA /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				306A09B01E2CC57A007A2F54 /* libtbb.dylib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		306A09AE1E2CC574007A2F54 /* libtbb.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbb.dylib; path = "../../../../../../Tools/intel-tbb/lib/libtbb.dylib"; sourceTree = "<group>"; };
+		30B63B9D1E2BF92800DB85AA /* Parallel Lab1 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Parallel Lab1"; sourceTree = BUILT_PRODUCTS_DIR; };
+		30B63BA01E2BF92800DB85AA /* Main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Main.cpp; sourceTree = "<group>"; };
+		30B63BB41E2C16B700DB85AA /* ApplicationArguments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ApplicationArguments.cpp; sourceTree = "<group>"; };
+		30B63BB51E2C16B700DB85AA /* ApplicationArguments.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ApplicationArguments.hpp; sourceTree = "<group>"; };
+		30B63BB91E2C426D00DB85AA /* Pixmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Pixmap.h; sourceTree = "<group>"; };
+		30B63BBA1E2C428000DB85AA /* Pixmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Pixmap.cpp; sourceTree = "<group>"; };
+		30B63BBC1E2C438200DB85AA /* Pixel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Pixel.cpp; sourceTree = "<group>"; };
+		30B63BBD1E2C438200DB85AA /* Pixel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Pixel.h; sourceTree = "<group>"; };
+		30B63BBF1E2C441400DB85AA /* LabUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LabUtils.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		30B63B9A1E2BF92800DB85AA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				306A09AF1E2CC574007A2F54 /* libtbb.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		30B63B941E2BF92800DB85AA = {
+			isa = PBXGroup;
+			children = (
+				30B63B9F1E2BF92800DB85AA /* Parallel Lab1 */,
+				30B63B9E1E2BF92800DB85AA /* Products */,
+				30B63BA71E2BFC3800DB85AA /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		30B63B9E1E2BF92800DB85AA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				30B63B9D1E2BF92800DB85AA /* Parallel Lab1 */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		30B63B9F1E2BF92800DB85AA /* Parallel Lab1 */ = {
+			isa = PBXGroup;
+			children = (
+				30B63BB81E2C16E300DB85AA /* headers */,
+				30B63BB71E2C16BC00DB85AA /* sources */,
+			);
+			path = "Parallel Lab1";
+			sourceTree = "<group>";
+		};
+		30B63BA71E2BFC3800DB85AA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				306A09AE1E2CC574007A2F54 /* libtbb.dylib */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		30B63BB71E2C16BC00DB85AA /* sources */ = {
+			isa = PBXGroup;
+			children = (
+				30B63BA01E2BF92800DB85AA /* Main.cpp */,
+				30B63BB41E2C16B700DB85AA /* ApplicationArguments.cpp */,
+				30B63BBA1E2C428000DB85AA /* Pixmap.cpp */,
+				30B63BBC1E2C438200DB85AA /* Pixel.cpp */,
+			);
+			name = sources;
+			sourceTree = "<group>";
+		};
+		30B63BB81E2C16E300DB85AA /* headers */ = {
+			isa = PBXGroup;
+			children = (
+				30B63BB51E2C16B700DB85AA /* ApplicationArguments.hpp */,
+				30B63BB91E2C426D00DB85AA /* Pixmap.h */,
+				30B63BBD1E2C438200DB85AA /* Pixel.h */,
+				30B63BBF1E2C441400DB85AA /* LabUtils.h */,
+			);
+			name = headers;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		30B63B9C1E2BF92800DB85AA /* Parallel Lab1 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 30B63BA41E2BF92800DB85AA /* Build configuration list for PBXNativeTarget "Parallel Lab1" */;
+			buildPhases = (
+				30B63B991E2BF92800DB85AA /* Sources */,
+				30B63B9A1E2BF92800DB85AA /* Frameworks */,
+				30B63B9B1E2BF92800DB85AA /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Parallel Lab1";
+			productName = "Parallel Lab1";
+			productReference = 30B63B9D1E2BF92800DB85AA /* Parallel Lab1 */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		30B63B951E2BF92800DB85AA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				KnownAssetTags = (
+					New,
+				);
+				LastUpgradeCheck = 0820;
+				ORGANIZATIONNAME = "Aleksei Bazankov";
+				TargetAttributes = {
+					30B63B9C1E2BF92800DB85AA = {
+						CreatedOnToolsVersion = 8.2.1;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 30B63B981E2BF92800DB85AA /* Build configuration list for PBXProject "Parallel Lab1" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 30B63B941E2BF92800DB85AA;
+			productRefGroup = 30B63B9E1E2BF92800DB85AA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				30B63B9C1E2BF92800DB85AA /* Parallel Lab1 */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		30B63B991E2BF92800DB85AA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				30B63BBE1E2C438200DB85AA /* Pixel.cpp in Sources */,
+				30B63BBB1E2C428000DB85AA /* Pixmap.cpp in Sources */,
+				30B63BC01E2C441400DB85AA /* LabUtils.h in Sources */,
+				30B63BA11E2BF92800DB85AA /* Main.cpp in Sources */,
+				30B63BB61E2C16B700DB85AA /* ApplicationArguments.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		30B63BA21E2BF92800DB85AA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		30B63BA31E2BF92800DB85AA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		30B63BA51E2BF92800DB85AA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = "/Users/bazleks/Develop/Tools/intel-tbb/include";
+				LIBRARY_SEARCH_PATHS = "/Users/bazleks/Develop/Tools/intel-tbb/lib";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		30B63BA61E2BF92800DB85AA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = "/Users/bazleks/Develop/Tools/intel-tbb/include";
+				LIBRARY_SEARCH_PATHS = "/Users/bazleks/Develop/Tools/intel-tbb/lib";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		30B63B981E2BF92800DB85AA /* Build configuration list for PBXProject "Parallel Lab1" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30B63BA21E2BF92800DB85AA /* Debug */,
+				30B63BA31E2BF92800DB85AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		30B63BA41E2BF92800DB85AA /* Build configuration list for PBXNativeTarget "Parallel Lab1" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30B63BA51E2BF92800DB85AA /* Debug */,
+				30B63BA61E2BF92800DB85AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 30B63B951E2BF92800DB85AA /* Project object */;
+}
