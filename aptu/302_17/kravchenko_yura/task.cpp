@@ -95,7 +95,7 @@ int run_threads() {
     pthread_cond_init(&consume_signal, NULL);
     pthread_create(&producer, NULL, producer_routine, static_cast<void*>(&value));
     pthread_create(&consumer, NULL, consumer_routine, static_cast<void*>(&value));
-    pthread_create(&interruptor, NULL, consumer_interruptor_routine, static_cast<void*>(&value));
+    pthread_create(&interruptor, NULL, consumer_interruptor_routine, static_cast<void*>(&consumer));
     pthread_join(interruptor, NULL);
     pthread_join(producer, NULL);
     pthread_join(consumer, reinterpret_cast<void**>(&value));
