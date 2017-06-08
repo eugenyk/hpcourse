@@ -58,12 +58,16 @@ public class LockFreeListSet<T extends Comparable<T>> implements LockFreeSet<T> 
     }
 
     public boolean isEmpty() {
-        for (Node<T> node = head.next.getReference(); node != tail; node = node.next.getReference()) {
-            if (!node.next.isMarked()) {
+        while (true) {
+            Node<T> next = head.next.getReference();
+            if (next == tail) {
+                return true;
+            }
+            if (!next.next.isMarked()) {
                 return false;
             }
+            head.next.compareAndSet(next, next.next.getReference(), false, false);
         }
-        return true;
     }
 
     private PairNode<T> search(T value) {
