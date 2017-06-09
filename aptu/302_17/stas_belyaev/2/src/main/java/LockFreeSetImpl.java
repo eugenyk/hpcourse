@@ -25,7 +25,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
         do {
             pair = search(value);
-            if ((pair.snd != tail) && pair.snd.key.equals(value)) {
+            if (pair.snd != tail && pair.snd.key.equals(value)) {
                 return false;
             }
 
@@ -50,13 +50,12 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                 return false;
             sndNext = pair.snd.next.getReference();
 
-            if (pair.snd.next.attemptMark(sndNext, true)) {
+            if (pair.snd.next.compareAndSet(sndNext, sndNext, false, true)) {
                 break;
             }
         } while (true);
 
-        boolean ref = pair.fst.next.isMarked();
-        if (!pair.fst.next.compareAndSet(pair.snd, sndNext, ref, ref)) {
+        if (!pair.fst.next.compareAndSet(pair.snd, sndNext, false, false)) {
             search(value);
         }
         return true;
