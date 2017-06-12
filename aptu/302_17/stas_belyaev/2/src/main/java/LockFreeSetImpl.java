@@ -73,6 +73,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                 break;
             }
         } while (helper.next.isMarked() || helper.key == null || helper.key.compareTo(value) < 0);
+        
         return (helper != tail && helper.key.equals(value) && !helper.next.isMarked());
     }
 
@@ -82,28 +83,34 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     @Override
     public boolean isEmpty() {
         Node<T> helper = head;
+
         do {
             helper = helper.next.getReference();
             if (helper == tail) {
-                break;
+                return true;
             }
 
             if (!helper.next.isMarked()) {
                 return false;
+            } else {
+                if (!head.next.compareAndSet(helper, helper.next.getReference(), false, false)) {
+                    helper = head;
+                }
             }
-        } while (true);
+        } while (helper.next.isMarked() || helper.key == null);
+
         return true;
     }
 
     /**
-     * Finds a pair of adjacent nodes.
+     * Finds a pair of adjacent nodes. (l, r)
      *
      * @param value to search
      * @return pair
      */
     private NodePair<T> search(T value) {
         Node<T> fst = head;
-        Node<T> fstNext = null;
+        Node<T> fstNext = fst.next.getReference();
         Node<T> snd;
 
         do {
@@ -122,6 +129,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             } while (helper.next.isMarked() || helper.key == null || helper.key.compareTo(value) < 0);
             snd = helper;
 
+            // fst -> fstNext  == snd
             if (fstNext == snd) {
                 if (snd.next.isMarked()) {
                     continue;
@@ -130,6 +138,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                 }
             }
 
+            // removing nodes in between
             boolean ref = fst.next.isMarked();
             if (fst.next.compareAndSet(fstNext, snd, ref, ref)) {
                 if (!snd.next.isMarked()) {
