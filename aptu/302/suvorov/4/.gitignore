@@ -1,0 +1,12 @@
+CMakeCache.txt
+CMakeFiles
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.cmake
+*.sdf
+*.opensdf
+*.suo
+hw04.dir
+Debug
+Release
