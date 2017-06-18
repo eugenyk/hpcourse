@@ -2,7 +2,7 @@ CMakeCache.txt
 CMakeFiles
 *.sln
 *.vcxproj
-*.vcxproj.filters
+*.vcxproj.*
 *.cmake
 *.sdf
 *.opensdf
