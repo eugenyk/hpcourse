@@ -118,6 +118,7 @@ int run_threads() {
 
     int result = *static_cast<int*>(result_join);
     delete static_cast<int*>(result_join);
+    delete value;
 
     return result;
 }
