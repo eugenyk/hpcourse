@@ -4,6 +4,8 @@
 
 using namespace std;
 
+bool dbg = false; //show messages in console
+
 class Value
 {
 public:
@@ -52,6 +54,8 @@ void* producer_routine(void* arg)
       //update value
       ((Value*)arg)->update(*it);
       is_new_val = true;
+      if (dbg)
+        cout << "producer: next value = " << *it << endl;
       pthread_cond_signal(&upd);
       pthread_mutex_unlock(&m);
     }
@@ -61,6 +65,9 @@ void* producer_routine(void* arg)
   is_end = true;
   pthread_cond_signal(&upd);
   pthread_mutex_unlock(&m);
+
+  if (dbg)
+    cout << "producer: finished\n";
 }
 
 void* consumer_routine(void* arg)
@@ -72,6 +79,8 @@ void* consumer_routine(void* arg)
   // notify about start
   pthread_mutex_lock(&m);
   is_new_val = false;
+  if (dbg)
+    cout << "consumer: started\n";
   pthread_cond_signal(&upd);
   pthread_mutex_unlock(&m);
 
@@ -93,6 +102,9 @@ void* consumer_routine(void* arg)
       pthread_mutex_unlock(&m);
     }
 
+  if (dbg)
+    cout << "consumer: finished\n";
+
   // return pointer to result
   return (void*)result;
 }
@@ -103,11 +115,16 @@ void* consumer_interruptor_routine(void* arg)
   pthread_mutex_lock(&m);
   while (is_new_val)
     pthread_cond_wait(&upd, &m);
+  if (dbg)
+    cout << "interruptor: started\n";
   pthread_mutex_unlock(&m);
 
   // try interrupt consumer while producer is running
   while (!is_end)
     pthread_cancel(consumer);
+
+  if (dbg)
+    cout << "interruptor: finished\n";
 }
 
 int run_threads()
