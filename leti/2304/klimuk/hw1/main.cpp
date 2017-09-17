@@ -1,6 +1,6 @@
 #include <pthread.h>
 #include <iostream>
-#include <vector>
+#include <list>
 #include <sstream>
 
 class Value {
@@ -26,8 +26,7 @@ pthread_cond_t can_produce = PTHREAD_COND_INITIALIZER;
 pthread_cond_t consumer_is_started = PTHREAD_COND_INITIALIZER;
 
 //For disable spurious wakeups
-bool b_can_consume = false;
-bool b_can_produce = false;
+bool b_can_produce = true;
 bool b_consumer_is_started = false;
 
 pthread_t t_producer;
@@ -54,7 +53,6 @@ void *producer_routine(void *arg) {
 	pthread_mutex_lock(&m_mutex);
 	pthread_cleanup_push(clean, NULL)
 
-	//std::cout << "Producer: waiting for consumer to start..." << std::endl;
 	while (!b_consumer_is_started)
 		pthread_cond_wait(&consumer_is_started, &m_mutex);
 
@@ -63,20 +61,22 @@ void *producer_routine(void *arg) {
 
 	//Init start values
 	Value *value = reinterpret_cast<Value *>(arg);
-	
-	std::vector<int> in_values;
-	int input;
+	std::list<int> in_values;
+	//temp variables for reading
+	{
+		int input;
 
-	//Read input	
-	std::string line;
-	getline(std::cin, line);
-	std::istringstream is(line);
+		//Read input	
+		std::string line;
+		getline(std::cin, line);
+		std::istringstream is(line);
 
-	//transform string to int array
-	while (is >> input) {
-		in_values.emplace_back(input);
+		//transform string to int list
+		while (is >> input) {
+			in_values.emplace_back(input);
+		}
 	}
-
+	
 	//loop through each value and update the value, notify consumer, wait for consumer to process
 	for (auto next_int : in_values) {
 		pthread_mutex_lock(&m_mutex);
@@ -85,12 +85,9 @@ void *producer_routine(void *arg) {
 
 		value->update(next_int);
 
-		//std::cout << "Producer: send update signal..." << std::endl;
-		b_can_consume = true;
 		b_can_produce = false;
 		pthread_cond_signal(&can_consume);
 		
-		//std::cout << "Producer: waiting for consumer to process..." << std::endl;
 		while(!b_can_produce)
 			pthread_cond_wait(&can_produce, &m_mutex);
 
@@ -98,22 +95,21 @@ void *producer_routine(void *arg) {
 		pthread_mutex_unlock(&m_mutex);
 	}
 	
-	//std::cout << "Producer: finish..." << std::endl;
 	producer_finish = true;
+	b_can_produce = false;
 	pthread_barrier_wait(&prod_inter_barrier);
-	b_can_consume = true;
 	pthread_cond_signal(&can_consume);
 
 	return nullptr;
 }
 
 void *consumer_routine(void *arg) {
+	//Disable cancelling
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	// notify about start
 	pthread_mutex_lock(&m_mutex);
 	pthread_cleanup_push(clean, NULL);
 
-	//std::cout << "Consumer: send signal about start..." << std::endl;
 	b_consumer_is_started = true;
 	pthread_cond_broadcast(&consumer_is_started);
 
@@ -131,14 +127,11 @@ void *consumer_routine(void *arg) {
 		pthread_mutex_lock(&m_mutex);
 		pthread_cleanup_push(consumer_sum_clean, (void*) sum);
 		
-		//std::cout << "Consumer: waiting for producer to update..." << std::endl;
-		while (!b_can_consume)
+		while (b_can_produce)
 			pthread_cond_wait(&can_consume, &m_mutex);
 
 		*sum += value->get();
 
-		//std::cout << "Consumer: send signal about end process..." << std::endl;
-		b_can_consume = false;
 		b_can_produce = true;
 		pthread_cond_signal(&can_produce);
 
@@ -148,8 +141,6 @@ void *consumer_routine(void *arg) {
 		pthread_cleanup_pop(0);
 		pthread_mutex_unlock(&m_mutex);	
 	}
-
-	//std::cout << "Consumer: finish..." << std::endl;
 	// return pointer to result
 	return reinterpret_cast<void *>(sum);
 }
@@ -159,7 +150,6 @@ void *consumer_interruptor_routine(void *arg) {
 	pthread_mutex_lock(&m_mutex);
 	pthread_cleanup_push(clean, NULL)
 
-	//std::cout << "Interruptor: waiting for consumer to start..." << std::endl;
 	while(!b_consumer_is_started)
 		pthread_cond_wait(&consumer_is_started, &m_mutex);
 	
@@ -170,7 +160,6 @@ void *consumer_interruptor_routine(void *arg) {
 	{	
 		pthread_barrier_wait(&prod_inter_barrier);
 		if (!producer_finish) {
-			//std::cout << "Interruptor: try to interrupt while produce..." << std::endl;
 			pthread_cancel(t_consumer);
 		}
 	}
@@ -203,6 +192,5 @@ int run_threads() {
 
 int main() {
 	std::cout << run_threads() << std::endl;
-	//system("pause");
 	return 0;
 }
