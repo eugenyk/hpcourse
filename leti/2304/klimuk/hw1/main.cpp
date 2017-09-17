@@ -33,9 +33,7 @@ pthread_t t_producer;
 pthread_t t_consumer;
 pthread_t t_interruptor;
 
-pthread_barrier_t prod_inter_barrier;
 bool producer_finish = false;
-
 
 void clean(void* arg)
 {
@@ -49,55 +47,52 @@ void consumer_sum_clean(void *arg)
 }
 
 void *producer_routine(void *arg) {
-	//Wait for consumer to start
-	pthread_mutex_lock(&m_mutex);
-	pthread_cleanup_push(clean, NULL)
-
-	while (!b_consumer_is_started)
-		pthread_cond_wait(&consumer_is_started, &m_mutex);
-
-	pthread_cleanup_pop(0)
-	pthread_mutex_unlock(&m_mutex);
-
 	//Init start values
 	Value *value = reinterpret_cast<Value *>(arg);
 	std::list<int> in_values;
 	//temp variables for reading
-	{
-		int input;
+	int input;
 
-		//Read input	
-		std::string line;
-		getline(std::cin, line);
-		std::istringstream is(line);
+	//Read input	
+	std::string line;
+	getline(std::cin, line);
+	std::istringstream is(line);
 
-		//transform string to int list
-		while (is >> input) {
-			in_values.emplace_back(input);
-		}
+	//transform string to int list
+	while (is >> input) {
+		in_values.emplace_back(input);
 	}
+	
+	//Wait for consumer to start
+	pthread_mutex_lock(&m_mutex);
+	pthread_cleanup_push(clean, NULL);
+
+	while (!b_consumer_is_started)
+		pthread_cond_wait(&consumer_is_started, &m_mutex);
+
+	pthread_cleanup_pop(0);
+	pthread_mutex_unlock(&m_mutex);
+	
 	
 	//loop through each value and update the value, notify consumer, wait for consumer to process
 	for (auto next_int : in_values) {
 		pthread_mutex_lock(&m_mutex);
-		pthread_cleanup_push(clean, NULL)
-		pthread_barrier_wait(&prod_inter_barrier);
+		pthread_cleanup_push(clean, NULL);
 
 		value->update(next_int);
-
+		
 		b_can_produce = false;
 		pthread_cond_signal(&can_consume);
 		
 		while(!b_can_produce)
 			pthread_cond_wait(&can_produce, &m_mutex);
-
-		pthread_cleanup_pop(0)
+		
+		pthread_cleanup_pop(0);
 		pthread_mutex_unlock(&m_mutex);
 	}
 	
 	producer_finish = true;
 	b_can_produce = false;
-	pthread_barrier_wait(&prod_inter_barrier);
 	pthread_cond_signal(&can_consume);
 
 	return nullptr;
@@ -106,22 +101,16 @@ void *producer_routine(void *arg) {
 void *consumer_routine(void *arg) {
 	//Disable cancelling
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	// notify about start
-	pthread_mutex_lock(&m_mutex);
-	pthread_cleanup_push(clean, NULL);
-
-	b_consumer_is_started = true;
-	pthread_cond_broadcast(&consumer_is_started);
-
-	pthread_cleanup_pop(0);
-	pthread_mutex_unlock(&m_mutex);
 
 	// allocate value for result
 	int *sum = new int;
 	*sum = 0;
-
 	// for every update issued by producer, read the value and add to sum
 	Value *value = reinterpret_cast<Value *>(arg);
+	// notify about start
+	b_consumer_is_started = true;
+	pthread_cond_broadcast(&consumer_is_started);
+
 	while (!producer_finish)
 	{
 		pthread_mutex_lock(&m_mutex);
@@ -129,11 +118,11 @@ void *consumer_routine(void *arg) {
 		
 		while (b_can_produce)
 			pthread_cond_wait(&can_consume, &m_mutex);
-
+		
 		*sum += value->get();
 
 		b_can_produce = true;
-		pthread_cond_signal(&can_produce);
+		pthread_cond_broadcast(&can_produce);
 
 		if (producer_finish)
 			*sum -= value->get();
@@ -148,7 +137,7 @@ void *consumer_routine(void *arg) {
 void *consumer_interruptor_routine(void *arg) {
 	// wait for consumer to start	
 	pthread_mutex_lock(&m_mutex);
-	pthread_cleanup_push(clean, NULL)
+	pthread_cleanup_push(clean, NULL);
 
 	while(!b_consumer_is_started)
 		pthread_cond_wait(&consumer_is_started, &m_mutex);
@@ -157,11 +146,18 @@ void *consumer_interruptor_routine(void *arg) {
 	pthread_mutex_unlock(&m_mutex);
 	// interrupt consumer while producer is running
 	while (!producer_finish)
-	{	
-		pthread_barrier_wait(&prod_inter_barrier);
+	{		
+		pthread_mutex_lock(&m_mutex);
+		pthread_cleanup_push(clean, NULL);
+
+		while(!b_can_produce)
+			pthread_cond_wait(&can_produce, &m_mutex);
+		
 		if (!producer_finish) {
 			pthread_cancel(t_consumer);
 		}
+		pthread_cleanup_pop(0);
+		pthread_mutex_unlock(&m_mutex);
 	}
 
 	return nullptr;
@@ -171,7 +167,6 @@ int run_threads() {
 	Value *value = new Value();
 	int *res;
 
-	pthread_barrier_init(&prod_inter_barrier, nullptr, 2);
 	// start 3 threads and wait until they're done
 	pthread_create(&t_producer, nullptr, &producer_routine, value);
 	pthread_create(&t_interruptor, nullptr, &consumer_interruptor_routine, nullptr);
