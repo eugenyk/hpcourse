@@ -34,7 +34,9 @@ pthread_t t_producer;
 pthread_t t_consumer;
 pthread_t t_interruptor;
 
+pthread_barrier_t prod_inter_barrier;
 bool producer_finish = false;
+
 
 void clean(void* arg)
 {
@@ -79,6 +81,7 @@ void *producer_routine(void *arg) {
 	for (auto next_int : in_values) {
 		pthread_mutex_lock(&m_mutex);
 		pthread_cleanup_push(clean, NULL)
+		pthread_barrier_wait(&prod_inter_barrier);
 
 		value->update(next_int);
 
@@ -97,6 +100,7 @@ void *producer_routine(void *arg) {
 	
 	//std::cout << "Producer: finish..." << std::endl;
 	producer_finish = true;
+	pthread_barrier_wait(&prod_inter_barrier);
 	b_can_consume = true;
 	pthread_cond_signal(&can_consume);
 
@@ -151,6 +155,25 @@ void *consumer_routine(void *arg) {
 }
 
 void *consumer_interruptor_routine(void *arg) {
+	// wait for consumer to start	
+	pthread_mutex_lock(&m_mutex);
+	pthread_cleanup_push(clean, NULL)
+
+	//std::cout << "Interruptor: waiting for consumer to start..." << std::endl;
+	while(!b_consumer_is_started)
+		pthread_cond_wait(&consumer_is_started, &m_mutex);
+	
+	pthread_cleanup_pop(0);
+	pthread_mutex_unlock(&m_mutex);
+	// interrupt consumer while producer is running
+	while (!producer_finish)
+	{	
+		pthread_barrier_wait(&prod_inter_barrier);
+		if (!producer_finish) {
+			//std::cout << "Interruptor: try to interrupt while produce..." << std::endl;
+			pthread_cancel(t_consumer);
+		}
+	}
 
 	return nullptr;
 }
@@ -159,6 +182,7 @@ int run_threads() {
 	Value *value = new Value();
 	int *res;
 
+	pthread_barrier_init(&prod_inter_barrier, nullptr, 2);
 	// start 3 threads and wait until they're done
 	pthread_create(&t_producer, nullptr, &producer_routine, value);
 	pthread_create(&t_interruptor, nullptr, &consumer_interruptor_routine, nullptr);
@@ -169,9 +193,9 @@ int run_threads() {
 	pthread_join(t_interruptor, nullptr);
 	pthread_join(t_consumer, (void **)&res);
 
-	delete value;
-	
 	int result = *res;
+
+	delete value;
 	delete res;
 	
 	return result;
@@ -179,5 +203,6 @@ int run_threads() {
 
 int main() {
 	std::cout << run_threads() << std::endl;
+	//system("pause");
 	return 0;
 }
