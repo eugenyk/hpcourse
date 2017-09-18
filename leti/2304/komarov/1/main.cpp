@@ -1,118 +1,126 @@
-#include <QCoreApplication>
 #include <iostream>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "value.h"
 #include <unistd.h>
-#include <semaphore.h>
-
+#include <sstream>
+#include <vector>
 using namespace std;
 
-Value val = Value();
-int int_msg[] ={0,1,2,3,4,5,6,7,8,9};
-
-pthread_t producerThread;
-pthread_t consumerThread;
-pthread_t interruptorThread;
-
 pthread_mutex_t myMutex;
-sem_t producerSemaphore;
-sem_t interruptorSemaphore;
+pthread_cond_t cond;
+volatile bool isConsumerStarted = false;
 
-bool isReadyToCompute = false;
-bool isRun = false;
+volatile bool isReadyToCompute = false;
+volatile bool isRun = false;
+volatile bool isReadyToClose= false;
 
 void* producer_routine(void* arg) {
-    cout << "producer_routine start\n";
+
   // Wait for consumer to start
-    sem_wait(&producerSemaphore);
-    cout << "consumer is started\n";
-  // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
-    auto dataForUpdate =  (int*) arg;
-    int counter = 0;
-    while(isRun){
+    pthread_mutex_lock(&myMutex);
+    while (!isConsumerStarted)
+        pthread_cond_wait(&cond, &myMutex);
+    pthread_mutex_unlock(&myMutex);
+    //cout << "producer_routine start\n";
+    Value *value = reinterpret_cast<Value *>(arg);
+    std::vector<int> inputValues;
+
+
+     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
+    std::string line;
+    getline(std::cin, line);
+    std::istringstream is(line);
+    int input;
+    //transform string to int list
+    while (is >> input) {
+        inputValues.emplace_back(input);
+    }
+
+    unsigned counter = 0;
+    while(isRun && !isReadyToClose){
         if(!isReadyToCompute){
-            pthread_mutex_lock(&myMutex);
-            isReadyToCompute = true;
-            if(counter == 10)
-                isRun=false;
-            val.update(dataForUpdate[counter]);
+            value->update(inputValues[counter]);
             counter++;
-            pthread_mutex_unlock(&myMutex);
+            if(counter >= inputValues.size())
+                isReadyToClose = true;
+            isReadyToCompute = true;
         }
     }
     pthread_exit(NULL);
 }
 
 void* consumer_routine(void* arg) {
-  // notify about start
-    cout << "consumer_routine start\n";
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    Value *value = reinterpret_cast<Value *>(arg);
 
-    int s;
-    s = pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-    if (s != 0)
-        cout <<  "pthread_setcancelstate ERROR";
     isRun = true;
-    sem_post(&producerSemaphore);
-    sem_post(&interruptorSemaphore);
+    // notify about start
+    isConsumerStarted = true;
+    pthread_cond_broadcast(&cond);
+    //cout << "consumer_routine start\n";
+
   // allocate value for result
     int result = 0;
   // for every update issued by producer, read the value and add to sum
 
     while(isRun){
         if(isReadyToCompute){
-            sleep(2);
-            int x = val.get();
+            int x = value->get();
             result += x;
-            cout << "val = " << x << "  res = " << result << endl;
+            //cout << "val = " << x << "  res = " << result << endl;
+
+            if(isReadyToClose)
+                isRun = false;
+
             isReadyToCompute = false;
         }
+
     }
-    s = pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    if (s != 0)
-        cout <<  "pthread_setcancelstate ERROR";
-    pthread_exit((void*)result);
-
     // return pointer to result
-
+    pthread_exit((void*)result);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 void* consumer_interruptor_routine(void* arg) {
-//  // wait for consumer to start
-    sem_wait(&interruptorSemaphore);
-    cout << "consumer_interruptor_routine start\n";
-        while(isRun){
-            // interrupt consumer while producer is running
-            while(isRun && isReadyToCompute){
-                pthread_cancel(consumerThread);
-            }
-        }
-
+    auto consumerPointer = (pthread_t*)arg;
+  // wait for consumer to start
+    pthread_mutex_lock(&myMutex);
+    while(!isConsumerStarted)
+        pthread_cond_wait(&cond, &myMutex);
+    pthread_mutex_unlock(&myMutex);
+    //cout << "consumer_interruptor_routine start\n";
+    while(isRun){
+        // interrupt consumer while producer is running
+        pthread_cancel(*consumerPointer);
+    }
     pthread_exit(NULL);
 }
 
 int run_threads() {
+    pthread_t producerThread;
+    pthread_t consumerThread;
+    pthread_t interruptorThread;
+    Value value;
   // start 3 threads and wait until they're done
-  // return sum of update values seen by consumer
-    sem_init(&producerSemaphore, 0, 0);
-    sem_init(&interruptorSemaphore, 0, 0);
+
     int ret_join;
     pthread_mutex_init(&myMutex,0);
-    pthread_create(&producerThread, NULL, &producer_routine, (void*) int_msg);
-    pthread_create(&consumerThread, NULL, &consumer_routine, NULL);
-    pthread_create(&interruptorThread, NULL, &consumer_interruptor_routine, NULL);
+    pthread_cond_init(&cond,NULL);
+    pthread_create(&producerThread, NULL, &producer_routine, &value);
+    pthread_create(&consumerThread, NULL, &consumer_routine, &value);
+    pthread_create(&interruptorThread, NULL, &consumer_interruptor_routine, &consumerThread);
     pthread_join(producerThread, NULL);
     pthread_join(consumerThread, (void **)&ret_join);
     pthread_join(interruptorThread, NULL);
     pthread_mutex_destroy(&myMutex);
-    cout << "RESULT  " << ret_join << endl;
-    sem_destroy(&producerSemaphore);
-    sem_destroy(&interruptorSemaphore);
+    pthread_cond_destroy(&cond);
+    // return sum of update values seen by consumer
     return ret_join;
 }
 
 int main() {
-    cout <<" RESULT = " << run_threads() << std::endl;
+    cout << run_threads() << std::endl;
     return 0;
 }
