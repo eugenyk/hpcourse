@@ -70,4 +70,8 @@ Thumbs.db
 *.dll
 *.exe
 
+Makefile
+
+# executable for first lab's project.;
+posix
 
