@@ -231,7 +231,9 @@ int run_threads() {
 }
 
 int main() {
-    freopen("readme.txt", "r", stdin);
+    FILE *f = freopen("readme.txt", "r", stdin);
+    (void) f; // avoiding [-Wunused-result] warning.
+
     std::cout << run_threads() << std::endl;
     return 0;
 }
