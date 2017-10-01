@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include <pthread.h>
 
 
@@ -34,10 +35,17 @@ void* producer_routine(void* arg) {
     }
     pthread_mutex_unlock(&mutex_start);
 
-    int data;
-    while (std::cin >> data) {
+    std::vector<int> data;
+    {
+        int number;
+        while (std::cin >> number) {
+            data.push_back(number);
+        }
+    }
+
+    for (uint32_t i = 0; i < data.size(); i++) {
         pthread_mutex_lock(&mutex_empty);
-        value->update(data);
+        value->update(data[i]);
 
         is_empty = false;
         pthread_cond_signal(&cond_empty);

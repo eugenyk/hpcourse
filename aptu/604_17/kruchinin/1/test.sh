@@ -6,10 +6,10 @@ NC='\033[0m'
 
 fail=false
 for (( i = 0; i < 1000; i++ )); do
-    result=`./main <<< "10 20 30 40"`
-    if [[ $result != 100 ]]; then
+    result=`./main <<< "10 20 30 40 50 60 70 80"`
+    if [[ $result != 360 ]]; then
         echo -e "${RED}TEST FAILED${NC}"
-        echo "expected 100, found ${result}"
+        echo "expected 360, found ${result}"
         fail=true
         break
     fi
