@@ -1,3 +1,5 @@
+package ru.spbau.mit;
+
 /**
  * Lock-Free множество.
  * @param <T> Тип ключей
