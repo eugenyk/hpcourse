@@ -1,4 +1,4 @@
-group 'ru.spbau.yaveyn.java-2017'
+group 'ru.spbau.yaveyn.lockfree'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
