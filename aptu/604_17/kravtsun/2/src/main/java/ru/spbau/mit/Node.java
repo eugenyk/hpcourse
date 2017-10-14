@@ -5,32 +5,32 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 class Node<U extends Comparable<U>> {
     private final U value;
     private final AtomicMarkableReference<Node<U>> next;
-    private LockFreeSetImpl.NodeType nodeType;
+    private NodeType nodeType;
 
     public Node(U value, Node<U> next) {
         this.value = value;
-        this.next = new AtomicMarkableReference<Node<U>>(next, false);
-        this.nodeType = LockFreeSetImpl.NodeType.Usual;
+        this.next = new AtomicMarkableReference<>(next, false);
+        this.nodeType = NodeType.Usual;
     }
 
     public static <T extends Comparable<T>> Node<T> tailNode() {
         Node<T> node = new Node<>(null, null);
-        node.nodeType = LockFreeSetImpl.NodeType.Tail;
+        node.nodeType = NodeType.Tail;
         return node;
     }
 
     public static <T extends Comparable<T>> Node<T> headNode(Node<T> tailNode) {
         Node<T> node = new Node<>(null, tailNode);
-        node.nodeType = LockFreeSetImpl.NodeType.Head;
+        node.nodeType = NodeType.Head;
         return node;
     }
 
     public boolean isHead() {
-        return nodeType == LockFreeSetImpl.NodeType.Head;
+        return nodeType == NodeType.Head;
     }
 
     public boolean isTail() {
-        return nodeType == LockFreeSetImpl.NodeType.Tail;
+        return nodeType == NodeType.Tail;
     }
 
     // this.value <= value.
@@ -50,5 +50,11 @@ class Node<U extends Comparable<U>> {
 
     public U getValue() {
         return value;
+    }
+
+    private enum NodeType {
+        Usual,
+        Head,
+        Tail
     }
 }

@@ -1,13 +1,43 @@
 package ru.spbau.mit;
 
-public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
+import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicMarkableReference;
+
+public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>, Iterable<T> {
     private final Node<T> tail = Node.tailNode();
     private final Node<T> head = Node.headNode(tail);
+
+    private static <T extends Comparable<T>> NodeWindow<T> find(T value, Node<T> startNode) {
+        retry: while (true) {
+            NodeWindow<T> nodeWindow = new NodeWindow<>(startNode, startNode.getNext().getReference());
+
+            while (true) {
+                Node<T> nextNode = nodeWindow.getCurrent().getNext().getReference();
+                boolean currentMarked = nodeWindow.getCurrent().getNext().isMarked();
+                if (currentMarked) { // logical removal.
+                    AtomicMarkableReference<Node<T>> previousNext = nodeWindow.getPrevious().getNext();
+                    if (!previousNext.compareAndSet(nodeWindow.getCurrent(), nextNode, false, false)) {
+                        // first case: previousNode was removed before CAS, should review list from start.
+                        // second case: somebody already removed currentNode.
+                        continue retry;
+                    }
+                    // we succeeded in removing currentNode.
+                    nodeWindow.setCurrent(nextNode);
+                } else {
+                    if (nodeWindow.getCurrent().compareToValue(value) >= 0) {
+                        return nodeWindow;
+                    }
+                    nodeWindow.setPrevious(nodeWindow.getCurrent());
+                    nodeWindow.setCurrent(nextNode);
+                }
+            }
+        }
+    }
 
     @Override
     public boolean add(T value) {
         while (true) {
-            NodeWindow nodeWindow = find(value);
+            NodeWindow<T> nodeWindow = find(value);
             Node<T> previousNode = nodeWindow.getPrevious();
             Node<T> currentNode = nodeWindow.getCurrent();
             if (currentNode.getValue() != null && currentNode.getValue().equals(value)) {
@@ -23,7 +53,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     @Override
     public boolean remove(T value) {
         while (true) {
-            NodeWindow nodeWindow = find(value);
+            NodeWindow<T> nodeWindow = find(value);
             Node<T> previousNode = nodeWindow.getPrevious();
             Node<T> currentNode = nodeWindow.getCurrent();
             if (currentNode.compareToValue(value) != 0) {
@@ -40,7 +70,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean contains(T value) {
-        NodeWindow nodeWindow = find(value);
+        NodeWindow<T> nodeWindow = find(value);
         Node<T> currentNode = nodeWindow.getCurrent();
         return currentNode.compareToValue(value) == 0;
     }
@@ -50,54 +80,29 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         return head.getNext().getReference() == tail;
     }
 
-    private NodeWindow find(T value) {
-        retry: while (true) {
-            Node<T> previousNode = head;
-            Node<T> currentNode = previousNode.getNext().getReference();
-            while (true) {
-                Node<T> nextNode = currentNode.getNext().getReference();
-                boolean currentMarked = currentNode.getNext().isMarked();
-                if (currentMarked) { // logical removal.
-                    if (!previousNode.getNext().compareAndSet(currentNode, nextNode, false, false)) {
-                        // first case: previousNode was removed before CAS, should review list from start.
-                        // second case: somebody already removed currentNode.
-                        continue retry;
-                    }
-                    // we succeded in removing currentNode.
-                    currentNode = nextNode;
-                } else {
-                    if (currentNode.compareToValue(value) >= 0) {
-                        return new NodeWindow(previousNode, currentNode);
-                    }
-                    previousNode = currentNode;
-                    currentNode = nextNode;
-                }
+    private NodeWindow<T> find(T value) {
+        return find(value, head);
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        // not thread-safe iterator.
+        return new Iterator<T>() {
+            private final NodeWindow<T> nodeWindow = new NodeWindow<>(head, head.getNext().getReference());
+
+            @Override
+            public boolean hasNext() {
+                return !nodeWindow.getCurrent().isTail();
             }
-        }
+
+            @Override
+            public T next() {
+                T value = nodeWindow.getCurrent().getValue();
+                nodeWindow.setPrevious(nodeWindow.getCurrent());
+                Node<T> nextNode = nodeWindow.getCurrent().getNext().getReference();
+                nodeWindow.setCurrent(nextNode);
+                return value;
+            }
+        };
     }
-
-    enum NodeType {
-        Usual,
-        Head,
-        Tail
-    }
-
-    private class NodeWindow {
-        private final Node<T> previous;
-        private final Node<T> current;
-
-        private NodeWindow(Node<T> previous, Node<T> current) {
-            this.previous = previous;
-            this.current = current;
-        }
-
-        Node<T> getPrevious() {
-            return previous;
-        }
-
-        Node<T> getCurrent() {
-            return current;
-        }
-    }
-
 }

@@ -1,6 +1,5 @@
 package ru.spbau.mit;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -8,7 +7,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class LockFreeSetImplTest {
-    LockFreeSet<Integer> set;
+    private LockFreeSet<Integer> set;
 
     @Before
     public void setUp() {
@@ -56,7 +55,7 @@ public class LockFreeSetImplTest {
         testLimit(Integer.MAX_VALUE);
     }
 
-    public void testLimit(Integer limitValue) {
+    private void testLimit(Integer limitValue) {
         assertFalse(set.contains(limitValue));
 
         assertTrue(set.add(limitValue));
