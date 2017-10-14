@@ -16,13 +16,12 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
         }
         while (true) {
             NodeWindow<T> nodeWindow = find(value);
-            Node<T> previousNode = nodeWindow.getPrevious();
-            Node<T> currentNode = nodeWindow.getCurrent();
-            if (currentNode.getValue() != null && currentNode.getValue().equals(value)) {
+            if (nodeWindow.getCurrent().getValue() != null && nodeWindow.getCurrent().getValue().equals(value)) {
                 return false;
             }
-            Node<T> newNode = new Node<>(value, currentNode);
-            if (previousNode.getNext().compareAndSet(currentNode, newNode, false, false)) {
+            Node<T> newNode = new Node<>(value, nodeWindow.getCurrent());
+            AtomicMarkableReference<Node<T>> previousNext = nodeWindow.getPrevious().getNext();
+            if (previousNext.compareAndSet(nodeWindow.getCurrent(), newNode, false, false)) {
                 return true;
             }
         }
@@ -35,15 +34,14 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
         }
         while (true) {
             NodeWindow<T> nodeWindow = find(value);
-            Node<T> previousNode = nodeWindow.getPrevious();
-            Node<T> currentNode = nodeWindow.getCurrent();
-            if (currentNode.compareToValue(value) != 0) {
+            if (nodeWindow.getCurrent().compareToValue(value) != 0) {
                 return false;
             }
-            Node<T> nextNode = currentNode.getNext().getReference();
-            if (currentNode.getNext().compareAndSet(nextNode, nextNode, false, true)) {
+            Node<T> nextNode = nodeWindow.getCurrent().getNext().getReference();
+            if (nodeWindow.getCurrent().getNext().compareAndSet(nextNode, nextNode, false, true)) {
                 // optimization, unnecessary.
-                previousNode.getNext().compareAndSet(currentNode, nextNode, false, false);
+                AtomicMarkableReference<Node<T>> previousNext = nodeWindow.getPrevious().getNext();
+                previousNext.compareAndSet(nodeWindow.getCurrent(), nextNode, false, false);
                 return true;
             }
         }
@@ -55,8 +53,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
             return hasNull.get();
         }
         NodeWindow<T> nodeWindow = find(value);
-        Node<T> currentNode = nodeWindow.getCurrent();
-        return currentNode.compareToValue(value) == 0;
+        return nodeWindow.getCurrent().compareToValue(value) == 0;
     }
 
     @Override
@@ -71,7 +68,6 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
 
         retry: while (true) {
             NodeWindow<T> nodeWindow = new NodeWindow<>(startNode, startNode.getNext().getReference());
-
             while (true) {
                 Node<T> nextNode = nodeWindow.getCurrent().getNext().getReference();
                 boolean currentMarked = nodeWindow.getCurrent().getNext().isMarked();
