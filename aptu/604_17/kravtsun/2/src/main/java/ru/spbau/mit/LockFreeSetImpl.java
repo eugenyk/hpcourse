@@ -1,13 +1,74 @@
 package ru.spbau.mit;
 
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>, Iterable<T> {
     private final Node<T> tail = Node.tailNode();
     private final Node<T> head = Node.headNode(tail);
+    private final AtomicBoolean hasNull = new AtomicBoolean(false);
+
+    @Override
+    public boolean add(T value) {
+        if (value == null) {
+            return hasNull.compareAndSet(false,true);
+        }
+        while (true) {
+            NodeWindow<T> nodeWindow = find(value);
+            Node<T> previousNode = nodeWindow.getPrevious();
+            Node<T> currentNode = nodeWindow.getCurrent();
+            if (currentNode.getValue() != null && currentNode.getValue().equals(value)) {
+                return false;
+            }
+            Node<T> newNode = new Node<>(value, currentNode);
+            if (previousNode.getNext().compareAndSet(currentNode, newNode, false, false)) {
+                return true;
+            }
+        }
+    }
+
+    @Override
+    public boolean remove(T value) {
+        if (value == null) {
+            return hasNull.compareAndSet(true, false);
+        }
+        while (true) {
+            NodeWindow<T> nodeWindow = find(value);
+            Node<T> previousNode = nodeWindow.getPrevious();
+            Node<T> currentNode = nodeWindow.getCurrent();
+            if (currentNode.compareToValue(value) != 0) {
+                return false;
+            }
+            Node<T> nextNode = currentNode.getNext().getReference();
+            if (currentNode.getNext().compareAndSet(nextNode, nextNode, false, true)) {
+                // optimization, unnecessary.
+                previousNode.getNext().compareAndSet(currentNode, nextNode, false, false);
+                return true;
+            }
+        }
+    }
+
+    @Override
+    public boolean contains(T value) {
+        if (value == null) {
+            return hasNull.get();
+        }
+        NodeWindow<T> nodeWindow = find(value);
+        Node<T> currentNode = nodeWindow.getCurrent();
+        return currentNode.compareToValue(value) == 0;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return head.getNext().getReference() == tail && !hasNull.get();
+    }
 
     private static <T extends Comparable<T>> NodeWindow<T> find(T value, Node<T> startNode) {
+        if (value == null) {
+            throw new RuntimeException("Null is not allowed");
+        }
+
         retry: while (true) {
             NodeWindow<T> nodeWindow = new NodeWindow<>(startNode, startNode.getNext().getReference());
 
@@ -32,52 +93,6 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
                 }
             }
         }
-    }
-
-    @Override
-    public boolean add(T value) {
-        while (true) {
-            NodeWindow<T> nodeWindow = find(value);
-            Node<T> previousNode = nodeWindow.getPrevious();
-            Node<T> currentNode = nodeWindow.getCurrent();
-            if (currentNode.getValue() != null && currentNode.getValue().equals(value)) {
-                return false;
-            }
-            Node<T> newNode = new Node<>(value, currentNode);
-            if (previousNode.getNext().compareAndSet(currentNode, newNode, false, false)) {
-                return true;
-            }
-        }
-    }
-
-    @Override
-    public boolean remove(T value) {
-        while (true) {
-            NodeWindow<T> nodeWindow = find(value);
-            Node<T> previousNode = nodeWindow.getPrevious();
-            Node<T> currentNode = nodeWindow.getCurrent();
-            if (currentNode.compareToValue(value) != 0) {
-                return false;
-            }
-            Node<T> nextNode = currentNode.getNext().getReference();
-            if (currentNode.getNext().compareAndSet(nextNode, nextNode, false, true)) {
-                // optimization, unnecessary.
-                previousNode.getNext().compareAndSet(currentNode, nextNode, false, false);
-                return true;
-            }
-        }
-    }
-
-    @Override
-    public boolean contains(T value) {
-        NodeWindow<T> nodeWindow = find(value);
-        Node<T> currentNode = nodeWindow.getCurrent();
-        return currentNode.compareToValue(value) == 0;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return head.getNext().getReference() == tail;
     }
 
     private NodeWindow<T> find(T value) {

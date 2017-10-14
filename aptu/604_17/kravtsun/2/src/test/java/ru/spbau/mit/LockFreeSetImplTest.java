@@ -75,5 +75,16 @@ public class LockFreeSetImplTest {
         assertFalse(set.contains(limitValue));
     }
 
-    // test null value.
+    @Test
+    public void nullTest() {
+        assertFalse(set.contains(null));
+
+        assertTrue(set.add(null));
+        assertFalse(set.add(null));
+        assertTrue(set.contains(null));
+
+        assertTrue(set.remove(null));
+        assertFalse(set.remove(null));
+        assertFalse(set.contains(null));
+    }
 }
