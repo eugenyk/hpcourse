@@ -33,7 +33,6 @@ void* producer_routine(void* arg) {
   // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     Value* value = (Value*) arg;
 
-    cout << "Producer_routine: start()" << endl;
 
     string str;
     std::getline(std::cin, str);
@@ -47,25 +46,21 @@ void* producer_routine(void* arg) {
         pthread_mutex_lock(&mutex);
             value->update(atoi(pch));
             pthread_cond_signal(&condition_next_sum);
-            cout << "Producer_routine: condition_next = " << atoi(pch) << endl;
             pthread_cond_wait(&condition_next_update, &mutex);
             pch = strtok (NULL, " ");
         pthread_mutex_unlock(&mutex);
     }
 
     pthread_mutex_lock(&mutex);
-        cout << "Producer_routine: update NULL" << endl;
         value->update(NULL);
         pthread_cond_signal(&condition_next_sum);
     pthread_mutex_unlock(&mutex);
 
-    cout << "Producer_routine: end()" << endl;
     return 0;
 }
 
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-    cout << "Consumer_routine: start()" << endl;
     pthread_cond_broadcast(&condition_start_consumer);
 
     Value* value = (Value*) arg;
@@ -80,24 +75,19 @@ void* consumer_routine(void* arg) {
     while (true) {
         pthread_mutex_lock(&mutex);
             pthread_cond_wait(&condition_next_sum, &mutex);
-            cout << "Consumer_routine: while start()" << endl;
             if (value->get() == NULL) {
                 pthread_mutex_unlock(&mutex);
-                cout << "Consumer_routine: while end NULL" << endl;
                 break;
             }
             sum += value->get();
-            cout << "Consumer_routine: New add, sum = " << sum << endl;
             pthread_cond_signal(&condition_next_update);
         pthread_mutex_unlock(&mutex);
     }
 
     pthread_mutex_lock(&mutex_end);
         end_consumer = false;
-        cout << "Consumer_routine: end_consumer = false" << endl;
     pthread_mutex_unlock(&mutex_end);
 
-    cout << "Consumer_routine: end()" << endl;
     pthread_exit((void*)sum);
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,NULL);
 }
@@ -107,7 +97,6 @@ void* consumer_interruptor_routine(void* arg) {
   // interrupt consumer while producer is running
     pthread_mutex_lock(&mutex_end);
         pthread_cond_wait(&condition_start_consumer, &mutex_end);
-        cout << "Consumer_interruptor_routine: do wait" << endl;
         end_consumer = true;
     pthread_mutex_unlock(&mutex_end);
 
@@ -118,7 +107,6 @@ void* consumer_interruptor_routine(void* arg) {
         pthread_cancel(_ThreadIdConsumer);
     }
 
-    cout << "Consumer_interruptor_routine: end()" << endl;
 
     return 0;
 }
