@@ -1,19 +1,18 @@
 package ru.spbau.mit;
 
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.function.Predicate;
 
 public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>, Iterable<T> {
-    private static final String nullIsNotAllowedMessage = "null is not allowed";
+    private static final String NULL_IS_NOT_ALLOWED_MESSAGE = "null is not allowed";
     private final Node<T> tail = Node.tailNode();
     private final Node<T> head = Node.headNode(tail);
 
     @Override
     public boolean add(T value) {
         if (value == null) {
-            throw new LockFreeSetException(nullIsNotAllowedMessage);
+            throw new LockFreeSetException(NULL_IS_NOT_ALLOWED_MESSAGE);
         }
         while (true) {
             NodeWindow<T> nodeWindow = find(value);
@@ -31,7 +30,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
     @Override
     public boolean remove(T value) {
         if (value == null) {
-            throw new LockFreeSetException(nullIsNotAllowedMessage);
+            throw new LockFreeSetException(NULL_IS_NOT_ALLOWED_MESSAGE);
         }
         while (true) {
             NodeWindow<T> nodeWindow = find(value);
@@ -51,7 +50,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
     @Override
     public boolean contains(T value) {
         if (value == null) {
-            throw new LockFreeSetException(nullIsNotAllowedMessage);
+            throw new LockFreeSetException(NULL_IS_NOT_ALLOWED_MESSAGE);
         }
         NodeWindow<T> nodeWindow = find(value);
         return nodeWindow.getCurrent().compareToValue(value) == 0;

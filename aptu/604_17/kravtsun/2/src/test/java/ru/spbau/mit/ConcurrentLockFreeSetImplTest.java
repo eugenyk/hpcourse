@@ -17,6 +17,13 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class ConcurrentLockFreeSetImplTest {
+    private final int nhits;
+    private final LockFreeSetImpl<Integer> set;
+    public ConcurrentLockFreeSetImplTest(int nBuckets) {
+        this.nhits = nBuckets;
+        this.set = new LockFreeSetImpl<>();
+    }
+
     @Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
@@ -25,16 +32,8 @@ public class ConcurrentLockFreeSetImplTest {
         });
     }
 
-    private final int nhits;
-    private final LockFreeSetImpl<Integer> set;
-
-    public ConcurrentLockFreeSetImplTest(int nBuckets) {
-        this.nhits = nBuckets;
-        this.set = new LockFreeSetImpl<>();
-    }
-
     @Test
-    public void AppendRemoveEvenTest() throws Exception {
+    public void appendRemoveEvenTest() throws Exception {
         final int nAdderThreads = 3;
         final int nRemoverThreads = 2;
         final int nThreads = nAdderThreads + nRemoverThreads;

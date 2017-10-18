@@ -7,7 +7,7 @@ class Node<U extends Comparable<U>> {
     private final AtomicMarkableReference<Node<U>> next;
     private NodeType nodeType;
 
-    public Node(U value, Node<U> next) {
+    Node(U value, Node<U> next) {
         this.value = value;
         this.next = new AtomicMarkableReference<>(next, false);
         this.nodeType = NodeType.Usual;
