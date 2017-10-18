@@ -3,16 +3,17 @@ package ru.spbau.mit;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.function.Predicate;
 
 public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>, Iterable<T> {
+    private static final String nullIsNotAllowedMessage = "null is not allowed";
     private final Node<T> tail = Node.tailNode();
     private final Node<T> head = Node.headNode(tail);
-    private final AtomicBoolean hasNull = new AtomicBoolean(false);
 
     @Override
     public boolean add(T value) {
         if (value == null) {
-            return hasNull.compareAndSet(false,true);
+            throw new LockFreeSetException(nullIsNotAllowedMessage);
         }
         while (true) {
             NodeWindow<T> nodeWindow = find(value);
@@ -30,7 +31,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
     @Override
     public boolean remove(T value) {
         if (value == null) {
-            return hasNull.compareAndSet(true, false);
+            throw new LockFreeSetException(nullIsNotAllowedMessage);
         }
         while (true) {
             NodeWindow<T> nodeWindow = find(value);
@@ -50,7 +51,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
     @Override
     public boolean contains(T value) {
         if (value == null) {
-            return hasNull.get();
+            throw new LockFreeSetException(nullIsNotAllowedMessage);
         }
         NodeWindow<T> nodeWindow = find(value);
         return nodeWindow.getCurrent().compareToValue(value) == 0;
@@ -58,14 +59,19 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
 
     @Override
     public boolean isEmpty() {
-        return head.getNext().getReference() == tail && !hasNull.get();
+        NodeWindow<T> nodeWindow = find(Node::isTail);
+        return nodeWindow.getPrevious().isHead() && nodeWindow.getCurrent().isTail();
     }
 
-    private static <T extends Comparable<T>> NodeWindow<T> find(T value, Node<T> startNode) {
+    private NodeWindow<T> find(T value) {
         if (value == null) {
             throw new RuntimeException("Null is not allowed");
         }
+        return find(node -> node.compareToValue(value) >= 0);
+    }
 
+    private NodeWindow<T> find(Predicate<Node<T>> stopCondition) {
+        Node<T> startNode = head;
         retry: while (true) {
             NodeWindow<T> nodeWindow = new NodeWindow<>(startNode, startNode.getNext().getReference());
             while (true) {
@@ -81,7 +87,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
                     // we succeeded in removing currentNode.
                     nodeWindow.setCurrent(nextNode);
                 } else {
-                    if (nodeWindow.getCurrent().compareToValue(value) >= 0) {
+                    if (stopCondition.test(nodeWindow.getCurrent())) {
                         return nodeWindow;
                     }
                     nodeWindow.setPrevious(nodeWindow.getCurrent());
@@ -89,10 +95,6 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>,
                 }
             }
         }
-    }
-
-    private NodeWindow<T> find(T value) {
-        return find(value, head);
     }
 
     @Override

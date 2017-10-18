@@ -11,6 +11,8 @@ import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
@@ -19,7 +21,7 @@ public class ConcurrentLockFreeSetImplTest {
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 {2}, {4}, {8}, {16}, {32}, {50},
-                {100}, {256}, {1024}, {4098}, {16392}
+                {100}, {256}, {1024}, {4098}, {8192}
         });
     }
 
@@ -88,5 +90,41 @@ public class ConcurrentLockFreeSetImplTest {
                 Assert.assertNotEquals(0, elementsCounter[nAdderThreads * j + i]);
             }
         }
+    }
+
+    @Test(timeout = 30000)
+    public void allRemoveTest() throws InterruptedException {
+        if (nhits > 10000) {
+            return;
+        }
+
+        CyclicBarrier startBarrier = new CyclicBarrier(nhits);
+        CountDownLatch finishLatch = new CountDownLatch(nhits);
+
+        Thread[] threads = new Thread[nhits];
+        Exception[] exceptions = new Exception[nhits];
+
+        for (int i = 0; i < nhits; i++) {
+            set.add(i);
+            int finalI = i;
+            threads[i] = new Thread(() -> {
+                try {
+                    startBarrier.await();
+                    assertTrue(set.remove(finalI));
+                } catch (Exception e) {
+                    exceptions[finalI] = e;
+                }
+                finishLatch.countDown();
+            });
+            threads[i].start();
+        }
+
+        finishLatch.await();
+
+        for (int i = 0; i < nhits; i++) {
+            assertNull(exceptions[i]);
+            assertFalse(set.contains(i));
+        }
+        assertTrue(set.isEmpty());
     }
 }
