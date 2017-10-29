@@ -1,5 +1,8 @@
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include <algorithm>
+#include <iterator>
 
 #include <pthread.h>
 
@@ -54,19 +57,26 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 POSSIBLE_STATUS status = POSSIBLE_STATUS::WAITING_CONSUMER;
 
-char *str_data = nullptr;
+std::vector<int> read_data(std::istream &is)
+{
+    std::vector<int> res;
+
+    std::copy(std::istream_iterator<int>(is),
+              std::istream_iterator<int>(),
+              std::back_inserter(res));
+
+    return res;
+}
 
 void *producer_routine(void *arg) 
 {    
     Value *v_ptr = reinterpret_cast<Value *>(arg);
-    std::stringstream ss(str_data);
+    
+    std::vector<int> input = read_data(std::cin);
 
     pthread_mutex_lock(&global_mutex);
-    while (ss.good()) 
+    for(int v : input) 
     {
-        int v;
-        ss >> v;
-
         if(status == POSSIBLE_STATUS::WAITING_CONSUMER) 
         {
             pthread_cond_wait(&cond, &global_mutex); // waiting consumer thread to handle previous number
@@ -75,6 +85,8 @@ void *producer_routine(void *arg)
         v_ptr->update(v);
         status = POSSIBLE_STATUS::WAITING_CONSUMER;
     }
+
+    status = POSSIBLE_STATUS::WAITING_CONSUMER;
 
     pthread_cond_wait(&cond, &global_mutex); // waiting consumer thread to handle last number
 
@@ -162,15 +174,8 @@ int run_threads()
 
 int main(int argc, char **argv) 
 {
-    if(argc != 2)
-    {
-        std::cerr << "Second argument with numbers is required!\n";
-        std::cout << "DAFAFWQRFQWF\n";
-        return 1;
-    }
-
-    str_data = argv[1];
-
-    std::cout << run_threads() << std::endl;
+    int res = run_threads();
+    std::cout << res << std::endl;
+    
     return 0;
 }

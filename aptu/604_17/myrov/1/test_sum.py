@@ -30,9 +30,9 @@ def run_test():
     for data, test_name in sequences:
         answer = sum(data)
 
-        args = "{} {}".format(BIN_PATH, '"{}"'.format(' '.join(map(str, data))))
-        popen = subprocess.Popen([args], stdout=subprocess.PIPE, shell=True)
-        output = int(popen.stdout.read())
+        popen = subprocess.Popen([BIN_PATH], stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        output, err = popen.communicate(input=' '.join(map(str, data)).encode())
+        output = int(output)
 
         print('Test name: {} {} {}'.format(bcolors.OKBLUE, test_name, bcolors.ENDC))
         print('Expected answer: {}'.format(answer))
