@@ -1,17 +1,26 @@
 package ru.spbau.mit;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 class LockFreeListImpl<T extends Comparable<T>> implements LockFreeList<T> {
 
     @Override
     public boolean isEmpty() {
-        return size.get() == 0;
+        while (head.getReference().next.getReference() != null) {
+            if(!head.getReference().next.isMarked()) {
+                return false;
+            }
+            Node curr = head.getReference().next.getReference();
+            head.getReference().next.compareAndSet(curr, head.getReference().next.getReference(), false, false);
+        }
+        return true;
     }
 
     @Override
     public boolean add(T value) {
+        if (value == null) {
+            return false;
+        }
         while(true) {
             final Tuple result = find(value);
             if (result.curr != null) {
@@ -20,7 +29,6 @@ class LockFreeListImpl<T extends Comparable<T>> implements LockFreeList<T> {
             Node newNode = new Node(value);
             newNode.next = new AtomicMarkableReference<>(result.succ, false);
             if (result.pred.next.compareAndSet(result.succ, newNode, false, false)) {
-                size.incrementAndGet();
                 return true;
             }
         }
@@ -36,7 +44,6 @@ class LockFreeListImpl<T extends Comparable<T>> implements LockFreeList<T> {
             if (!result.curr.next.attemptMark(result.succ, true)) {
                 continue;
             }
-            size.decrementAndGet();
             result.pred.next.compareAndSet(result.curr, result.succ, false, false);
             return true;
         }
@@ -65,7 +72,7 @@ class LockFreeListImpl<T extends Comparable<T>> implements LockFreeList<T> {
                     }
                     curr = succ;
                 } else {
-                    if (curr.value.compareTo(value) >= 0) {
+                    if (curr.value != null && curr.value.compareTo(value) >= 0) {
                         return new Tuple(pred, curr, succ);
                     }
                     pred = curr;
@@ -101,6 +108,5 @@ class LockFreeListImpl<T extends Comparable<T>> implements LockFreeList<T> {
         }
     }
 
-    private final AtomicInteger size = new AtomicInteger();
     private final AtomicMarkableReference<Node> head = new AtomicMarkableReference<>(new Node(), false);
 }
