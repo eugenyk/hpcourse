@@ -1,7 +1,6 @@
 import com.sun.istack.internal.NotNull;
 
 import java.util.Objects;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -72,7 +71,19 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean remove(T value) {
-        return false;
+        for (;;) {
+            NodeWindow nodeWindow = find(value);
+            Node currNode = nodeWindow.getPrevNext();
+
+            if (currNode.getValue().compareTo(value) != 0) {
+                return false;
+            } else {
+                Node nextNode = currNode.getNextNode().getReference();
+                if (currNode.getNextNode().compareAndSet(nextNode, nextNode, false, true)) {
+                    return true;
+                }
+            }
+        }
     }
 
     //move window throw set until value
