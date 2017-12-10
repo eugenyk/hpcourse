@@ -17,8 +17,9 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
             newNode.next = new AtomicMarkableReference<>(triple.succ, false);
 
-            if (triple.pred.next.compareAndSet(triple.succ, newNode, false, false))
+            if (triple.pred.next.compareAndSet(triple.succ, newNode, false, false)) {
                 return true;
+            }
         }
     }
 
@@ -41,7 +42,6 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         }
     }
 
-
     @Override
     public boolean contains(T value) {
         final Triple triple = find(value);
@@ -51,21 +51,26 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     private Triple find(T value) {
         Node pred, curr, succ = null;
         boolean[] cmark = new boolean[1];
+        boolean[] pmark = new boolean[1];
         retry:
         while (true) {
             pred = head.getReference();
             while (true) {
-                curr = pred.next.getReference();
+                curr = pred.next.get(pmark);
                 if (curr == null) {
                     return new Triple(pred, null, succ);
                 }
 
                 succ = curr.next.get(cmark);
 
+                if (pred.next.getReference() != curr || pred.next.isMarked() != pmark[0]) {
+                    continue retry;
+                }
+
                 if (!cmark[0]) {
                     if (curr.value == value) {
                         return new Triple(pred, curr, succ);
-                    } else if (curr.value.compareTo(value) <= 0) {
+                    } else if (curr.value.compareTo(value) < 0) {
                         pred = curr;
                     } else {
                         return new Triple(pred, null, curr);
@@ -79,8 +84,20 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean isEmpty() {
-        boolean[] mark = new boolean[1];
-        return head.getReference().next.get(mark) == null || mark[0];
+        final boolean[] mark = new boolean[1];
+
+        while (true) {
+            Node curr = head.getReference().next.getReference();
+            if (curr == null) {
+                return true;
+            }
+
+            if (curr.next.get(mark) != null && !mark[0]) {
+                return false;
+            }
+
+            head.getReference().next.compareAndSet(curr, curr.next.getReference(), false, false);
+        }
     }
 
     private class Triple {
