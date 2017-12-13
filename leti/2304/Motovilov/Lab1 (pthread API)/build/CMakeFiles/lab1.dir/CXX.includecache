@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/gertrido/MTP/lab1/main.cpp
+iostream
+-
+pthread.h
+-
+stdio.h
+-
+stdlib.h
+-
+unistd.h
+-
+sstream
+-
+vector
+-
+errno.h
+-
+
