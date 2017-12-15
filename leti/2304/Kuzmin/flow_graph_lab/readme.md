@@ -1,15 +1,15 @@
 # Parameters
--b 123 - custom intensity to search
--l 5 - max of processing image at the same time
--f log.txt - file name to write average intensities
+-b 123 - custom intensity to search  
+-l 5 - max of processing image at the same time  
+-f log.txt - file name to write average intensities  
 
 # Input
-imgs/list.txt - required list of images
+imgs/list.txt - required list of images  
 
 # Output
-results/log.txt - file with average intensities
-results/itensity_image.jpg - image with selected min and max intensities
-results/inverted_image.jpg - inverted image
+results/log.txt - file with average intensities  
+results/itensity_image.jpg - image with selected min and max intensities  
+results/inverted_image.jpg - inverted image  
 
 # Structure of tbb
-![]("Graph.png")
+![](/Graph.png)
