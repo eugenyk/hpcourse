@@ -1,12 +1,12 @@
-#Parameters:
+# Parameters:
 -b 123 - custom intensity to search
 -l 5 - max of processing image at the same time
 -f log.txt - file name to write average intensities
 
-#Input:
+# Input:
 imgs/list.txt - required list of images
 
-#Output
+# Output
 results/log.txt - file with average intensities
 results/itensity_image.jpg - image with selected min and max intensities
 results/inverted_image.jpg - inverted image
