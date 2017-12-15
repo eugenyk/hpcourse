@@ -12,4 +12,4 @@ results/itensity_image.jpg - image with selected min and max intensities
 results/inverted_image.jpg - inverted image  
 
 # Structure of tbb
-![](/Graph.png)
+![Graph](https://github.com/MaxGsomGsom/hpcourse/blob/master/leti/2304/Kuzmin/flow_graph_lab/Graph.png)
