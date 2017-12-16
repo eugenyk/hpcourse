@@ -1,3 +1,0 @@
-/home/gertrido/MTP/lab1/build/CMakeFiles/rebuild_cache.dir
-/home/gertrido/MTP/lab1/build/CMakeFiles/edit_cache.dir
-/home/gertrido/MTP/lab1/build/CMakeFiles/lab1.dir
