@@ -66,8 +66,6 @@ void* producer_routine(void* arg) {
     pthread_cond_broadcast(&cond);
     waitConditionWithCheck(mutex, cond, currentValueApplied);
   }
-  //  int readValue = 0;
-  //  while(scanf("%d", &readValue))
 
   producerEnded = true;
   pthread_cond_broadcast(&cond);
