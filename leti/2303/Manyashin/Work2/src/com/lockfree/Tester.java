@@ -8,27 +8,31 @@ public class Tester {
 
         LockFreeSetImpl<Integer> testSet = new LockFreeSetImpl<>();
 
-        int count = 100000;
+        int count = 100;
 
-
+        // add 1,2 ... , count
         new Thread(() -> {
             for (int i=0; i<count; i++) {testSet.add(i);}
         }).start();
-        System.out.println("First thread is running");
+
+
+        // rm 2,4,6, ... , count
         new Thread(() -> {
             for (int i=0; i<count; i+=2) {testSet.remove(i);}
         }).start();
-        System.out.println("Second thread is running");
-        new Thread(() -> {
-            for (int i=100; i>count; i--) {testSet.remove(i);}
-        }).start();
-        System.out.println("Third thread is running");
-        new Thread(() -> {
-            for (int i=100; i>count; i-=2) {testSet.add(i);}
-        }).start();
-        System.out.println("Fourth thread is running");
 
-        try { Thread.sleep(count / 100); } catch (Exception e) { }
+
+        // rm count, count-3, ... , 0
+        new Thread(() -> {
+            for (int i=count; i>0; i-=3) {testSet.remove(i);}
+        }).start();
+
+        // add count, count - 5 , ... , 0
+        new Thread(() -> {
+            for (int i=count; i>0; i-=5) {testSet.add(i);}
+        }).start();
+
+        try { Thread.sleep(count ); } catch (Exception e) { }
 
         for (Integer n : testSet.getAll()) {
             System.out.println(n);
