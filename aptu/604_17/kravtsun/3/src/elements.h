@@ -6,31 +6,43 @@
 #include "image.h"
 
 using Position = std::pair<int, int>;
+using PositionsList = std::vector<Position>;
 
+using ElementsResultType = std::pair<size_t, PositionsList>;
 
 // TODO avoid capturing image in map by 'function' as function<void (int x, int y, value_type value)>.
-
 struct ImageElementFinder {
     static void check_value(int value);
     
-    static std::vector<Position> positions_with_value(const Image &image, Image::value_type value);
+    static PositionsList positions_with_value(ImageConstPtr image, Image::value_type value);
+    
+    static ElementsResultType result_from_positions(ImageConstPtr image, const PositionsList &positions);
+    
+    virtual ~ImageElementFinder();
 };
 
 struct MaximumElements : public ImageElementFinder {
-    std::vector<Position> operator()(const Image &image) const;
+    ElementsResultType operator()(ImageConstPtr image) const;
 };
 
 struct MinimumElements : public ImageElementFinder {
-    std::vector<Position> operator()(const Image &image) const;
+    ElementsResultType operator()(ImageConstPtr image) const;
 };
 
 struct ExactElements : public ImageElementFinder {
     explicit ExactElements(Image::value_type value): value_(value) {}
     
-    std::vector<Position> operator()(const Image &image) const;
+    ElementsResultType operator()(ImageConstPtr image) const;
 
 private:
     Image::value_type value_;
+};
+
+struct PositionsListHash {
+    size_t operator()(const ElementsResultType &elementsResult) {
+        size_t result = std::get<0>(elementsResult);
+        return result;
+    }
 };
 
 #endif //LAB03_ELEMENTS_H

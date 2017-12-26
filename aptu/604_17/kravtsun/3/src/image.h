@@ -4,30 +4,45 @@
 #include <functional>
 #include <cassert>
 #include <cstring>
+#include <memory>
 
-template<typename T=unsigned char>
-struct ImageT {
-    typedef T value_type;
+#if HAVE_OPENCV
+#include <opencv2/opencv.hpp>
+#endif
+
+using ImageType = unsigned char;
+
+struct Image;
+
+using ImagePtr = std::shared_ptr<Image>;
+
+using ImageConstPtr = std::shared_ptr<const Image>;
+
+struct Image {
+    typedef ImageType value_type;
     
-    ImageT()
+    Image()
             : width_(0)
             , height_(0)
             , data_(nullptr)
     {}
     
-    ImageT(size_t width, size_t height)
+    Image(size_t width, size_t height)
             : width_(width)
             , height_(height)
             , data_(nullptr)
     {
-        data_ = new T[width * height];
+        data_ = new value_type[width * height];
         init();
     }
     
-    ImageT(const ImageT &rhs) = delete;
-    ImageT &operator=(const ImageT &rhs) = delete;
+    Image(const Image &rhs) = delete;
+    Image &operator=(const Image &rhs) = delete;
     
-    ImageT(ImageT &&rhs) noexcept
+//    Image(Image &&rhs) = delete;
+//    Image &operator=(Image &&rhs) = delete;
+    
+    Image(Image &&rhs) noexcept
             : width_(rhs.width_)
             , height_(rhs.height_)
             , data_(rhs.data_)
@@ -37,15 +52,27 @@ struct ImageT {
         rhs.data_ = nullptr;
     }
     
-    ImageT clone() const {
-        ImageT result{width_, height_};
-        memcpy(result.data_, data_, width_ * height_ * sizeof(value_type));
-        return result;
+    size_t width() const {
+        return width_;
+    }
+    
+    size_t height() const {
+        return height_;
+    }
+    
+    const value_type *data() const {
+        return data_;
+    }
+    
+    ImagePtr clone() const {
+        auto result = new Image{width_, height_};
+        memcpy(result->data_, data_, width_ * height_ * sizeof(value_type));
+        return ImagePtr(result);
     }
     
     void init() {
         map([&](int x, int y) {
-            set(x, y, static_cast<char>(rand() % 256));
+            set(x, y, static_cast<value_type>(rand() % 256));
         });
     }
     
@@ -57,18 +84,26 @@ struct ImageT {
         }
     }
     
-    T get(int x, int y) const {
+    value_type get(int x, int y) const {
         return data_[get_index(x, y)];
     }
     
-    void set(int x, int y, T value) {
+    void set(int x, int y, value_type value) {
         data_[get_index(x, y)] = value;
     }
     
-    virtual ~ImageT() {
+    virtual ~Image() {
         delete[] data_;
     }
 
+#if HAVE_OPENCV
+    static cv::Mat matFromImage(const ImageConstPtr &image) {
+        return cv::Mat(image->height(), image->width(), CV_8UC1, const_cast<uchar *>(image->data()));
+    }
+#endif
+    
+    void debug(const std::string &name, bool wait = true) const;
+    
 private:
     void check_index(int x, int y) const {
         assert(x >= 0 && x < width_);
@@ -81,9 +116,14 @@ private:
     }
     
     size_t width_, height_;
-    T *data_;
+    value_type *data_;
 };
 
-using Image = ImageT<unsigned char>;
+struct ImageHash {
+    size_t operator()(ImageConstPtr ptr) const {
+        size_t result = std::hash<ImageConstPtr>()(ptr);
+        return result;
+    }
+};
 
 #endif //LAB03_IMAGE_H

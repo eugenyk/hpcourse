@@ -3,39 +3,14 @@
 #include <tbb/tbb.h>
 
 #include "elements.h"
+#include "process.h"
 
 using namespace tbb::flow;
-
-//struct square {
-//    int operator()(int v) {
-//        printf("squaring %d\n", v);
-//        sleep(1);
-//        return v*v;
-//    }
-//};
-//
-//struct cube {
-//    int operator()(int v) {
-//        printf("cubing %d\n", v);
-//        sleep(1);
-//        return v*v*v;
-//    }
-//};
-//
-//class sum {
-//    int &my_sum;
-//public:
-//    sum( int &s ) : my_sum(s) {}
-//    int operator()( std::tuple<int,int> v ) {
-//        printf("adding %d and %d to %d\n", std::get<0>(v), std::get<1>(v), my_sum);
-//        my_sum += std::get<0>(v) + std::get<1>(v);
-//        return my_sum;
-//    }
-//};
 
 std::string journal_filename;
 int brightness_interesting = -1;
 int images_limit = 0;
+int num_threads = 3;
 
 #define STR(x) #x
 #define XSTR(x) STR(x)
@@ -45,9 +20,11 @@ void parse_args(int argc, char **argv) {
 //    “-l 5”: предел одновременно обрабатываемых приложением изображений
 //    “-f log.txt”: имя файла журнала яркостей
     
+    const std::vector<std::string> arg_names = {"-b", "-l", "-f"};
+    
     for (int i = 0; i < argc; ++argv) {
         const std::string args = argv[i];
-        if (i + 1 == argc) {
+        if (std::count(arg_names.cbegin(), arg_names.cend(), args) && i + 1 == argc) {
             throw std::logic_error("Need to specify value for argument: " + args);
         }
         if (args == "-b") {
@@ -56,83 +33,70 @@ void parse_args(int argc, char **argv) {
             images_limit = atoi(argv[i + 1]);
         } else if (args == "-f") {
             journal_filename = argv[i + 1];
-        } else {
+        } else if (!args.empty() && args[0] == '-') {
             throw std::logic_error("Wrong argument: " + args);
         }
-        ++i;
+        ++i; // as arguments above require value.
     }
 }
 
-struct ImageHighlighter {
-    explicit ImageHighlighter(const Image &image)
-            : image_(image)
-    {}
-    
-    Image operator()(const std::vector<Position> &positions) {
-        return image_.clone();
-    }
-    
-private:
-    const Image &image_;
-};
+
 
 int main(int argc, char **argv) {
-//    На вход подаются генерированные случайным образом изображения
-
-//    Различные алгоритмы ищут || на изображении:
-//    Набор максимальных элементов (максимальная яркость)
-//    Набор минимальных элементов (минимальная яркость)
-//    Набор элементов, равных заданному в командной строке значению (0-255)
-
-//    По результатам предыдущего шага на избражении выделяются все найденные элементы (например, квадрат с максимальной яркостью вокруг точки)
-//    Результат предудущего шага передаётся на:
-//    Расчёт обратного изображения (инверсия яркости)
-//    Расчёт средней яркости изображения
-//    Результат расчёта средней яркости выводится в файл в произвольном формате, если указан соответствующий флаг запуска приолжения
-//    Результат расчёта обратного изображения никуда не идёт
-
-// Предполагается использовать:
-//    broadcast_node
-//    join_node
-//    function_node
-//    limiter_node
-//    …
-//    Приложение принимает в качестве параметров:
-//
-//    “-b 123”: интересующее значение яркости, для шага № 2
-//    “-l 5”: предел одновременно обрабатываемых приложением изображений
-//    “-f log.txt”: имя файла журнала яркостей
-
-//    broadcast_node - посылает сообщение всем приконнектившимся.
-//    join_node -
-//    function_node
-//    limiter_node
+    parse_args(argc, argv);
+    tbb::task_scheduler_init init(num_threads);
+  
+    graph g;
+    broadcast_node<ImageConstPtr> image_source(g); // TODO several image sources.
     
+    using ElementsFunctionNode = function_node<ImageConstPtr, ElementsResultType>;
+    using ElementsFunctionNodePtr = std::shared_ptr<ElementsFunctionNode>;
+    std::vector<ElementsFunctionNodePtr> elements_processors;
     
-//    int result = 0;
-//
-//    graph g;
-//    broadcast_node<int> input (g);
-//    function_node<int,int> squarer( g, unlimited, square() );
-//    function_node<int,int> cuber( g, unlimited, cube() );
-//    buffer_node<int> square_buffer(g);
-//    buffer_node<int> cube_buffer(g);
-//    join_node< std::tuple<int,int>, queueing > join(g);
-//    function_node<std::tuple<int,int>,int>
-//            summer( g, serial, sum(result) );
-//
-//    make_edge( input, squarer );
-//    make_edge( input, cuber );
-//    make_edge( squarer, square_buffer );
-//    make_edge( squarer, input_port<0>(join) );
-//    make_edge( cuber, cube_buffer );
-//    make_edge( cuber, input_port<1>(join)		);
-//    make_edge( join, summer );
-//
-//    for (int i = 1; i <= 10; ++i)
-//        input.try_put(i);
-//    g.wait_for_all();
-//
-//    printf("Final result is %d\n", result);
+    elements_processors.push_back(std::make_shared<ElementsFunctionNode>(g, unlimited, MinimumElements()));
+    elements_processors.push_back(std::make_shared<ElementsFunctionNode>(g, unlimited, MaximumElements()));
+    
+    if (brightness_interesting != -1) {
+        elements_processors.push_back(std::make_shared<ElementsFunctionNode>(g, unlimited, ExactElements(
+                static_cast<Image::value_type>(brightness_interesting))));
+    }
+    
+    using ImagePositionsJoiner = join_node<ImageHighlighter::input_type, key_matching<size_t>>;
+    
+    function_node<ImageHighlighter::input_type, ImageConstPtr> highlighter(g, unlimited, ImageHighlighter());
+    
+    function_node<ImageConstPtr, MeanBrightnessCalculator::result_type> meaner(g, unlimited, MeanBrightnessCalculator("output.txt"));
+    function_node<ImageConstPtr, ImagePtr> inverser(g, unlimited, ImageInverser());
+    
+    std::vector<std::shared_ptr<ImagePositionsJoiner>> joiners;
+    
+    auto process_element_function = [&](const ElementsFunctionNodePtr &node_ptr) {
+        ElementsFunctionNode &node = *node_ptr;
+        make_edge(image_source, node);
+        auto image_positions_joiner = std::make_shared<ImagePositionsJoiner>(g, ImageHash(), PositionsListHash());
+        auto &joiner_node = *image_positions_joiner.get();
+    
+        make_edge(image_source, input_port<0>(joiner_node));
+        make_edge(node, input_port<1>(joiner_node));
+    
+        make_edge(joiner_node, highlighter);
+        joiners.push_back(image_positions_joiner);
+    };
+
+    std::for_each(elements_processors.begin(), elements_processors.end(), process_element_function);
+    
+    make_edge(highlighter, meaner);
+    
+    using result_type = MeanBrightnessCalculator::result_type;
+    result_type result;
+    function_node<result_type> mean_result_printer(g, serial, [&](const result_type &input) {
+        std::cout << "Result: " << input << std::endl;
+    });
+    make_edge(meaner, mean_result_printer);
+    
+    auto image = std::make_shared<Image>(640, 480);
+    bool is_image_put = image_source.try_put(image);
+    assert(is_image_put);
+    g.wait_for_all();
     return 0;
 }

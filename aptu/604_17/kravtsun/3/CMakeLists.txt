@@ -8,10 +8,15 @@ list(APPEND
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake
     )
 
-find_package(
-    TBB # COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview
-    )
+add_executable(lab03 src/main.cpp src/image.h src/elements.cpp src/elements.h src/common.h src/process.cpp src/process.h src/image.cpp)
 
-add_executable(lab03 src/main.cpp src/image.h src/elements.cpp src/elements.h)
+find_package(TBB 4.4)
 target_link_libraries(lab03 tbb)
 
+# TODO choose OpenCV components.
+find_package(OpenCV 3)
+
+IF(OpenCV_FOUND)
+    SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAVE_OPENCV=1" )
+    target_link_libraries(lab03 opencv_core opencv_highgui opencv_imgproc)
+ENDIF(OpenCV_FOUND)
