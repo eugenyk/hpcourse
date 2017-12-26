@@ -6,8 +6,8 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     private Node<T> head;
     private Node<T> tail;
-	
-	static class Node<T> {
+    
+    static class Node<T> {
         T item;
         AtomicMarkableReference<Node<T>> next = new AtomicMarkableReference<>(null, false);
 
@@ -15,8 +15,8 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             this.item = item;
         }
     }
-	
-	static class Pair<T> {
+    
+    static class Pair<T> {
         Node<T> left;
         Node<T> right;
 
@@ -25,14 +25,14 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             this.right = right;
         }
     }
-	
+    
     LockFreeSetImpl() {
         tail = new Node<>(null);
         head = new Node<>(null);
         head.next.set(tail, false);
     }
-	
-	private Pair<T> search(T item) {
+    
+    private Pair<T> search(T item) {
         Node<T> prev;
         Node<T> curr;
         Node<T> next;
@@ -49,14 +49,14 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             while (true) {
                 next = curr.next.get(marked);
                 while (marked[0]) {
-					//physical remove
+                    //physical remove
                     if (!prev.next.compareAndSet(curr, next, false, false)) {
                         continue retry;
                     }
                     curr = next;
                     next = curr.next.get(marked);
                 }
-				//when we stop searching
+                //when we stop searching
                 if (curr == tail || item.compareTo(curr.item) <= 0) {
                     return new Pair<>(prev, curr);
                 }
@@ -76,7 +76,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             if (right.item == item) {
                 return false;
             } 
-			else {
+            else {
                 newNode.next.set(right, false);
                 if (left.next.compareAndSet(right, newNode, false, false)) {
                     return true;
@@ -93,7 +93,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                 return false;
             }
             Node<T> next = curr.next.getReference();
-			//logical remove
+            //logical remove
             if (curr.next.compareAndSet(next, next, false, true)) {
                 return true;
             }
@@ -109,11 +109,11 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     public boolean isEmpty() {
         boolean[] marked = {false};
         while(true){
-			
-			if(head.next.getReference() == tail){
+            
+            if(head.next.getReference() == tail){
                 return true;
             }
-			// test if all elements are marked to remove
+            // test if all elements are marked to remove
             else{
                 Node<T> head_next = head.next.get(marked);
                 if(marked[0] && head_next != tail){
@@ -124,13 +124,13 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                     return false;
                 }
             }
-		}
+        }
             
-		
-    }
-	public void printResult() {
         
-		String result = "";
+    }
+    public void printResult() {
+        
+        String result = "";
         Node<T> curr = this.head.next.getReference();
 
         while (curr != tail) {
@@ -139,7 +139,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             }
             curr = curr.next.getReference();
         }
-		System.out.println("Result: " + result);
+        System.out.println("Result: " + result);
         
-	}
+    }
 }
