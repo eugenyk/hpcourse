@@ -16,10 +16,14 @@ PositionsList ImageElementFinder::positions_with_value(ImageConstPtr image, Imag
 }
 
 ElementsResultType ImageElementFinder::result_from_positions(ImageConstPtr image, const PositionsList &positions) {
-    return std::make_pair(ImageHash()(image), positions);
+    return positions;
 }
 
 ImageElementFinder::~ImageElementFinder() {}
+
+ElementsResultType NoneElements::operator()(ImageConstPtr image) const {
+    return ElementsResultType();
+}
 
 ElementsResultType MaximumElements::operator()(ImageConstPtr image) const {
     LOG("enter maxer");

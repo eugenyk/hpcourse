@@ -7,7 +7,7 @@
 
 struct ImageHighlighter {
     explicit ImageHighlighter(size_t radius = 3);
-    typedef std::tuple<ImageConstPtr, ElementsResultType> input_type;
+    typedef std::tuple<ImagePtr, ElementsResultType, ElementsResultType, ElementsResultType> input_type;
     // TODO avoid copying vector of positions.
     ImagePtr operator()(input_type image_and_positions);
     

@@ -7,7 +7,7 @@
 
 using namespace tbb::flow;
 
-std::string journal_filename = "mean_output.txt";
+std::string journal_filename = "";
 int brightness_interesting = -1;
 int images_limit = 0;
 int num_threads = 3;
@@ -44,65 +44,64 @@ int main(int argc, char **argv) {
     tbb::task_scheduler_init init(num_threads);
   
     graph g;
-    broadcast_node<ImageConstPtr> image_source(g); // TODO several image sources.
+    source_node<ImagePtr> image_sourcer(g, [](ImagePtr &image) -> bool {
+        image = std::make_shared<Image>(640, 480);
+        return true;
+    }, false); // TODO several image sources.
+    broadcast_node<ImagePtr> image_source_broadcaster(g);
+    make_edge(image_sourcer, image_source_broadcaster);
     
-    using ElementsFunctionNode = function_node<ImageConstPtr, ElementsResultType>;
+    using ElementsFunctionNode = function_node<ImagePtr, ElementsResultType>;
     using ElementsFunctionNodePtr = std::shared_ptr<ElementsFunctionNode>;
-    std::vector<ElementsFunctionNodePtr> elements_processors;
     
-    elements_processors.push_back(std::make_shared<ElementsFunctionNode>(g, unlimited, MinimumElements()));
-    elements_processors.push_back(std::make_shared<ElementsFunctionNode>(g, unlimited, MaximumElements()));
-    
+    auto miner = std::make_shared<ElementsFunctionNode>(g, unlimited, MinimumElements());
+    auto maxer = std::make_shared<ElementsFunctionNode>(g, unlimited, MaximumElements());
+    ElementsFunctionNodePtr exacter;
+
     if (brightness_interesting != -1) {
-        elements_processors.push_back(std::make_shared<ElementsFunctionNode>(g, unlimited, ExactElements(
-                static_cast<Image::value_type>(brightness_interesting))));
+        exacter = std::make_shared<ElementsFunctionNode>(g, unlimited, ExactElements(
+                static_cast<Image::value_type>(brightness_interesting)));
+    } else {
+        exacter = std::make_shared<ElementsFunctionNode>(g, unlimited, NoneElements());
     }
     
-    using ImagePositionsJoiner = join_node<ImageHighlighter::input_type, key_matching<size_t>>;
+    using ImagePositionsJoiner = join_node<ImageHighlighter::input_type>;
     
-    function_node<ImageHighlighter::input_type, ImageConstPtr> highlighter(g, unlimited, ImageHighlighter());
+    ImagePositionsJoiner elements_joiner(g);
     
-    function_node<ImageConstPtr, MeanBrightnessCalculator::result_type> meaner(g, unlimited, MeanBrightnessCalculator(journal_filename));
-    function_node<ImageConstPtr, ImagePtr> inverser(g, unlimited, ImageInverser());
+    make_edge(image_source_broadcaster, input_port<0>(elements_joiner));
     
-    std::vector<std::shared_ptr<ImagePositionsJoiner>> joiners;
+#define PROCESS_ELEMENT_NODE(node_ptr, port_number)          \
+    do {                                                     \
+        ElementsFunctionNode &node = *(node_ptr);            \
+        make_edge(image_source_broadcaster, node);           \
+        make_edge(node, input_port<port_number>(elements_joiner)); \
+    } while (0);
     
-    auto process_element_function = [&](const ElementsFunctionNodePtr &node_ptr) {
-        ElementsFunctionNode &node = *node_ptr;
-        make_edge(image_source, node);
-        auto image_positions_joiner = std::make_shared<ImagePositionsJoiner>(g, ImageHash(), PositionsListHash());
-        auto &joiner_node = *image_positions_joiner.get();
+    PROCESS_ELEMENT_NODE(miner, static_cast<const int>(ImageElementFinderType::MIN));
+    PROCESS_ELEMENT_NODE(maxer, static_cast<const int>(ImageElementFinderType::MAX));
+    PROCESS_ELEMENT_NODE(exacter, static_cast<const int>(ImageElementFinderType::EXACT));
     
-        make_edge(image_source, input_port<0>(joiner_node));
-        make_edge(node, input_port<1>(joiner_node));
+    function_node<ImageHighlighter::input_type, ImagePtr> highlighter(g, unlimited, ImageHighlighter());
+    make_edge(elements_joiner, highlighter);
     
-        make_edge(joiner_node, highlighter);
-        joiners.push_back(image_positions_joiner);
-    };
-
-    std::for_each(elements_processors.begin(), elements_processors.end(), process_element_function);
-    
-    broadcast_node<ImageConstPtr> highlighter_broadcast(g);
+    broadcast_node<ImagePtr> highlighter_broadcast(g);
     make_edge(highlighter, highlighter_broadcast);
+
+    function_node<ImagePtr, MeanBrightnessCalculator::result_type> meaner(g, unlimited, MeanBrightnessCalculator(journal_filename));
+    function_node<ImagePtr, ImagePtr> inverser(g, unlimited, ImageInverser());
     
     make_edge(highlighter_broadcast, meaner);
     make_edge(highlighter_broadcast, inverser);
-    
-//    using result_type = MeanBrightnessCalculator::result_type;
-//    result_type result;
-//    function_node<result_type> mean_result_printer(g, serial, [&](const result_type &input) {
-//        std::cout << "Mean result: " << input << std::endl;
-//    });
-//    make_edge(meaner, mean_result_printer);
-    
-    while (true) {
-        auto image = std::make_shared<Image>(640, 480);
-        bool is_image_put = image_source.try_put(image);
-        if (!is_image_put) {
-            std::cerr << "failed to put image" << std::endl;
-            break;
-        }
-    }
+
+    using result_type = MeanBrightnessCalculator::result_type;
+    result_type result;
+    function_node<result_type> mean_result_printer(g, serial, [&](const result_type &input) {
+        std::cout << "Mean result: " << input << std::endl;
+    });
+    make_edge(meaner, mean_result_printer);
+
+    image_sourcer.activate();
     g.wait_for_all();
     return 0;
 }

@@ -8,7 +8,13 @@
 using Position = std::pair<int, int>;
 using PositionsList = std::vector<Position>;
 
-using ElementsResultType = std::pair<size_t, PositionsList>;
+using ElementsResultType = PositionsList;
+
+enum struct ImageElementFinderType {
+    MIN = 1,
+    MAX = 2,
+    EXACT = 3
+};
 
 // TODO avoid capturing image in map by 'function' as function<void (int x, int y, value_type value)>.
 struct ImageElementFinder {
@@ -19,6 +25,10 @@ struct ImageElementFinder {
     static ElementsResultType result_from_positions(ImageConstPtr image, const PositionsList &positions);
     
     virtual ~ImageElementFinder();
+};
+
+struct NoneElements : public ImageElementFinder {
+    ElementsResultType operator()(ImageConstPtr image) const;
 };
 
 struct MaximumElements : public ImageElementFinder {
@@ -36,13 +46,6 @@ struct ExactElements : public ImageElementFinder {
 
 private:
     Image::value_type value_;
-};
-
-struct PositionsListHash {
-    size_t operator()(const ElementsResultType &elementsResult) {
-        size_t result = std::get<0>(elementsResult);
-        return result;
-    }
 };
 
 #endif //LAB03_ELEMENTS_H
