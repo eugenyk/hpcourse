@@ -7,13 +7,10 @@
 
 using namespace tbb::flow;
 
-std::string journal_filename;
+std::string journal_filename = "mean_output.txt";
 int brightness_interesting = -1;
 int images_limit = 0;
 int num_threads = 3;
-
-#define STR(x) #x
-#define XSTR(x) STR(x)
 
 void parse_args(int argc, char **argv) {
 //    “-b 123”: интересующее значение яркости, для шага № 2
@@ -22,25 +19,25 @@ void parse_args(int argc, char **argv) {
     
     const std::vector<std::string> arg_names = {"-b", "-l", "-f"};
     
-    for (int i = 0; i < argc; ++argv) {
+    for (int i = 0; i < argc; ++i) {
         const std::string args = argv[i];
         if (std::count(arg_names.cbegin(), arg_names.cend(), args) && i + 1 == argc) {
             throw std::logic_error("Need to specify value for argument: " + args);
         }
-        if (args == "-b") {
-            brightness_interesting = atoi(argv[i + 1]);
-        } else if (args == "-l") {
-            images_limit = atoi(argv[i + 1]);
-        } else if (args == "-f") {
-            journal_filename = argv[i + 1];
-        } else if (!args.empty() && args[0] == '-') {
-            throw std::logic_error("Wrong argument: " + args);
+        if (!args.empty() && args[0] == '-') {
+            if (args == "-b") {
+                brightness_interesting = atoi(argv[i + 1]);
+            } else if (args == "-l") {
+                images_limit = atoi(argv[i + 1]);
+            } else if (args == "-f") {
+                journal_filename = argv[i + 1];
+            } else if (!args.empty()) {
+                throw std::logic_error("Wrong argument: " + args);
+            }
+            ++i; // as arguments above require value.
         }
-        ++i; // as arguments above require value.
     }
 }
-
-
 
 int main(int argc, char **argv) {
     parse_args(argc, argv);
@@ -65,7 +62,7 @@ int main(int argc, char **argv) {
     
     function_node<ImageHighlighter::input_type, ImageConstPtr> highlighter(g, unlimited, ImageHighlighter());
     
-    function_node<ImageConstPtr, MeanBrightnessCalculator::result_type> meaner(g, unlimited, MeanBrightnessCalculator("output.txt"));
+    function_node<ImageConstPtr, MeanBrightnessCalculator::result_type> meaner(g, unlimited, MeanBrightnessCalculator(journal_filename));
     function_node<ImageConstPtr, ImagePtr> inverser(g, unlimited, ImageInverser());
     
     std::vector<std::shared_ptr<ImagePositionsJoiner>> joiners;
@@ -85,18 +82,27 @@ int main(int argc, char **argv) {
 
     std::for_each(elements_processors.begin(), elements_processors.end(), process_element_function);
     
-    make_edge(highlighter, meaner);
+    broadcast_node<ImageConstPtr> highlighter_broadcast(g);
+    make_edge(highlighter, highlighter_broadcast);
     
-    using result_type = MeanBrightnessCalculator::result_type;
-    result_type result;
-    function_node<result_type> mean_result_printer(g, serial, [&](const result_type &input) {
-        std::cout << "Result: " << input << std::endl;
-    });
-    make_edge(meaner, mean_result_printer);
+    make_edge(highlighter_broadcast, meaner);
+    make_edge(highlighter_broadcast, inverser);
     
-    auto image = std::make_shared<Image>(640, 480);
-    bool is_image_put = image_source.try_put(image);
-    assert(is_image_put);
+//    using result_type = MeanBrightnessCalculator::result_type;
+//    result_type result;
+//    function_node<result_type> mean_result_printer(g, serial, [&](const result_type &input) {
+//        std::cout << "Mean result: " << input << std::endl;
+//    });
+//    make_edge(meaner, mean_result_printer);
+    
+    while (true) {
+        auto image = std::make_shared<Image>(640, 480);
+        bool is_image_put = image_source.try_put(image);
+        if (!is_image_put) {
+            std::cerr << "failed to put image" << std::endl;
+            break;
+        }
+    }
     g.wait_for_all();
     return 0;
 }

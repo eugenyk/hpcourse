@@ -4,15 +4,21 @@
 #include "process.h"
 #include "common.h"
 
+#define DEBUG_INVERSE 0
+#define DEBUG_HIGHLIGHT 0
+
 ImageHighlighter::ImageHighlighter(size_t radius)
         : radius_(radius)
 {}
 
+#if DEBUG_HIGHLIGHT
+static std::mutex highlight_mutex;
+#endif
+
 ImagePtr ImageHighlighter::operator()(ImageHighlighter::input_type image_and_positions) {
     ImageConstPtr image = std::get<0>(image_and_positions);
-    LOG("enter hightlighter for image with hash: " + std::to_string(ImageHash()(image)));
+    LOG("enter highlighter for image with hash: " + std::to_string(ImageHash()(image)));
     auto const &positions = std::get<1>(image_and_positions).second;
-    image->debug("input", false);
     
     ImagePtr output_image = image->clone();
     if (image->width() * image->height() == 0) {
@@ -35,17 +41,32 @@ ImagePtr ImageHighlighter::operator()(ImageHighlighter::input_type image_and_pos
             }
         }
     });
-    
+
+#if DEBUG_HIGHLIGHT
+    std::unique_lock<std::mutex> highlight_lock(highlight_mutex);
+    image->debug("input", false);
     output_image->debug("output", true);
+#endif
+    
     return output_image;
 }
 
+#if DEBUG_INVERSE
+static std::mutex inverse_mutex;
+#endif
 ImagePtr ImageInverser::operator()(const ImageConstPtr &image) {
+#if DEBUG_INVERSE
+    std::unique_lock<std::mutex> show_pair_lock(inverse_mutex);
+    image->debug("input", false);
+#endif
     auto image_ptr = image->clone();
     image_ptr->map([&](int x, int y) {
         auto value = image_ptr->get(x, y);
         image_ptr->set(x, y, std::numeric_limits<Image::value_type>::max() - value);
     });
+#if DEBUG_INVERSE
+    image_ptr->debug("output", true);
+#endif
     return image_ptr;
 }
 
@@ -61,13 +82,16 @@ MeanBrightnessCalculator::result_type MeanBrightnessCalculator::operator()(Image
     
     auto result = static_cast<result_type>(s) / (image->width() * image->height());
     write(result);
+    
+    LOG("Mean result: " + std::to_string(result)
+//                + "for image with hash: " + std::to_string(ImageHash()(image))
+    );
     return result;
 }
 
-static std::mutex mean_brightness_calculator_write_mutex;
-
+static std::mutex mean_brightness_write_mutex;
 void MeanBrightnessCalculator::write(MeanBrightnessCalculator::result_type s) {
-    std::unique_lock<std::mutex> write_lock{mean_brightness_calculator_write_mutex};
+    std::unique_lock<std::mutex> write_lock{mean_brightness_write_mutex};
     std::ofstream fout(filename_, std::ios_base::app);
     fout << s << std::endl;
 }
