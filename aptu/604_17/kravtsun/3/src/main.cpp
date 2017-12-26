@@ -5,12 +5,10 @@
 #include "elements.h"
 #include "process.h"
 
-using namespace tbb::flow;
-
-std::string journal_filename = "";
-int brightness_interesting = -1;
-int images_limit = 0;
-int num_threads = 3;
+static std::string journal_filename = "";
+static int brightness_interesting = -1;
+static int images_limit = 0;
+static int num_threads = 3;
 
 void parse_args(int argc, char **argv) {
 //    “-b 123”: интересующее значение яркости, для шага № 2
@@ -39,17 +37,46 @@ void parse_args(int argc, char **argv) {
     }
 }
 
+#if DEBUG_COUNT
+static int image_count = 0;
+static std::mutex image_count_mutex;
+int increment_image_count() {
+    std::unique_lock<std::mutex> image_count_lock(image_count_mutex);
+    image_count++;
+    std::cout << "image_count = " << image_count << std::endl;
+}
+
+int decrement_image_count() {
+    std::unique_lock<std::mutex> image_count_lock(image_count_mutex);
+    image_count--;
+    std::cout << "image_count = " << image_count << std::endl;
+}
+#endif
+
 int main(int argc, char **argv) {
     parse_args(argc, argv);
+    
+    using namespace tbb::flow;
     tbb::task_scheduler_init init(num_threads);
   
     graph g;
     source_node<ImagePtr> image_sourcer(g, [](ImagePtr &image) -> bool {
         image = std::make_shared<Image>(640, 480);
+#if DEBUG_COUNT
+        increment_image_count();
+#endif
         return true;
     }, false); // TODO several image sources.
     broadcast_node<ImagePtr> image_source_broadcaster(g);
-    make_edge(image_sourcer, image_source_broadcaster);
+    
+    limiter_node<ImagePtr> limiter(g, images_limit);
+    
+    if (images_limit > 0) {
+        make_edge(image_sourcer, limiter);
+        make_edge(limiter, image_source_broadcaster);
+    } else {
+        make_edge(image_sourcer, image_source_broadcaster);
+    }
     
     using ElementsFunctionNode = function_node<ImagePtr, ElementsResultType>;
     using ElementsFunctionNodePtr = std::shared_ptr<ElementsFunctionNode>;
@@ -93,13 +120,20 @@ int main(int argc, char **argv) {
     
     make_edge(highlighter_broadcast, meaner);
     make_edge(highlighter_broadcast, inverser);
-
-    using result_type = MeanBrightnessCalculator::result_type;
-    result_type result;
-    function_node<result_type> mean_result_printer(g, serial, [&](const result_type &input) {
-        std::cout << "Mean result: " << input << std::endl;
-    });
-    make_edge(meaner, mean_result_printer);
+    
+    function_node< double, continue_msg > meaner_pit( g, unlimited,
+                                                   []( double v ) -> continue_msg {
+#if DEBUG_COUNT
+                                                       decrement_image_count();
+#endif
+                                                       return continue_msg();
+                                                   } );
+    
+    make_edge(meaner, meaner_pit);
+    
+    if (images_limit > 0) {
+        make_edge(meaner_pit, limiter.decrement);
+    }
 
     image_sourcer.activate();
     g.wait_for_all();

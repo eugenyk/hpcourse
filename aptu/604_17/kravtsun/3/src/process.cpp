@@ -1,5 +1,6 @@
 #include <fstream>
 #include <mutex>
+#include <algorithm>
 
 #include "process.h"
 #include "common.h"
@@ -98,6 +99,7 @@ MeanBrightnessCalculator::result_type MeanBrightnessCalculator::operator()(Image
     return result;
 }
 
+// TODO query_node for writing to file.
 static std::mutex mean_brightness_write_mutex;
 void MeanBrightnessCalculator::write(MeanBrightnessCalculator::result_type s) {
     std::unique_lock<std::mutex> write_lock{mean_brightness_write_mutex};

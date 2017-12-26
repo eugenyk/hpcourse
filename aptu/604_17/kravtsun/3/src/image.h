@@ -6,10 +6,6 @@
 #include <cstring>
 #include <memory>
 
-#if HAVE_OPENCV
-#include <opencv2/opencv.hpp>
-#endif
-
 using ImageType = unsigned char;
 
 struct Image;
@@ -38,9 +34,6 @@ struct Image {
     
     Image(const Image &rhs) = delete;
     Image &operator=(const Image &rhs) = delete;
-    
-//    Image(Image &&rhs) = delete;
-//    Image &operator=(Image &&rhs) = delete;
     
     Image(Image &&rhs) noexcept
             : width_(rhs.width_)
@@ -95,12 +88,6 @@ struct Image {
     virtual ~Image() {
         delete[] data_;
     }
-
-#if HAVE_OPENCV
-    static cv::Mat matFromImage(const ImageConstPtr &image) {
-        return cv::Mat(image->height(), image->width(), CV_8UC1, const_cast<uchar *>(image->data()));
-    }
-#endif
     
     void debug(const std::string &name, bool wait = true) const;
     
@@ -120,7 +107,7 @@ private:
 };
 
 struct ImageHash {
-    size_t operator()(ImageConstPtr ptr) const {
+    size_t operator()(const ImageConstPtr &ptr) const {
         size_t result = std::hash<ImageConstPtr>()(ptr);
         return result;
     }

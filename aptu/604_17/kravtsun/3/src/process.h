@@ -20,7 +20,6 @@ struct ImageInverser {
 
 struct MeanBrightnessCalculator {
     typedef double result_type;
-    // TODO query_node for writing to file.
     
     explicit MeanBrightnessCalculator(const std::string &filename);
     

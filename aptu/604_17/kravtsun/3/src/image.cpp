@@ -2,9 +2,8 @@
 #include <mutex>
 #include "image.h"
 
-
-
 #if HAVE_OPENCV
+#include <opencv2/opencv.hpp>
 std::mutex show_mutex;
 #endif
 
