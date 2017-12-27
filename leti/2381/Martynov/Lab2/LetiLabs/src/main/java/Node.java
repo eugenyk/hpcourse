@@ -2,11 +2,16 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class Node<T> {
 
-    T value;
-    AtomicMarkableReference<Node<T>> next;
+    T item;
+    int key;
+    AtomicMarkableReference<Node> next;
 
-    Node(T value) {
-        this.value = value;
-        this.next = new AtomicMarkableReference<>(null, false);
+    public Node(T item) {
+        this.item = item;
+        this.key = item.hashCode();
+    }
+
+    public Node() {
+        //! for head and tail only
     }
 }
