@@ -8,8 +8,8 @@
 #include <vector>
 using namespace std;
 
-pthread_mutex_t myMutex;
-pthread_cond_t cond;
+//pthread_mutex_t myMutex;
+//pthread_cond_t cond;
 volatile bool isConsumerStarted = false;
 
 volatile bool isReadyToCompute = false;
@@ -19,10 +19,10 @@ volatile bool isReadyToClose= false;
 void* producer_routine(void* arg) {
 
   // Wait for consumer to start
-    pthread_mutex_lock(&myMutex);
-    while (!isConsumerStarted)
-        pthread_cond_wait(&cond, &myMutex);
-    pthread_mutex_unlock(&myMutex);
+//    pthread_mutex_lock(&myMutex);
+    while (!isConsumerStarted){};
+//        pthread_cond_wait(&cond, &myMutex);
+//    pthread_mutex_unlock(&myMutex);
     //cout << "producer_routine start\n";
     Value *value = reinterpret_cast<Value *>(arg);
     std::vector<int> inputValues;
@@ -58,7 +58,7 @@ void* consumer_routine(void* arg) {
     isRun = true;
     // notify about start
     isConsumerStarted = true;
-    pthread_cond_broadcast(&cond);
+//    pthread_cond_broadcast(&cond);
     //cout << "consumer_routine start\n";
 
   // allocate value for result
@@ -86,10 +86,10 @@ void* consumer_routine(void* arg) {
 void* consumer_interruptor_routine(void* arg) {
     auto consumerPointer = (pthread_t*)arg;
   // wait for consumer to start
-    pthread_mutex_lock(&myMutex);
-    while(!isConsumerStarted)
-        pthread_cond_wait(&cond, &myMutex);
-    pthread_mutex_unlock(&myMutex);
+//    pthread_mutex_lock(&myMutex);
+    while(!isConsumerStarted){};
+//        pthread_cond_wait(&cond, &myMutex);
+//    pthread_mutex_unlock(&myMutex);
     //cout << "consumer_interruptor_routine start\n";
     while(isRun){
         // interrupt consumer while producer is running
@@ -106,16 +106,16 @@ int run_threads() {
   // start 3 threads and wait until they're done
 
     int ret_join;
-    pthread_mutex_init(&myMutex,0);
-    pthread_cond_init(&cond,NULL);
+//    pthread_mutex_init(&myMutex,0);
+//    pthread_cond_init(&cond,NULL);
     pthread_create(&producerThread, NULL, &producer_routine, &value);
     pthread_create(&consumerThread, NULL, &consumer_routine, &value);
     pthread_create(&interruptorThread, NULL, &consumer_interruptor_routine, &consumerThread);
     pthread_join(producerThread, NULL);
     pthread_join(consumerThread, (void **)&ret_join);
     pthread_join(interruptorThread, NULL);
-    pthread_mutex_destroy(&myMutex);
-    pthread_cond_destroy(&cond);
+//    pthread_mutex_destroy(&myMutex);
+//    pthread_cond_destroy(&cond);
     // return sum of update values seen by consumer
     return ret_join;
 }
