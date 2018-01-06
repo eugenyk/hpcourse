@@ -4,170 +4,137 @@
  * and open the template in the editor.
  */
 package hw2;
+import java.util.concurrent.atomic.AtomicMarkableReference;
 /**
  *
  * @author Kiril
  */
 public class ListBasedSet<T extends Comparable<T>> implements LockFreeSet<T>{
     
-    private class ValidationData{
-        public Node<T> prev;
-        public long pVer;
-        public Node<T> cur;
-        
-        public boolean validationOK;
-        
-        public ValidationData(Node<T> prev, long pVer, Node<T> cur){
-            this.prev = prev;
-            this.pVer = pVer;
-            this.cur = cur;
-            this.validationOK = true;
-        }
-        
-        public ValidationData(){
-            this.validationOK = false;
-        }
-    }
+    final private Node head;
+    final private Node tail;
     
-    private class Node<T>{
-        public T value;
-        public Node next;
-        public boolean deleted;
-        public VersionLock vlock;
+    private class Node{
+        public final T value;
+        public volatile AtomicMarkableReference<Node> next = new AtomicMarkableReference<>(null, false);
         
         public Node(T value, Node next)
         {
             this.value = value;
-            this.next = next;
-            this.deleted = false;
-            this.vlock = new VersionLock();
+            this.next.set(next, false);
         }
     };
     
-    Node<T> head;
-    Node<T> tail;
-    
-    public ListBasedSet(T rangeStartValue, T rangeEndValue)
-    {
-        tail = new Node<T>(rangeEndValue, null);
-        head = new Node<T>(rangeStartValue, tail);
-    }
-    
-    private Node<T> waitfreeTraversal(T value){
-        Node<T> prev = head;
-        Node<T> cur = head;
-        while (cur.value.compareTo(value) < 0){
-            prev = cur;
-            cur = cur.next;
-        }
-        return prev;
-    }
-    
-    private ValidationData validate(T value, Node<T> prev){
-        Node<T> cur;
-        long pVer;
-        validate: do {
-            pVer = prev.vlock.getVersion();
-            if (prev.deleted) 
-                return new ValidationData();
-
-            cur = prev.next;
-            while (cur.value.compareTo(value) < 0){
-                pVer = cur.vlock.getVersion();
-                if (cur.deleted)
-                {
-                    continue validate;
-                }
-                prev = cur;
-                cur = cur.next;
-            }
-            break validate;
-        }  while(true);
+    private class Window{
+        public Node prev = head; 
+        public Node curr;
         
-        return new ValidationData(prev, pVer, cur);
+        public Window(){}
+        
+        public Window(Node prev, Node curr){
+            this.prev = prev;
+            this.curr = curr;
+        }
+        
+        public void setValues(Node prev, Node curr){
+            this.prev = prev;
+            this.curr = curr;
+        }
     }
+    
+    public ListBasedSet()
+    {
+        tail = new Node(null, null);
+        head = new Node(null, tail);
+    }
+    
+    public ListBasedSet(T min, T max)
+    {
+        tail = new Node(max, null);
+        head = new Node(min, tail);
+    }
+    
+    private Window traverse(T value){
+        Node prev = null;
+        Node curr = null;
+        Node next = null;
+        boolean[] marked = {false};
+        
+        retry: 
+        while(true){
+            prev = head;
+            curr = prev.next.getReference();
+            while(curr != null){
+                next = curr.next.get(marked);
+                //delete marked nodes
+                while(marked[0]){
+                    if(prev.next.compareAndSet(curr, next, false, false))
+                        continue retry;
+                    
+                    curr = next;
+                    next = curr.next.get(marked);
+                }
+                
+                if (curr.value.compareTo(value) > 0)
+                    return new Window(prev, curr);
+                
+                prev = curr;
+                curr = next;
+            }
+        }
+    }
+    
     
     public boolean add(T value){
-        Node<T> prev;
-        ValidationData validData;
-        Node<T> newNode = new Node<T>(value, null);
-        
-        adding:
-        do {
-            prev = waitfreeTraversal(value);
-            validation: do {
-                validData = validate(value, prev);
-                prev = validData.prev;
-                
-                if (!validData.validationOK)
-                    continue adding;
-       
-                if (validData.cur.deleted)
-                    continue validation;
-                
-                if (validData.cur.value.compareTo(value) == 0)
-                    return false;
-                
-                newNode.next = validData.cur;
-                if (!prev.vlock.tryLockAtVersion(validData.pVer))
-                    continue validation;
-                
-                break validation;
-                } while(true);
+        while(true){
+            Window win = traverse(value);
+            Node prev = win.prev;
+            Node curr = win.curr;
             
-            prev.next = newNode;
-            prev.vlock.unlockAndIncrementVersion();
-            
-            break adding;
-        } while(true);
-        
-        System.out.println("add ended");
-        return true;
-    };
+            if (curr.value.equals(value))
+                return false;
+            else {
+                Node newNode = new Node(value, curr);
+                if (prev.next.compareAndSet(curr, newNode, false, false))
+                    return true;
+            }
+       }
+   };
+    
     
     public boolean remove(T value){
-        Node<T> prev;
-        ValidationData validData;
-        
-        removing: do{
-            prev = waitfreeTraversal(value);
-            validation: do {
-                validData = validate(value, prev);
-                prev = validData.prev;
-                
-                if (!validData.validationOK)
-                    continue removing;
-       
-                if (validData.cur.deleted || validData.cur.value.compareTo(value) != 0 )
-                    return false;
-                
-                if (!prev.vlock.tryLockAtVersion(validData.pVer))
-                    continue validation;
-                
-                break validation;
-                } while(true);
-            
-            validData.cur.vlock.lockAtCurrentVersion();
-            validData.cur.deleted = true;
-            prev.next = validData.cur.next;
-            validData.cur.vlock.unlockAndIncrementVersion();
-            prev.vlock.unlockAndIncrementVersion();
-            
-            break removing;
-        } while(true);
-        
-        return true;
+       while(true){
+           Window win = traverse(value);
+           Node prev = win.prev;
+           Node curr = win.curr;
+           
+           if (curr.value.compareTo(value) != 0)
+               return false;
+           else {
+               Node next = curr.next.getReference();
+               if (!curr.next.attemptMark(next, true))
+                   continue;
+               
+               prev.next.compareAndSet(curr, next, false, false);
+               return true;
+           }
+              
+       }
     };
     
     public boolean contains(T value){
-        Node<T> cur = head;
-        while (cur.value.compareTo(value) < 0)
-            cur = cur.next;
-        
-        return (cur.value.compareTo(value) == 0 && !cur.deleted);
+        Window win = traverse(value);
+        return (win.curr.value.equals(value) && !win.curr.next.isMarked());
     };
     
     public boolean isEmpty(){
-        return head.next == tail;
+        Node curr = head;
+        while (curr.next.getReference() != tail){
+            if (!curr.next.isMarked())
+                return false;
+            curr = curr.next.getReference();
+        }
+        
+        return true;
     };
 }

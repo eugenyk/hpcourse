@@ -28,6 +28,8 @@ pthread_cond_t consumer_is_started = PTHREAD_COND_INITIALIZER;
 //For disable spurious wakeups
 bool b_can_produce = true;
 bool b_consumer_is_started = false;
+bool b_producer_is_started = false;
+bool b_interruptor_is_started = false;
 
 pthread_t t_producer;
 pthread_t t_consumer;
@@ -69,11 +71,11 @@ void *producer_routine(void *arg) {
 
 	while (!b_consumer_is_started)
 		pthread_cond_wait(&consumer_is_started, &m_mutex);
-
+	
+	b_producer_is_started = true;
 	pthread_cleanup_pop(0);
 	pthread_mutex_unlock(&m_mutex);
-	
-	
+
 	//loop through each value and update the value, notify consumer, wait for consumer to process
 	for (auto next_int : in_values) {
 		pthread_mutex_lock(&m_mutex);
@@ -109,24 +111,25 @@ void *consumer_routine(void *arg) {
 	Value *value = reinterpret_cast<Value *>(arg);
 	// notify about start
 	b_consumer_is_started = true;
-	pthread_cond_broadcast(&consumer_is_started);
+	while (!b_interruptor_is_started && !b_producer_is_started)
+		pthread_cond_signal(&consumer_is_started);
 
 	while (!producer_finish)
 	{
 		pthread_mutex_lock(&m_mutex);
 		pthread_cleanup_push(consumer_sum_clean, (void*) sum);
+
+		if (!b_can_produce)
+		{
+			*sum += value->get();
+
+			b_can_produce = true;
+			pthread_cond_signal(&can_produce);
+		}
 		
 		while (b_can_produce)
 			pthread_cond_wait(&can_consume, &m_mutex);
-		
-		*sum += value->get();
-
-		b_can_produce = true;
-		pthread_cond_broadcast(&can_produce);
-
-		if (producer_finish)
-			*sum -= value->get();
-
+			
 		pthread_cleanup_pop(0);
 		pthread_mutex_unlock(&m_mutex);	
 	}
@@ -136,28 +139,16 @@ void *consumer_routine(void *arg) {
 
 void *consumer_interruptor_routine(void *arg) {
 	// wait for consumer to start	
-	pthread_mutex_lock(&m_mutex);
-	pthread_cleanup_push(clean, NULL);
-
 	while(!b_consumer_is_started)
-		pthread_cond_wait(&consumer_is_started, &m_mutex);
+		continue;
 	
-	pthread_cleanup_pop(0);
-	pthread_mutex_unlock(&m_mutex);
+	b_interruptor_is_started = true;
 	// interrupt consumer while producer is running
 	while (!producer_finish)
-	{		
-		pthread_mutex_lock(&m_mutex);
-		pthread_cleanup_push(clean, NULL);
-
-		while(!b_can_produce)
-			pthread_cond_wait(&can_produce, &m_mutex);
-		
-		if (!producer_finish) {
+	{	
+		if (b_can_produce) {
 			pthread_cancel(t_consumer);
 		}
-		pthread_cleanup_pop(0);
-		pthread_mutex_unlock(&m_mutex);
 	}
 
 	return nullptr;
