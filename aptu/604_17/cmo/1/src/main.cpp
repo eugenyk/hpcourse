@@ -38,16 +38,17 @@ void* producer_routine(void* arg) {
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     pthread_mutex_lock(&mutex);
     for (int x; std::cin >> x;) {
-        while (!is_value_processed) {
-            pthread_cond_wait(&cond, &mutex);
-        }
         value->update(x);
         is_value_processed = false;
         pthread_cond_signal(&cond);
+        while (!is_value_processed) {
+            pthread_cond_wait(&cond, &mutex);
+        }
     }
+    is_producer_finished = true;
+    pthread_cond_signal(&cond);
     pthread_mutex_unlock(&mutex);
 
-    is_producer_finished = true;
     return nullptr;
 }
 
@@ -68,9 +69,12 @@ void* consumer_routine(void* arg) {
 
     // for every update issued by producer, read the value and add to sum
     pthread_mutex_lock(&mutex);
-    while (!is_producer_finished) {
-        while (is_value_processed) {
+    while (true) {
+        while (!is_producer_finished && is_value_processed) {
             pthread_cond_wait(&cond, &mutex);
+        }
+        if (is_producer_finished) {
+            break;
         }
         *sum += value->get();
         is_value_processed = true;
