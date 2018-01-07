@@ -128,17 +128,16 @@ public class ListBasedSet<T extends Comparable<T>> implements LockFreeSet<T>{
     };
     
     public boolean isEmpty(){
-		while (true){
-				Node next = head.next.getReference();
-				if (next == tail)
-					return true;
-				
-				if (!curr.next.isMarked())
-					return false;
-				
-				if (!head.next.compareAndSet(next, next.next, false, false))
-					continue;
-			}
+        while (true){
+            Node next = head.next.getReference();
+            if (next == tail)
+                return true;
+
+            if (!next.next.isMarked())
+                return false;
+
+            head.next.compareAndSet(next, next.next.getReference(), false, false);
         }
-    };
-}
+    }
+};
+
