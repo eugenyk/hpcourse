@@ -133,10 +133,10 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>{
                 return true;
             }
             else{
-                Node<T> head_next = head.next.get(mark);
-                if(mark[0] && head_next != tail){
-                    Node<T> head_next_next = head_next.next.getReference();
-                    head.next.compareAndSet(head_next,head_next_next,false,false);
+                Node<T> first = head.next.getReference();
+                Node<T> second = first.next.get(mark);
+                if(mark[0] && first != tail) {
+                    head.next.compareAndSet(first, second, false, false);
                 }
                 else{
                     return false;
@@ -144,4 +144,6 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T>{
             }
         }while(true);
     }
+
+
 }
