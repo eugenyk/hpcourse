@@ -70,11 +70,11 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     @Override
     public boolean isEmpty() {
         for (Node<T> next = head.getNext(); next != tail; next = head.getNext()) {
-            if (!head.isMarked()) {
+            if (!next.isMarked()) {
                 return false;
             }
 
-            head.next.compareAndSet(next, next.getNext(), true, true);
+            head.next.compareAndSet(next, next.getNext(), false, false);
         }
 
         return true;
