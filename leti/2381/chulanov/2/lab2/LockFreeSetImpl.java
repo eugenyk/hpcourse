@@ -115,9 +115,9 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             }
             // test if all elements are marked to remove
             else{
-                Node<T> head_next = head.next.get(marked);
+                Node<T> head_next = head.next.getReference();
+                Node<T> head_next_next = head_next.next.get(marked);
                 if(marked[0] && head_next != tail){
-                    Node<T> head_next_next = head_next.next.getReference();
                     head.next.compareAndSet(head_next,head_next_next,false,false);
                 }
                 else{

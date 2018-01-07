@@ -25,17 +25,20 @@ pthread_t interrupter;
 pthread_mutex_t mutex;
 pthread_cond_t cond;
 
+pthread_mutex_t cons_mutex;
+pthread_cond_t cons_cond;
+
 
 int condition = 0;
-bool consumer_starts=false;
+int consumer_starts=0;
 bool continue_updates = true;
 
  
 void* producer_routine(void* arg) {
   // Wait for consumer to start
-    while (!consumer_starts)
+    while (consumer_starts == 0)
     {
-
+        pthread_cond_wait( &cons_cond, &cons_mutex );
     }
     int n;   // number of values
     int x;   // values
@@ -67,7 +70,10 @@ void* consumer_routine(void* arg) {
   // for every update issued by producer, read the value and add to sum
   // return pointer to result
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-    consumer_starts = true;
+    pthread_mutex_lock( &cons_mutex );
+    consumer_starts = 1;
+    pthread_cond_signal( &cons_cond );
+    pthread_mutex_unlock( &cons_mutex );
     int *sum = new int();
     Value *value = (Value*)arg;
     *sum = 0;
@@ -87,9 +93,9 @@ void* consumer_routine(void* arg) {
  
 void* consumer_interruptor_routine(void* arg) {
   // wait for consumer to start
-    while (!consumer_starts)
+    while (consumer_starts == 0)
     {
-
+        pthread_cond_wait( &cons_cond, &cons_mutex );
     }
   // interrupt consumer while producer is running   
     while(continue_updates)
