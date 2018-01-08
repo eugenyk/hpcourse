@@ -1,10 +1,11 @@
 #include <pthread.h>
 #include <iostream>
 #include <vector>
+#include <limits.h>
 
 using namespace std;
 
-bool dbg = false; //show messages in console
+bool dbg = true; //show messages in console
 
 class Value
 {
@@ -27,19 +28,36 @@ private:
 
 pthread_mutex_t m;
 pthread_cond_t upd;
-bool is_new_val = true;
-bool is_end = false;
+bool is_new_val = true; //if FALSE producer can push new value
+bool is_end = false; //flag shows end of process
 
 pthread_t producer, consumer, interruptor;
+
+void lock_and_wait(){
+    int rtn = 0; //flag indicates error in cond_wait
+    pthread_mutex_lock(&m);
+    while (is_new_val || rtn!=0)
+      rtn = pthread_cond_wait(&upd, &m);
+}
+
+void signal_and_unlock(){
+    pthread_cond_signal(&upd);
+    pthread_mutex_unlock(&m);
+}
+
 
 void* producer_routine(void* arg)
 {
   // Read data
   vector<int> data;
-  int num;
   while (cin.peek() != '\n')
     {
+      int num = INT_MIN;
       cin >> num;
+      if (num == INT_MIN) {
+          cout << "Wrong input" << endl;
+          break;
+      }
       data.push_back(num);
     }
 
@@ -47,27 +65,21 @@ void* producer_routine(void* arg)
   for (vector<int>::iterator it = data.begin(); it != data.end(); ++it)
     {
       // wait for consumer to start / to process value
-      pthread_mutex_lock(&m);
-      while (is_new_val)
-        pthread_cond_wait(&upd, &m);
-
+      lock_and_wait();
       //update value
       ((Value*)arg)->update(*it);
       is_new_val = true;
-      if (dbg)
-        cout << "producer: next value = " << *it << endl;
-      pthread_cond_signal(&upd);
-      pthread_mutex_unlock(&m);
+      if (dbg) cout << "producer: next value = " << *it << endl;
+      signal_and_unlock();
     }
 
-  //signal to finish all tasks
-  pthread_mutex_lock(&m);
+  //wait for consumer to end all tasks
+  lock_and_wait();
+  //set flag to finish consumer
   is_end = true;
-  pthread_cond_signal(&upd);
-  pthread_mutex_unlock(&m);
+  if (dbg) cout << "producer: finished\n";
+  signal_and_unlock();
 
-  if (dbg)
-    cout << "producer: finished\n";
 }
 
 void* consumer_routine(void* arg)
@@ -76,13 +88,12 @@ void* consumer_routine(void* arg)
   int* result = new int;
   *result = 0;
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
   // notify about start
   pthread_mutex_lock(&m);
   is_new_val = false;
-  if (dbg)
-    cout << "consumer: started\n";
-  pthread_cond_signal(&upd);
-  pthread_mutex_unlock(&m);
+  if (dbg) cout << "consumer: started\n";
+  signal_and_unlock();
 
   while (!is_end)
     {
@@ -96,35 +107,30 @@ void* consumer_routine(void* arg)
         {
           *result += ((Value*)arg)->get();
           is_new_val = false;
-          pthread_cond_signal(&upd);
+          if (dbg) cout << "consumer: added value = " << ((Value*)arg)->get() << ", sum = " << *result << endl;
         }
 
-      pthread_mutex_unlock(&m);
+      signal_and_unlock();
     }
 
-  if (dbg)
-    cout << "consumer: finished\n";
+  if (dbg) cout << "consumer: finished\n";
 
   // return pointer to result
   return (void*)result;
 }
 
-void* consumer_interruptor_routine(void* arg)
+void* interruptor_routine(void* arg)
 {
   // wait for consumer to start
-  pthread_mutex_lock(&m);
-  while (is_new_val)
-    pthread_cond_wait(&upd, &m);
-  if (dbg)
-    cout << "interruptor: started\n";
-  pthread_mutex_unlock(&m);
+  lock_and_wait();
+  if (dbg) cout << "interruptor: started\n";
+  signal_and_unlock();
 
   // try interrupt consumer while producer is running
   while (!is_end)
     pthread_cancel(consumer);
 
-  if (dbg)
-    cout << "interruptor: finished\n";
+  if (dbg) cout << "interruptor: finished\n";
 }
 
 int run_threads()
@@ -132,10 +138,11 @@ int run_threads()
   // start 3 threads and wait until they're done
   Value* val = new Value();
   int* sum = new int;
+  pthread_cond_init(&upd, NULL);
 
   pthread_create(&consumer, NULL, consumer_routine, (void*)val);
   pthread_create(&producer, NULL, producer_routine, (void*)val);
-  pthread_create(&interruptor, NULL, consumer_interruptor_routine, NULL);
+  pthread_create(&interruptor, NULL, interruptor_routine, NULL);
 
   pthread_join(producer, NULL);
   pthread_join(consumer, (void**)&sum);
