@@ -14,7 +14,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     static class Node<T> {
         final T value;
-        //mark stores state of current node, not which it refer
+        //mark stores state for current node, not for node to which it refer
         final AtomicMarkableReference<Node<T>> next = new AtomicMarkableReference<>(null, false);
 
         Node(T value) {
@@ -81,10 +81,12 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         Node<T> prev;
         Node<T> cur;
         Node<T> next;
-        boolean[] marked = {false};
+        //when trying to get next node, mark will be here
+        //mark means that current element should be deleted
+        boolean[] curMark = {false};
 
         // If set is empty
-        if (isEmpty()) {
+        if (head.next.getReference() == tail) {
             return new NodesPair<>(head, tail);
         }
 
@@ -94,17 +96,19 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             cur = prev.next.getReference();
             //loop through all nodes in list
             while (true) {
-                next = cur.next.get(marked);
+                next = cur.next.get(curMark);
+
                 //remove marked nodes
-                while (marked[0]) {
+                while (curMark[0]) {
                     //try to remove, if can't remove then retry
                     if (!prev.next.compareAndSet(cur, next, false, false)) {
                         continue retry;
                     }
                     //else go to next node and remove it if marked too
                     cur = next;
-                    next = cur.next.get(marked);
+                    next = cur.next.get(curMark);
                 }
+
                 //if value found or place for insertion found or list tail reached
                 if (cur == tail || value.compareTo(cur.value) <= 0) {
                     return new NodesPair<>(prev, cur);
@@ -136,13 +140,25 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     }
 
     public boolean isEmpty() {
-        return head.next.getReference() == tail;
+        boolean[] prevMark = {false};
+        Node<T> cur = head.next.getReference();
+
+        //loop through all nodes
+        while (cur != tail) {
+            cur = cur.next.get(prevMark);
+            //if found not removed element than set is not empty
+            if (!prevMark[0]) return false;
+        }
+
+        //set is empty in other cases
+        return true;
     }
 
     //just for test
     public java.util.ArrayList<T> getAll() {
         java.util.ArrayList<T> result = new java.util.ArrayList<>();
         Node<T> cur = head.next.getReference();
+        //loop through all nodes
         while (cur != tail) {
             if (contains(cur.value)) result.add(cur.value);
             cur = cur.next.getReference();

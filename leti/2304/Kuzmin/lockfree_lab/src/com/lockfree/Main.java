@@ -25,6 +25,7 @@ public class Main {
 
 
         try { Thread.sleep(1000); } catch (Exception e) { }
-        System.out.print(testSet.getAll().toString());
+        System.out.print(testSet.getAll().toString() + "\n");
+        System.out.print(testSet.isEmpty());
     }
 }
