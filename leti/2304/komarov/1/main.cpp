@@ -43,6 +43,7 @@ void* producer_routine(void* arg) {
         if(!isReadyToCompute){
             value->update(inputValues[counter]);
             counter++;
+            asm volatile("" ::: "memory");
             if(counter >= inputValues.size())
                 isReadyToClose = true;
             isReadyToCompute = true;
@@ -57,6 +58,7 @@ void* consumer_routine(void* arg) {
 
     isRun = true;
     // notify about start
+    asm volatile("" ::: "memory");
     isConsumerStarted = true;
 //    pthread_cond_broadcast(&cond);
     //cout << "consumer_routine start\n";
@@ -70,7 +72,7 @@ void* consumer_routine(void* arg) {
             int x = value->get();
             result += x;
             //cout << "val = " << x << "  res = " << result << endl;
-
+            asm volatile("" ::: "memory");
             if(isReadyToClose)
                 isRun = false;
 
