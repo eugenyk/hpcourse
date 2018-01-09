@@ -140,18 +140,13 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     }
 
     public boolean isEmpty() {
-        boolean[] prevMark = {false};
-        Node<T> cur = head.next.getReference();
-
-        //loop through all nodes
-        while (cur != tail) {
-            cur = cur.next.get(prevMark);
-            //if found not removed element than set is not empty
-            if (!prevMark[0]) return false;
+        while (true) {
+            Node<T> cur = head.next.getReference();
+            if (cur == tail) return true;
+            if (!cur.next.isMarked()) return false;
+            //if next node after head is marked, remove it and go again
+            head.next.compareAndSet(cur, cur.next.getReference(), false, false);
         }
-
-        //set is empty in other cases
-        return true;
     }
 
     //just for test
