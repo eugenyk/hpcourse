@@ -42,13 +42,7 @@ void* producer_routine(void* arg) {
     bool* not_finished = std::get<4>(*tupl);
     bool* buffer_ready_flag = std::get<5>(*tupl);
 
-//    std::string str = "-12 45 67 -12 0 -1 16";
-
-    std::string str;
-    std::cin >> str;
-
-    std::stringstream stream(str);
-    std::vector<int64_t> values{std::istream_iterator<int64_t>(stream),
+    std::vector<int64_t> values{std::istream_iterator<int64_t>(std::cin),
                                 std::istream_iterator<int64_t>()};
 
     for (size_t i = 0; i < values.size(); ++i) {
