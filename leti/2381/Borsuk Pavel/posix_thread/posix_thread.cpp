@@ -65,9 +65,9 @@ void* producer_routine(void* arg) {
 			pthread_cond_wait(&condStatusUpdate, &mutex);	
 		}
 		int c = 0;
-		fscanf (fIn, "%d", &c);
 		if ( !feof(fIn) )
 		{
+			fscanf (fIn, "%d", &c);
 			buffer.update(c);	
 		}
 		else
