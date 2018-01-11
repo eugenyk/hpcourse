@@ -2,6 +2,8 @@
 #include <iostream>
 
 using namespace std;
+
+
  
 class Value {
 public:
@@ -32,33 +34,26 @@ bool continue_updates = true;
 
  
 void* producer_routine(void* arg) {
-  // Wait for consumer to start
-    while (!consumer_starts)
-    {
-
-    }
-    int n;   // number of values
-    int x;   // values
-    cout << "Enter the number of values: ";
-    cin >> n;
-    cout << "Enter the values: ";
+    int number;   
+    int input_value; 
+    while (!consumer_starts){}
+    cout << "Input num of values: ";
+    cin >> number;
+    cout << "Input each value: ";
     Value *value = (Value*)arg;
-  // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
-    while( n > 0 ) 
+    while( number > 0 ) 
     { 
         pthread_mutex_lock( &mutex ); 
         while( condition == 1 ) 
             pthread_cond_wait( &cond, &mutex ); 
-        cin >> x;
-        value->update(x);
-        n--;
+        cin >> input_value;
+        value -> update(input_value);
+        number--;
         condition = 1; 
         pthread_cond_signal( &cond ); 
         pthread_mutex_unlock( &mutex ); 
     } 
     continue_updates = false;
-    
-    
 }
  
 void* consumer_routine(void* arg) {
@@ -81,20 +76,11 @@ void* consumer_routine(void* arg) {
 }
  
 void* consumer_interruptor_routine(void* arg) {
-  // wait for consumer to start
-    while (!consumer_starts)
-    {
-
-    }
-  // interrupt consumer while producer is running   
-    while(continue_updates)
-    {
-        pthread_cancel(consumer);
-    }                                       
+    while (!consumer_starts){}
+    while(continue_updates){ pthread_cancel(consumer);}                                       
 }
  
 int run_threads() {
-  // start 3 threads and wait until they're done
     Value *value = new Value();
     int *sum;
     
@@ -103,7 +89,6 @@ int run_threads() {
     pthread_create(&consumer,NULL,&consumer_routine,value);
     pthread_create(&interrupter,NULL,&consumer_interruptor_routine,NULL);
 
-  // return sum of update values seen by consumer
     pthread_join(producer,NULL);
     pthread_join(consumer,(void**)&sum); 
     pthread_join(interrupter,NULL);
