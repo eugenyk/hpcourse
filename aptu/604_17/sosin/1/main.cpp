@@ -5,7 +5,9 @@
 #include <vector>
 #include <iterator>
 #include <tuple>
-#include <zconf.h>
+
+
+#define NUM_THREADS 3
 
 
 class Value {
@@ -25,97 +27,91 @@ private:
 };
 
 
-typedef std::pair<pthread_mutex_t*, pthread_cond_t*> mut_cond_pair;
+pthread_mutex_t mutex_data;
+pthread_cond_t cond;
+pthread_barrier_t barrier;
 
-typedef std::tuple<pthread_t, bool*, bool*> thread_tup;
-typedef std::tuple<pthread_mutex_t*,
-        pthread_cond_t*, pthread_cond_t*,
-        Value*, bool*, bool*> tup;
+
+enum class Readiness {
+    producer,
+    consumer,
+    none
+};
+
+
+enum class Signal {
+    prod_completed,
+    none
+};
+
+
+Readiness ready = Readiness::none;
+Signal signal = Signal::none;
+
 
 void* producer_routine(void* arg) {
-    tup* tupl = (tup*) arg;
+    pthread_barrier_wait(&barrier);
 
-    pthread_mutex_t* mutex_data = std::get<0>(*tupl);
-    pthread_cond_t* buffer_full = std::get<1>(*tupl);
-    pthread_cond_t* buffer_empty = std::get<2>(*tupl);
-    Value* val = std::get<3>(*tupl);
-    bool* not_finished = std::get<4>(*tupl);
-    bool* buffer_ready_flag = std::get<5>(*tupl);
+    auto* value = (Value*) arg;
 
-    std::vector<int64_t> values{std::istream_iterator<int64_t>(std::cin),
-                                std::istream_iterator<int64_t>()};
+    std::vector<int> values{std::istream_iterator<int>(std::cin),
+                                std::istream_iterator<int>()};
 
-    for (size_t i = 0; i < values.size(); ++i) {
-        pthread_mutex_lock(mutex_data);
-        while (*buffer_ready_flag) {
-            pthread_cond_wait(buffer_empty, mutex_data);
+    pthread_mutex_lock(&mutex_data);
+
+    for (auto new_val: values) {
+        value->update(new_val);
+        ready = Readiness::producer;
+
+        while (ready != Readiness::consumer) {
+            pthread_cond_wait(&cond, &mutex_data);
         }
-        val->update(values[i]);
-        *buffer_ready_flag = true;
-
-        pthread_mutex_unlock(mutex_data);
-        pthread_cond_signal(buffer_full);
     }
 
-    pthread_mutex_lock(mutex_data);
-    while (*buffer_ready_flag) {
-        pthread_cond_wait(buffer_empty, mutex_data);
-    }
-    *not_finished = false;
-    pthread_mutex_unlock(mutex_data);
-    pthread_cond_signal(buffer_full);
+    pthread_mutex_unlock(&mutex_data);
 
-    return 0;
+    signal = Signal::prod_completed;
+
+    return nullptr;
 }
 
 void* consumer_routine(void* arg) {
-    tup* tupl = (tup*) arg;
+    pthread_barrier_wait(&barrier);
 
-    pthread_mutex_t* mutex_data = std::get<0>(*tupl);
-    pthread_cond_t* buffer_full = std::get<1>(*tupl);
-    pthread_cond_t* buffer_empty = std::get<2>(*tupl);
-    Value* val = std::get<3>(*tupl);
-    bool* not_finished = std::get<4>(*tupl);
-    bool* buffer_ready_flag = std::get<5>(*tupl);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 
-    int64_t* result = new int64_t(0);
+    auto* value = (Value*) arg;
 
-    while (*not_finished) {
-        pthread_mutex_lock(mutex_data);
-        while (!*buffer_ready_flag) {
-            pthread_cond_wait(buffer_full, mutex_data);
+    auto* result = new int(0);
 
-            if (!*not_finished && !*buffer_ready_flag) break;
+    while (signal != Signal::prod_completed) {
+
+        if (ready == Readiness::producer) {
+            pthread_mutex_lock(&mutex_data);
+
+            *result += value->get();
+            ready = Readiness::consumer;
+
+            pthread_mutex_unlock(&mutex_data);
+            pthread_cond_broadcast(&cond);
         }
-        if (!*not_finished && !*buffer_ready_flag) break;
-
-        *result += val->get();
-
-        *buffer_ready_flag = false;
-        pthread_mutex_unlock(mutex_data);
-        pthread_cond_broadcast(buffer_empty);
     }
+
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
+
     pthread_exit(result);
 }
 
 void* consumer_interruptor_routine(void* arg) {
+    pthread_barrier_wait(&barrier);
 
-    thread_tup* tupl = (thread_tup*) arg;
+    auto thread = (pthread_t*) arg;
 
-    pthread_t thread = std::get<0>(*tupl);
-    bool* not_finished = std::get<1>(*tupl);
-    bool* buffer_ready_flag = std::get<2>(*tupl);
-
-    while (true) {
-        while (!*buffer_ready_flag && *not_finished) {
-            pthread_cancel(thread);
-        }
-        if (!*not_finished) break;
+    while (signal != Signal::prod_completed) {
+        pthread_cancel(*thread);
     }
 
-
-
-    return 0;
+    return nullptr;
 }
 
 int run_threads() {
@@ -123,47 +119,36 @@ int run_threads() {
     pthread_t con_thread;
     pthread_t inter_thread;
 
-    pthread_mutex_t mutex_data;
-    pthread_cond_t buffer_full;
-    pthread_cond_t buffer_empty;
-
-    pthread_mutex_init(&mutex_data, NULL);
-    pthread_cond_init(&buffer_full, NULL);
-    pthread_cond_init(&buffer_empty, NULL);
-
     Value value;
-    bool not_finished = true;
-    bool ready = false;
 
-    tup tupl = std::make_tuple(&mutex_data, &buffer_full,
-                               &buffer_empty, &value, &not_finished, &ready);
+    pthread_mutex_init(&mutex_data, nullptr);
+    pthread_cond_init(&cond, nullptr);
+    pthread_barrier_init(&barrier, nullptr, NUM_THREADS);
 
-    thread_tup for_cancel = std::make_tuple(con_thread, &not_finished, &ready);
+    assert(pthread_create(&prod_thread, nullptr,
+                          producer_routine, &value) == 0);
+    assert(pthread_create(&con_thread, nullptr,
+                          consumer_routine, &value) == 0);
+    assert(pthread_create(&inter_thread, nullptr,
+                          consumer_interruptor_routine, &con_thread) == 0);
 
-    assert(pthread_create(&prod_thread, NULL,
-                          producer_routine, &tupl) == 0);
-    assert(pthread_create(&con_thread, NULL,
-                          consumer_routine, &tupl) == 0);
-    assert(pthread_create(&inter_thread, NULL,
-                          consumer_interruptor_routine, &for_cancel) == 0);
+    void* result = nullptr;
 
-    void* result = NULL;
-
-    assert(pthread_join(prod_thread, NULL) == 0);
+    assert(pthread_join(prod_thread, nullptr) == 0);
     assert(pthread_join(con_thread, &result) == 0);
-    assert(pthread_join(inter_thread, NULL) == 0);
+    assert(pthread_join(inter_thread, nullptr) == 0);
 
     pthread_mutex_destroy(&mutex_data);
-    pthread_cond_destroy(&buffer_full);
-    pthread_cond_destroy(&buffer_empty);
+    pthread_cond_destroy(&cond);
+    pthread_barrier_destroy(&barrier);
 
+    int sum = *(int*)result;
+    delete (int*)result;
 
-  return *(int64_t*)result;
+    return sum;
 }
 
 int main() {
-
     std::cout << run_threads() << std::endl;
-
     return 0;
 }
