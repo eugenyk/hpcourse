@@ -1,5 +1,7 @@
 package com.company;
 
+import com.company.LockFreeSet;
+
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 /**
@@ -67,25 +69,23 @@ public class CustomLockFreeSet<T extends Comparable<T>> implements LockFreeSet<T
         }
         Node<T> previous, current, next;
         boolean[] marked = {false};
+        previous = head;
+        current = previous.next.getReference();
         while (true) {
-            previous = head;
-            current = previous.next.getReference();
-            while (true) {
-                next = current.next.get(marked);
-                while (marked[0]) {
-                    if (!previous.next.compareAndSet(current, next, false, false)) {
-                        findPrevious(value);
-                    }
-                    current = next;
-                    next = current.next.get(marked);
+            next = current.next.get(marked);
+            while (marked[0]) {
+                if (!previous.next.compareAndSet(current, next, false, false)) {
+                    findPrevious(value);
                 }
-
-                if (current == tail || value.compareTo(current.value) == 0) {
-                    return previous;
-                }
-                previous = current;
                 current = next;
+                next = current.next.get(marked);
             }
+
+            if (current == tail || value.compareTo(current.value) == 0) {
+                return previous;
+            }
+            previous = current;
+            current = next;
         }
     }
 
