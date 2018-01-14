@@ -1,0 +1,89 @@
+    private final Object lock = new Object();
+
+    private Object[] array;
+
+    LockFreeContainer() {
+        array = new Object[0];
+    }
+
+    public boolean add(Comparable value) {
+        synchronized (lock) {
+            Object[] elements = getArray();
+            int len = elements.length;
+            Object[] newArray = Arrays.copyOf(elements, len + 1);
+            newArray[len] = value;
+            setArray(newArray);
+            return true;
+        }
+    }
+
+    public boolean remove(Comparable value) {
+        synchronized (lock) {
+            int index = indexOf(value);
+            Object[] current = getArray();
+            int len = current.length;
+            Object[] newElements = new Object[len - 1];
+            System.arraycopy(current, 0, newElements, 0, index);
+            System.arraycopy(current, index + 1, newElements, index, len - index - 1);
+            setArray(newElements);
+            return true;
+        }
+    }
+
+    public boolean contains(Comparable value) {
+        return indexOf(value) >= 0;
+    }
+
+    public boolean isEmpty() {
+        return getArray().length == 0;
+    }
+
+    private Object[] getArray() {
+        return array;
+    }
+
+    private void setArray(Object[] array) {
+        this.array = array;
+    }
+
+    private int indexOf(Object o) {
+        if (o == null) {
+            for (int i = 0; i < getArray().length; i++)
+                if (getArray()[i] == null)
+                    return i;
+        } else {
+            for (int i = 0; i < getArray().length; i++)
+                if (o.equals(getArray()[i]))
+                    return i;
+        }
+        return -1;
+    }
+
+    public int getSize() {
+        return array.length;
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    public boolean add(Comparable value) {
+            final Node<Comparable> newNode = new Node<>(value);
+
+            while (true) {
+                //search for value in sorted list
+                final NodesPair<T> nodesPair = search(value);
+                final Node<T> prev = nodesPair.prev;
+                final Node<T> cur = nodesPair.cur;
+
+                //if it's already in list then return
+                if (cur.value == value) {
+                    return false;
+                } else {
+                    //set reference from new node to current
+                    newNode.next.set(cur, false);
+                    //try to set reference from previous node to new if now it refer to current node and not marked
+                    if (prev.next.compareAndSet(cur, newNode, false, false)) {
+                        return true;
+                    }
+                }
+            }
+        }
