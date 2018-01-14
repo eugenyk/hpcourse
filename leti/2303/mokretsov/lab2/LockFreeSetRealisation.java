@@ -92,12 +92,12 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             Node prevNode = head.get();
             Node currNode = prevNode.getNextNode().getReference();
 
-            while(true) {
-                boolean currentMarked = currNode.getNextNode().isMarked();
+        retry: while(true) {
+                boolean currentMarked = currNode.isMarked();
                 Node nextNode = currNode.getNextNode().getReference();
 
                 if (currentMarked) {
-                    if (!prevNode.getNextNode().compareAndSet(currNode, nextNode, false, false)) {
+                    if (!prevNode.getNextNode().compareAndSet(currNode, nextNode, currentMarked, false)) {
                         continue retry;
                     } else {
                         currNode = nextNode;
