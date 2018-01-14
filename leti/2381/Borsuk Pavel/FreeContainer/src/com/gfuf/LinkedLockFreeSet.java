@@ -89,7 +89,19 @@ public class LinkedLockFreeSet<T extends Comparable<T>> implements LockFreeSet<T
 	@Override
 	public boolean isEmpty() 
 	{
-		return this.head.get() == null;
+          	AtomicMarkableReference<Node> current = this.head.get().next;
+		if (current.getReference() == null) {
+		    return true;
+		} else {
+		    while (current.getReference() != null) {
+		        if (!current.isMarked()) {
+		            return false;
+		        }
+
+		        current = current.getReference().next;
+		    }
+		    return true;
+		}
 	}
 	
 	private Pair findWindow(Comparable value) 
