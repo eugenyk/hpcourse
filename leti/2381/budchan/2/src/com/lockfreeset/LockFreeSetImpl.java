@@ -134,18 +134,19 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean isEmpty() {
-        AtomicMarkableReference<Node<T>> current = this.head.next;
-        if (current.getReference() == null) {
-            return true;
-        } else {
-            while (current.getReference() != null) {
-                if (!current.isMarked()) {
+        boolean[] marked = {false};
+        while(true) {
+            if (head.next.getReference() == null) {
+                return true;
+            } else {
+                Node<T> current = this.head.next.getReference();
+                Node<T> next = current.next.get(marked);
+                if (marked[0] && current != null) {
+                    head.next.compareAndSet(current, next, false, false);
+                } else {
                     return false;
                 }
-
-                current = current.getReference().next;
             }
-            return true;
         }
     }
 
