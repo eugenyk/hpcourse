@@ -92,8 +92,8 @@ void* consumer_routine(void* arg) {
             *result += value->get();
             ready = Readiness::consumer;
 
-            pthread_mutex_unlock(&mutex_data);
             pthread_cond_broadcast(&cond);
+            pthread_mutex_unlock(&mutex_data);
         }
     }
 
