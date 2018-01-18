@@ -28,10 +28,10 @@ pthread_cond_t is_modified_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t is_read_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t is_started_cond = PTHREAD_COND_INITIALIZER;
 
-bool is_modified = false;
-bool is_read = false;
-bool is_finished = false;
-bool is_started = false;
+volatile bool is_modified = false;
+volatile bool is_read = false;
+volatile bool is_finished = false;
+volatile bool is_started = false;
 
 void* producer_routine(void* arg) {
     pthread_mutex_lock(&mutex);
@@ -57,9 +57,10 @@ void* producer_routine(void* arg) {
         is_read = false;
         pthread_mutex_unlock(&mutex);
     }
+    pthread_mutex_lock(&mutex);
     pthread_cond_signal(&is_modified_cond);
-    pthread_mutex_unlock(&mutex);
     is_finished = true;
+    pthread_mutex_unlock(&mutex);
 }
 
 void* consumer_routine(void* arg) {
