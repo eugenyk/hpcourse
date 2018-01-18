@@ -21,6 +21,9 @@ public class LockFreeListImplTest {
         for (int i = 0; i < 100; i++) {
             assertTrue(lockFreeList.contains(i));
         }
+        for (int i = 0; i < 100; i++) {
+            assertFalse(lockFreeList.add(i));
+        }
     }
 
     @Test

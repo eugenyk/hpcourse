@@ -11,7 +11,7 @@ class LockFreeListImpl<T extends Comparable<T>> implements LockFreeList<T> {
                 return false;
             }
             Node curr = head.getReference().next.getReference();
-            head.getReference().next.compareAndSet(curr, head.getReference().next.getReference(), false, false);
+            head.getReference().next.compareAndSet(curr, curr.next.getReference(), true, false);
         }
         return true;
     }
