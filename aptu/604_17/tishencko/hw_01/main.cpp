@@ -53,7 +53,7 @@ void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
     pthread_mutex_lock(&the_mutex);
     started_flag = true;
-    pthread_cond_signal(&condrun);
+    pthread_cond_broadcast(&condrun);
     pthread_mutex_unlock(&the_mutex);
 
     for (int i = 0; i < list.size(); ++i) {
