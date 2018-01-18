@@ -22,9 +22,9 @@ private:
 
 pthread_mutex_t the_mutex;
 pthread_cond_t condcons, condprod, condrun;
-bool buffer_flag = false;
-bool started_flag = false;
-bool finished_flag = false;
+volatile bool buffer_flag = false;
+volatile bool started_flag = false;
+volatile bool finished_flag = false;
 
 std::vector<int> list;
 
