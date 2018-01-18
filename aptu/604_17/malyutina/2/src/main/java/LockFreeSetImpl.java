@@ -69,7 +69,8 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             if (!head.next.isMarked()) {
                 return false;
             }
-            head.next.compareAndSet(next, head.next.getReference(), false, false);
+            head.next.compareAndSet(next, next.next.getReference(), false,
+                    false);
         }
         return true;
     }
