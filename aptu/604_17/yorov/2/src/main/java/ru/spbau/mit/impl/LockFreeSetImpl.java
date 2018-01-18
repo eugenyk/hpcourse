@@ -37,7 +37,6 @@ public class LockFreeSetImpl<E extends Comparable<E>> implements LockFreeSet<E> 
 
     private Node<E> tail = new Node<>(null, NodeType.TAIL, null);
     private Node<E> head = new Node<>(null, NodeType.HEAD, tail);
-    private AtomicInteger size = new AtomicInteger(0);
 
     private static <E extends Comparable<E>> int compare(Node<E> cur, E key) {
         if (cur.nodeType == NodeType.TAIL) {
@@ -56,7 +55,6 @@ public class LockFreeSetImpl<E extends Comparable<E>> implements LockFreeSet<E> 
             }
             newNode.next.set(pos.rightNode, false);
             if (pos.leftNode.next.compareAndSet(pos.rightNode, newNode, false, false)) {
-                size.getAndIncrement();
                 return true;
             }
         }
@@ -102,7 +100,6 @@ public class LockFreeSetImpl<E extends Comparable<E>> implements LockFreeSet<E> 
 
             Node<E> succ = pos.rightNode.next.getReference();
             if (pos.rightNode.next.attemptMark(succ, true)) {
-                size.getAndDecrement();
                 pos.leftNode.next.compareAndSet(pos.rightNode, succ, false, false);
                 return true;
             }
@@ -117,7 +114,14 @@ public class LockFreeSetImpl<E extends Comparable<E>> implements LockFreeSet<E> 
 
     @Override
     public boolean isEmpty() {
-        return size.get() == 0;
+        while (head.next.getReference() != tail) {
+            Node<E> first = head.next.getReference();
+            if (!head.next.isMarked()) {
+                return false;
+            }
+            head.next.compareAndSet(first, first.next.getReference(), true, false);
+        }
+        return true;
     }
 
 }
