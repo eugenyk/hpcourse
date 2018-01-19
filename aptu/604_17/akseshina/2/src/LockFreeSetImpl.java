@@ -18,6 +18,13 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             this.value = value;
             this.next = new AtomicMarkableReference<>(next, false);
         }
+
+        private int compareTo(T value2) {
+            if (value == null || value2 == null) {
+                return -1;
+            }
+            return value.compareTo(value2);
+        }
     }
 
     private Node tail;
@@ -62,7 +69,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                     nextNode = currNode.next.get(marked);
                 }
 
-                if (currNode.value.compareTo(value) >= 0)
+                if (currNode.compareTo(value) >= 0 || currNode == tail)
                     return new Window(prevNode, currNode);
                 prevNode = currNode;
                 currNode = nextNode;
@@ -120,7 +127,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     public boolean contains(T value) {
         boolean[] marked = {false};
         Node currNode = head;
-        while (currNode.value.compareTo(value) < 0) {
+        while (currNode.compareTo(value) < 0 && currNode != tail) {
             currNode = currNode.next.getReference();
             Node nextNode = currNode.next.get(marked);
         }
@@ -129,16 +136,32 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean isEmpty() {
-        Node nextNode = head.next.getReference();
+        Node prevNode = null;
+        Node currNode = null;
+        Node nextNode = null;
+        boolean[] marked = {false};
+        boolean removeSucess;
 
-        while (nextNode != tail) {
-            if (!nextNode.next.isMarked()) {
-                return false;
+        main_loop: while (true) {
+            prevNode = head;
+            currNode = prevNode.next.getReference();
+
+            while (true) {
+                nextNode = currNode.next.get(marked);
+
+                while (marked[0]) {
+                    // attempt to physically remove the node
+                    removeSucess = prevNode.next.compareAndSet(currNode, nextNode,false, false);
+                    // fails if either value or ref has changed
+                    if (!removeSucess)
+                        continue main_loop;
+                    currNode = nextNode;
+                    nextNode = currNode.next.get(marked);
+                }
+
+                return currNode == tail;
             }
-            nextNode = nextNode.next.getReference();
         }
-
-        return true;
     }
 
 }
