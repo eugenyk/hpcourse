@@ -1,8 +1,6 @@
 package ru.spbau.mit.impl;
 
 import ru.spbau.mit.api.LockFreeSet;
-
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class LockFreeSetImpl<E extends Comparable<E>> implements LockFreeSet<E> {
@@ -116,10 +114,10 @@ public class LockFreeSetImpl<E extends Comparable<E>> implements LockFreeSet<E> 
     public boolean isEmpty() {
         while (head.next.getReference() != tail) {
             Node<E> first = head.next.getReference();
-            if (!head.next.isMarked()) {
+            if (!first.next.isMarked()) {
                 return false;
             }
-            head.next.compareAndSet(first, first.next.getReference(), true, false);
+            head.next.compareAndSet(first, first.next.getReference(), false, false);
         }
         return true;
     }
