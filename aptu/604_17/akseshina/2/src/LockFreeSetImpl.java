@@ -142,25 +142,24 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         boolean[] marked = {false};
         boolean removeSucess;
 
-        main_loop: while (true) {
+        main_loop:
+        while (true) {
             prevNode = head;
             currNode = prevNode.next.getReference();
 
-            while (true) {
+            nextNode = currNode.next.get(marked);
+            while (marked[0]) {
+                // attempt to physically remove the node
+                removeSucess = prevNode.next.compareAndSet(currNode, nextNode, false, false);
+                // fails if either value or ref has changed
+                if (!removeSucess)
+                    continue main_loop;
+                currNode = nextNode;
                 nextNode = currNode.next.get(marked);
-
-                while (marked[0]) {
-                    // attempt to physically remove the node
-                    removeSucess = prevNode.next.compareAndSet(currNode, nextNode,false, false);
-                    // fails if either value or ref has changed
-                    if (!removeSucess)
-                        continue main_loop;
-                    currNode = nextNode;
-                    nextNode = currNode.next.get(marked);
-                }
-
-                return currNode == tail;
             }
+
+            return currNode == tail;
+
         }
     }
 
