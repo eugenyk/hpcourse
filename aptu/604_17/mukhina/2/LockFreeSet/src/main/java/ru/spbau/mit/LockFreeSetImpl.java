@@ -13,6 +13,10 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean add(T value) {
+        if (value == null) {
+            return false;
+        }
+
         Node<T> newNode = new Node<>(value);
         Node<T> previousNode;
         while (true) {
@@ -31,6 +35,9 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean remove(T value) {
+        if (value == null) {
+            return false;
+        }
         Node<T> currentNode;
         Node<T> currentNodeNext;
         Node<T> previousNode;
@@ -65,19 +72,21 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean isEmpty() {
-        return searchTheLastElement() == head;
+        // searching null gives the last element in the set as previous node and tail as current one
+        Neighbours<T> neighbours = searchNeighbours(null);
+        // if the previous node is "head" then the set is empty
+        return neighbours.previous == head && neighbours.current == tail;
     }
 
     private Neighbours<T> searchNeighbours(T keyToSearch) {
-        Node<T> previousNode = head;
-        Node<T> previousNextNode = head.next.getReference();
-        Node<T> currentNode;
-
         while (true) {
+            Node<T> previousNode = head;
+            Node<T> previousNextNode = head.next.getReference();
+            Node<T> currentNode;
+
             Node<T> tmpNode = head;
             boolean[] isNextNodeMarked = {false};
             Node<T> tmpNodeNext = head.next.get(isNextNodeMarked);
-
             do {
                 if (!isNextNodeMarked[0]) {
                     previousNode = tmpNode;
@@ -89,28 +98,16 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                 }
                 tmpNodeNext = tmpNode.next.get(isNextNodeMarked);
             } while (isNextNodeMarked[0] || tmpNode.key.compareTo(keyToSearch) < 0);
-            currentNode = tmpNode;
 
+            currentNode = tmpNode;
             if (previousNode.next.compareAndSet(previousNextNode, currentNode, false, false)) {
                 if (currentNode != tail && currentNode.next.isMarked()) {
-                    return searchNeighbours(keyToSearch);
+                    continue;
                 } else {
                     return new Neighbours<>(previousNode, currentNode);
                 }
             }
         }
-    }
-
-    private Node<T> searchTheLastElement() {
-        boolean[] mark = {false};
-        Node<T> tmpNode = head;
-        while (tmpNode.next.getReference() != tail) {
-            tmpNode = tmpNode.next.get(mark);
-        }
-        if (mark[0])
-            return searchTheLastElement();
-        else
-            return tmpNode;
     }
 
     private static class Node<T> {
