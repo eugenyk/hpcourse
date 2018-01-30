@@ -1,0 +1,8 @@
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\bin\Debug\DevoidTalk.Core.dll
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\bin\Debug\DevoidTalk.Core.pdb
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\bin\Debug\protobuf-net.dll
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\bin\Debug\protobuf-net.pdb
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\bin\Debug\protobuf-net.xml
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\obj\Debug\mlk_1_csharp.Core.csproj.CoreCompileInputs.cache
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\obj\Debug\DevoidTalk.Core.dll
+C:\Users\Navalny\Desktop\1\mlk_1_csharp.Core\obj\Debug\DevoidTalk.Core.pdb
