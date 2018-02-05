@@ -131,14 +131,25 @@ class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
         boolean[] marked = {false};
         while (true) {
             Node pred = head;
-            Node curr = head.next.getReference();
-            if (curr == tail)
-                return true;
-            succ = curr.next.get(marked);
-            if (!marked[0])
-                return false;
-
-            pred.next.compareAndSet(curr, succ, true, false);
+            Node curr = head.next.get(marked);
+            if (!marked[0]) {
+                if (curr == tail) {
+                    return true;
+                } else {
+                    return false
+                }
+            } else {
+                succ = curr.next.get(marked);
+                if (succ == tail) {
+                    return true;
+                } else {
+                    if (!marked[0]) {
+                        return false
+                    } else {
+                        pred.next.compareAndSet(curr, succ, true, true);
+                    }
+                }
+            }
         }
     }
 }
