@@ -21,7 +21,7 @@ class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
     private Node head = new Node();
     private Node tail = new Node();
 
-    public ListBasedLockFreeSet() {
+    public LockFreeSetImpl() {
         head.key = Integer.MIN_VALUE;
         head.next = new AtomicMarkableReference<>(tail, false);
 
@@ -44,27 +44,26 @@ class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
         retry:
         while (true) {
             pred = head;
-            curr = pred.next.getReference();
+            curr = pred.next.get(marked);
             if (curr == tail)
                 // ! if head == tail, return tail and head
-                return new Window(pred, tail);
+                return new Window(head, tail);
             while (true) {
                 if (curr == tail)
                     // ! if on tail, return tail and pred,
                     // key of the tail is always greater than any other (RSentiel = INT.MAX)
-                    return new Window(pred, tail);
-                succ = curr.next.get(marked);
+                    return new Window(pred, curr);
                 while (marked[0]) {
-                    snip = pred.next.compareAndSet(curr, succ, false, false);
+                    succ = curr.next.get(marked);
+                    snip = pred.next.compareAndSet(curr, succ, true, marked[0]);
                     if (!snip)
                         continue retry;
                     curr = succ;
-                    succ = curr.next.get(marked);
                 }
                 if (curr.key >= key)
                     return new Window(pred, curr);
                 pred = curr;
-                curr = succ;
+                curr = pred.next.getReference();
             }
         }
     }
@@ -98,11 +97,9 @@ class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
             if (curr.key != key) {
                 return false;
             } else {
-                Node succ = curr.next.getReference();
-                snip = curr.next.attemptMark(succ, true);
+                snip = pred.next.attemptMark(curr, true);
                 if (!snip)
                     continue;
-                pred.next.compareAndSet(curr, succ, false, false);
                 return true;
             }
         }
@@ -114,13 +111,12 @@ class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
         int key = value.hashCode();
         Node curr = head;
         while (curr.key < key) {
-            curr = curr.next.getReference();
 
             if (curr == tail)
                 //! if reached tail then does not contain value
                 return false;
 
-            curr.next.get(marked);
+            curr = curr.next.get(marked);
         }
         return (curr.key == key && !marked[0]);
     }
@@ -136,7 +132,7 @@ class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
                 if (curr == tail) {
                     return true;
                 } else {
-                    return false
+                    return false;
                 }
             } else {
                 succ = curr.next.get(marked);
@@ -144,7 +140,7 @@ class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
                     return true;
                 } else {
                     if (!marked[0]) {
-                        return false
+                        return false;
                     } else {
                         pred.next.compareAndSet(curr, succ, true, true);
                     }
