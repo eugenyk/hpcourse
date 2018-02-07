@@ -110,14 +110,14 @@ void *consumer_interruptor_routine(void *arg) {
         pthread_cancel(*consumer_id);
     }
 }
-int run_threads() {
-
-
-
-    int maxNumber = 15;
-    for (int i = 0; i <= maxNumber; i++) {
-        v.push_back(i);
+int run_threads(char * path) {
+    std::ifstream fin(path);
+    int input_value;
+    while (fin >> input_value) {
+      v.push_back(input_value);
     }
+    fin.close();
+
     size = v.size();
 
     void *result;
@@ -152,8 +152,16 @@ int run_threads() {
     return *(int *) result;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    char * path;
+    if (argc != 2) {
+      std::cout << "You should type only one path to file with numbers as a parameter" << '\n';
+      return 0;
+    } else {
+      path = argv[1];
+    }
 
-    std::cout << run_threads() << std::endl;
+    std::cout << run_threads(path) << std::endl;
+
     return 0;
 }
