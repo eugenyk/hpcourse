@@ -62,7 +62,13 @@ void *producer_routine(void *arg) {
 
 void *consumer_routine(void *arg) {
 
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+    int result;
+    while (true) {
+      result = pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+      if (result == 0){
+        break;
+      }
+    }
 
     pthread_mutex_lock(&mutex);
     consumer_start = true;
