@@ -57,20 +57,24 @@ void* producer_routine(void* arg)
     while (it != list.end())
     {
         pthread_mutex_lock(&mutex);
+        if (isUpdateValue)
+            pthread_cond_wait(&condition, &mutex);
+
         ((Value*)arg)->update(*it);
         std::cout << "[PROD] value = " << *it << '\n';
         isUpdateValue = true;
+        ++it;
         pthread_cond_signal(&condition);
         pthread_mutex_unlock(&mutex);
-        std::cout << "[PROD] mutex unlock \n";
-        ++it;
     }
 
+    pthread_mutex_lock(&mutex);
     isFinish = true;
+    pthread_mutex_unlock(&mutex);
 }
 
 void* consumer_routine(void* arg)
-{ 
+{
     int* sum = new int;
     *sum = 0;
 
@@ -79,11 +83,8 @@ void* consumer_routine(void* arg)
     while (!isFinish)
     {
         pthread_mutex_lock(&mutex);
-
-        while (!isUpdateValue)
+        if (!isUpdateValue)
                      pthread_cond_wait(&condition, &mutex);
-
-
 
         if (isUpdateValue)
         {
@@ -93,8 +94,6 @@ void* consumer_routine(void* arg)
         }
         pthread_cond_signal(&condition);
         pthread_mutex_unlock(&mutex);
-        std::cout << "[CONS] mutex unlock\n";
-
     }
 
     return (void*)sum;
