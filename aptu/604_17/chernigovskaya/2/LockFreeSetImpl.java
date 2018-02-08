@@ -85,11 +85,13 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     public boolean isEmpty() {
         AtomicReference<Node> curRef = head.get().next;
         Node cur = curRef.get();
+        Node headNextBeforeTraversing = head.get().next.get();
         while (cur != null && cur.isDeleted) {
             curRef = cur.next;
             cur = curRef.get();
         }
-        return cur == null;
+        boolean listWasNotModified = head.get().next.get() == headNextBeforeTraversing;
+        return cur == null && listWasNotModified;
     }
 
     private boolean wereConnectedUsingCAS(AtomicReference<Node> prevRef, Node prev, AtomicReference<Node> curRef, Node cur) {
