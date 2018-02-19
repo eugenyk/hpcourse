@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <ctype.h>
+#include <sstream>
 
 
 class Value
@@ -38,14 +39,14 @@ std::vector<int> list;
 
 void readData()
 {
-    std::cout << "Input your data: ";
-    while (std::cin.peek() != '\n')
-    {
-        int num;
-        std::cin >> num;
-        if (isdigit(num)) break;
-        list.push_back(num);
-    }
+    int num;
+
+    std::string data;
+    std::getline(std::cin, data);
+    std::istringstream stream(data);
+
+    while (stream >> num)
+        list.push_back(num);   
 }
 
 
@@ -130,6 +131,6 @@ int run_threads()
 
 int main()
 {
-  std::cout << "Result = " << run_threads() << std::endl;
+  std::cout << run_threads() << std::endl;
   return 0;
 }
