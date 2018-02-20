@@ -1,0 +1,7 @@
+C:\Users\Navalny\source\repos\consoleChat\ConsoleServer\obj\Debug\ConsoleServer.csproj.CoreCompileInputs.cache
+C:\Users\Navalny\source\repos\consoleChat\ConsoleServer\bin\Debug\ConsoleServer.exe.config
+C:\Users\Navalny\source\repos\consoleChat\ConsoleServer\bin\Debug\ConsoleServer.exe
+C:\Users\Navalny\source\repos\consoleChat\ConsoleServer\bin\Debug\ConsoleServer.pdb
+C:\Users\Navalny\source\repos\consoleChat\ConsoleServer\obj\Debug\ConsoleServer.exe
+C:\Users\Navalny\source\repos\consoleChat\ConsoleServer\obj\Debug\ConsoleServer.pdb
+C:\Users\Navalny\source\repos\consoleChat\ConsoleServer\obj\Debug\ConsoleServer.csprojResolveAssemblyReference.cache
