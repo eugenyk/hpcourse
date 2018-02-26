@@ -16,7 +16,6 @@ namespace IDZCs
 {
     class Program
     {
-        private static List<string> _chatRoomList;
         private static bool _working;
         private static List<Socket> _clients;
         private static LockFreeList _lockFreeList;
@@ -24,16 +23,15 @@ namespace IDZCs
 
         static void Main(string[] args){
             exit = false;
-            _chatRoomList = new List<string>();
             _working = true;
             _clients = new List<Socket>();
             _lockFreeList = new LockFreeList();
-            Console.Write("Для запуска сервера введите '1'\nДля запуска клиента введите '0'\n");
+            Console.Out.WriteAsync("Для запуска сервера введите '1'\nДля запуска клиента введите '0'\n");
             var choice = Console.ReadLine();
             if (choice == "0") Client.Send();
-            Console.Write("Введите количество потоков\n");
+            Console.Out.WriteLineAsync("Введите количество потоков");
             var threadCapacity = Convert.ToInt32(Console.ReadLine());
-            ThreadPool.SetMaxThreads(30, 30);
+            ThreadPool.SetMaxThreads(threadCapacity, threadCapacity);            
             ThreadPool.SetMinThreads(2, 2);
             ServerStart();
             }
@@ -42,30 +40,20 @@ namespace IDZCs
             IPHostEntry ipHost = Dns.GetHostEntry("localhost");
             IPAddress ipAddr = ipHost.AddressList[0];
             IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, 11000);
-
-
-            // Создаем сокет Tcp/Ip
-            Socket sListener = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            // Назначаем сокет локальной конечной точке и слушаем входящие сокеты
-            try
-            {
+            
+            Socket sListener = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);            
+            try{
                 sListener.Bind(ipEndPoint);
-                sListener.Listen(10);
-
-                
-                while (_working)
-                {
-                    Console.WriteLine($"Ожидаем соединение через порт {ipEndPoint}");
-                    ThreadPool.QueueUserWorkItem(ClientHandler, sListener.Accept());
-                    
+                sListener.Listen(10);                
+                Console.Out.WriteLineAsync($"Ожидаем соединение через порт {ipEndPoint}");
+                while (_working){                    
+                    ThreadPool.QueueUserWorkItem(ClientHandler, sListener.Accept());                    
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
+            catch (Exception ex)            {
+                Console.Out.WriteLineAsync(ex.ToString());
             }
-            finally
-            {
+            finally            {
                 Console.ReadLine();
             }
         }
@@ -73,20 +61,32 @@ namespace IDZCs
         {
             var handler = (Socket)socket;
             _clients.Add(handler);
-            Console.WriteLine();
-            while (!exit)            {
+            Console.WriteLine();            
+            while (!exit) {
                 var bytes = new byte[1024];
-                var bytesRec = handler.Receive(bytes);
-                var messageSize = BitConverter.ToInt32(bytes, 0);
-                //bytesRec = handler.Receive(bytes);
-                var testmsg = Message.Parser.ParseFrom(bytes, 4, messageSize);
+                var testmsg = ProtoRecieve(handler,bytes);                
                 if (!MessageHandler(testmsg)){
                     break;
-                }
-                
+                }                
             }
+            _clients.Remove(handler);
             handler.Shutdown(SocketShutdown.Both);
             handler.Close();
+        }
+
+        private static Message ProtoRecieve(Socket socket, byte[] buffer){
+            var readedLength = 0;
+            while (readedLength < 4)
+            {
+                readedLength += socket.Receive(buffer, readedLength, 1, SocketFlags.None);
+            }
+            var dataLength = BitConverter.ToInt32(buffer, 0);
+            readedLength -= 4;
+            while (readedLength < dataLength)
+            {
+                readedLength += socket.Receive(buffer, readedLength, 1, SocketFlags.None);
+            }             
+            return Message.Parser.ParseFrom(buffer, 0, dataLength);
         }
 
         private static bool MessageHandler(Message message){
@@ -94,24 +94,24 @@ namespace IDZCs
             switch (message.Data){
                 case "Exit":
                     line = message.Sender + " покинул чат.";
-                    Console.WriteLine(line);
+                    Console.Out.WriteLineAsync(line);
                     Broadcast(line);
                     return false;
                 case "Join":
                     line = message.Sender + " присоеденился!";
-                    Console.WriteLine(line);
+                    Console.Out.WriteLineAsync(line);
                     Broadcast(line);
                     return true;
                 case "ServerClose":
                     line = "Завершение работы сервера";
-                    Console.WriteLine(line);
+                    Console.Out.WriteLineAsync(line);
                     Broadcast(line);
                     exit = true;
                     return true;
                 default:
                     _lockFreeList.Add(message.Text);
                     line = message.Sender + ": " + message.Text;
-                    Console.WriteLine(line);
+                    Console.Out.WriteLineAsync(line);
                     Broadcast(line);
                     return true;
             }
