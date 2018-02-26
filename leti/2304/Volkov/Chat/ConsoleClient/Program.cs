@@ -30,7 +30,7 @@ namespace ConsoleClient
 
                 string message = userName;
                 byte[] data = Encoding.Unicode.GetBytes(message);
-                stream.Write(data, 0, data.Length);// send UserName to Stream
+                stream.WriteAsync(data, 0, data.Length);// send UserName to Stream
 
                 // запускаем новый поток для получения данных
                 Thread receiveThread = new Thread(new ThreadStart(ReceiveMessage));
@@ -56,11 +56,11 @@ namespace ConsoleClient
             {// in an infinite loop We get messages user types
                 string message = Console.ReadLine();
                 byte[] data = Encoding.Unicode.GetBytes(message);
-                stream.Write(data, 0, data.Length);
+                stream.WriteAsync(data, 0, data.Length);
             }
         }
         // получение сообщений
-        static void ReceiveMessage()
+        static async void ReceiveMessage()
         {
             while (true)
             {
@@ -71,7 +71,7 @@ namespace ConsoleClient
                     int bytes = 0;
                     do
                     {
-                        bytes = stream.Read(data, 0, data.Length);
+                        bytes = await stream.ReadAsync(data, 0, data.Length);
                         builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
                     }
                     while (stream.DataAvailable);

@@ -25,7 +25,7 @@ namespace ConsoleServer
             {
                 server.Disconnect();
                 Console.OutputEncoding = Encoding.UTF8;
-                Console.WriteLine(ex.Message);
+                Console.Out.WriteLineAsync(ex.Message);
             }
         }// Main
     }// Program

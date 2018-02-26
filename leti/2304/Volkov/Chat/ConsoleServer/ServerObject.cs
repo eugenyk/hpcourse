@@ -34,33 +34,36 @@ namespace ConsoleServer
                 tcpListener = new TcpListener(IPAddress.Any, 8888);
                 tcpListener.Start();
                 Console.OutputEncoding = Encoding.UTF8;
-                Console.WriteLine("Server started. Waiting for connections...");
+                Console.Out.WriteLineAsync("Server started. Waiting for connections...");
 
                 while (true)
                 {// получаем входящее подключение
                     TcpClient tcpClient = tcpListener.AcceptTcpClient();
 
                     ClientObject clientObject = new ClientObject(tcpClient, this);
-                    Thread clientThread = new Thread(new ThreadStart(clientObject.Process));
-                    clientThread.Start();
+                    
+                    //ThreadPool.SetMinThreads(2, 2);// By default, the minimum number of threads is set to the number of processors on a system.You can use the
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(clientObject.Process));// пул потоков
+                    //Thread clientThread = new Thread(new ThreadStart(clientObject.Process));
+                    //clientThread.Start();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.Out.WriteLineAsync(ex.Message);
                 Disconnect();
             }
         }
 
         // трансляция сообщения подключенным клиентам
-        protected internal void BroadcastMessage(string message, string id)
+        protected internal void BroadcastMessage(string message, string id, string Data = "")
         {
             byte[] data = Encoding.Unicode.GetBytes(message);
             for (int i = 0; i < clients.Count; i++)
             {
                 if (clients[i].Id != id) // если id клиента не равно id отправляющего
                 {
-                    clients[i].Stream.Write(data, 0, data.Length); //передача данных
+                    clients[i].Stream.WriteAsync(data, 0, data.Length); //передача данных
                 }
             }
         }

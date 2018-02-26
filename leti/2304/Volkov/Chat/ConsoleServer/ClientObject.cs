@@ -11,46 +11,47 @@ namespace ConsoleServer
     {
         protected internal string Id { get; private set; }// unique for a client
         protected internal NetworkStream Stream { get; private set; }// Через данный объект можно передавать сообщения серверу или, наоборот, получать данные с сервера
-        string userName;
-        TcpClient client;// клиентской программы, работающей по протоколу TCP
+        string Sender;
+        string Data;//< Internal field. Можно использовать для реализации каких-либо собственных фич у своего сервера/клиента. Однако, стоит помнить, что все сервера-клиенты должны быть совместимы друг с другом
+        TcpClient client;
         ServerObject server; // объект сервера
 
         public ClientObject(TcpClient tcpClient, ServerObject serverObject)
         {
             Id = Guid.NewGuid().ToString();
-            client = tcpClient;
+            client = tcpClient;// TCP
             server = serverObject;
-            serverObject.AddConnection(this);
+            serverObject.AddConnection(this);// добавление в коллекцию подключений класса ServerObject
         }
 
-        public void Process()//from ServerObject.cs -> Listen() -> :44
+        public void Process(Object stateInfo)//from ServerObject.cs -> Listen() -> :44
         {
             try
             {
                 Stream = client.GetStream();
                 // получаем имя пользователя
                 string message = GetMessage();
-                userName = message;
+                Sender = message;
 
-                message = userName + " joined chat";
+                message = Sender + " joined chat";
                 // посылаем сообщение о входе в чат всем подключенным пользователям
                 server.BroadcastMessage(message, this.Id);
                 Console.OutputEncoding = Encoding.UTF8;
-                Console.WriteLine(message);
+                Console.Out.WriteLineAsync(message);
                 // в бесконечном цикле получаем сообщения от клиента
                 while (true)
                 {
                     try
                     {
                         message = GetMessage();
-                        message = String.Format("{0}: {1}", userName, message);
-                        Console.WriteLine(message);
+                        message = String.Format("{0}: {1}", Sender, message);
+                        Console.Out.WriteLineAsync(message);
                         server.BroadcastMessage(message, this.Id);
                     }
                     catch
                     {
-                        message = String.Format("{0}: left chat", userName);
-                        Console.WriteLine(message);
+                        message = String.Format("{0}: left chat", Sender);
+                        Console.Out.WriteLineAsync(message);
                         server.BroadcastMessage(message, this.Id);
                         break;
                     }
@@ -58,7 +59,7 @@ namespace ConsoleServer
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.Out.WriteLineAsync(e.Message);
             }
             finally
             {
