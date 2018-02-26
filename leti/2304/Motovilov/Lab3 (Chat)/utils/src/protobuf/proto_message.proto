@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+option java_package = "ru.leti.chat.utils.protoMessage";
+option java_outer_classname = "ProtoMessage";
+
+message ChatMessage {
+    required string Sender = 1; ///< Идентификатор отправителя
+    required string Text = 2;   ///< Содержание сообщения
+    optional string Data = 3;   ///< Internal field.
+}
