@@ -25,46 +25,38 @@ namespace IDZCs
                 IPHostEntry ipHost = Dns.GetHostEntry("localhost");
                 IPAddress ipAddr = ipHost.AddressList[0];
                 IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, 11000);
-
                 sender = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);                
-                sender.Connect(ipEndPoint);
-                Console.WriteLine("Сокет соединяется с {0} ", sender.RemoteEndPoint);
-
+                var afunc = new AsyncFunctions();
+                afunc.Connect(ipEndPoint, sender);                
+                
                 Thread receiveThread = new Thread(ReceiveMessage);
-                receiveThread.Start(); //старт потока
+                receiveThread.Start();
 
                 protomsg = new Message() { Data = "Join", Sender = "Human", Text = "" };
-                var size = BitConverter.GetBytes(protomsg.CalculateSize());
-                int bytesSent = sender.Send(size);
-                var message = protomsg.ToByteArray();
-                bytesSent = sender.Send(message);
+                afunc.Send(sender, protomsg);
 
                 while (!exit)
                 {
                     var text = Console.ReadLine();
                     ClearLine();                    
                     protomsg = MessageCreator(text);
-                    size = BitConverter.GetBytes(protomsg.CalculateSize());
-                    bytesSent = sender.Send(size);
-                    message = protomsg.ToByteArray();
-                    bytesSent = sender.Send(message);
+                    afunc.sendDone.WaitOne();
+                    afunc.Send(sender, protomsg);                    
                 }    
                 sender.Shutdown(SocketShutdown.Both);
                 sender.Close();
                
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex){
                 Console.WriteLine(ex.ToString());
             }
-            finally
-            {
+            finally{
                 Console.ReadLine();
             }
             
         }
-        public static void ClearLine()
-        {
+        
+        public static void ClearLine(){
             Console.SetCursorPosition(0, Console.CursorTop - 1);
             Console.Out.WriteAsync(new string(' ', Console.WindowWidth));
             Console.SetCursorPosition(0, Console.CursorTop - 1);
@@ -95,13 +87,16 @@ namespace IDZCs
         }
 
         public static void ReceiveMessage(){
-            while (!exit)
-            {
+            var afunc = new AsyncFunctions();
+            while (!exit){
                 try{
-                    var bytes = new byte[1024];
-                    var testmsg = ProtoRecieve(sender,bytes);
+                    afunc.Receive(sender);
+                    afunc.receiveDone.WaitOne();
+                    if (afunc.message == null) continue;
+                    var testmsg = afunc.message;
                     if (testmsg.Text == "Завершение работы сервера") exit = true;
                     Console.Out.WriteLineAsync(testmsg.Text);
+                    afunc.message = null;                    
                 }
                 catch (Exception ex)
                 {
@@ -109,18 +104,6 @@ namespace IDZCs
                     Console.Out.WriteLineAsync(ex.ToString());
                 }
             }
-        }
-        private static Message ProtoRecieve(Socket socket, byte[] buffer)        {
-            var readedLength = 0;
-            while (readedLength < 4)            {
-                readedLength += socket.Receive(buffer, readedLength, 1, SocketFlags.None);
-            }
-            var dataLength = BitConverter.ToInt32(buffer, 0);
-            readedLength -= 4;
-            while (readedLength < dataLength)            {
-                readedLength += socket.Receive(buffer, readedLength, 1, SocketFlags.None);
-            }
-            return Message.Parser.ParseFrom(buffer, 0, dataLength);
         }
     }
 }
