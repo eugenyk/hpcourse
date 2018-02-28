@@ -13,6 +13,7 @@ namespace ConsoleServer
     {
         static TcpListener tcpListener; // сервер для прослушивания
         List<ClientObject> clients = new List<ClientObject>(); // все подключения
+        public static ManualResetEvent tcpClientConnected = new ManualResetEvent(false);// Thread signal.
 
         protected internal void AddConnection(ClientObject clientObject)
         {
@@ -27,7 +28,7 @@ namespace ConsoleServer
                 clients.Remove(client);
         }
         // прослушивание входящих подключений
-        protected internal void Listen()// from Program.cs
+        protected internal void Listen(object threadsByUser = null)// from Program.cs
         {
             try
             {
@@ -35,24 +36,76 @@ namespace ConsoleServer
                 tcpListener.Start();
                 Console.OutputEncoding = Encoding.UTF8;
                 Console.Out.WriteLineAsync("Server started. Waiting for connections...");
+                
+                if (threadsByUser != null)// if we ran Console with arguments
+                {
+                    int threadsByUserInt = Convert.ToInt32(threadsByUser);
+                    //Console.Out.WriteLineAsync(threadsByUserInt.ToString());// debug Console with arguments
+                    ThreadPool.SetMaxThreads(threadsByUserInt, threadsByUserInt);
+                    ThreadPool.SetMinThreads(2, 2);// By default, the minimum number of threads is set to the number of processors on a system.You can use the
+                }// if
+
 
                 while (true)
-                {// получаем входящее подключение
-                    TcpClient tcpClient = tcpListener.AcceptTcpClient();
-
-                    ClientObject clientObject = new ClientObject(tcpClient, this);
+                {
+                    /*
+                     * http://forundex.ru/yap/Asinhronnij-TCP-server-klient-ne-vihodit-schitatj-potok-578193
+                     * https://msdn.microsoft.com/ru-ru/library/system.net.sockets.tcplistener.beginaccepttcpclient(v=vs.110).aspx
+                     * 
+                     * */
+                    try
+                    {
+                        tcpClientConnected.Reset();
+                        tcpListener.BeginAcceptTcpClient(new AsyncCallback(DoAcceptTcpClientCallback), tcpListener);
+                        tcpClientConnected.WaitOne();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Out.WriteLineAsync(e.Message);
+                    }
+                }// while true
+                
+                //while (true)
+                //{// получаем входящее подключение
+                    /*try
+                    {
+                        var tcpClient = await tcpListener.AcceptTcpClientAsync();
+                    }
+                    catch (SocketException e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    */
+                    /*ClientObject clientObject = new ClientObject(tcpClient, this);                    
                     
-                    //ThreadPool.SetMinThreads(2, 2);// By default, the minimum number of threads is set to the number of processors on a system.You can use the
                     ThreadPool.QueueUserWorkItem(new WaitCallback(clientObject.Process));// пул потоков
+                    */
                     //Thread clientThread = new Thread(new ThreadStart(clientObject.Process));
-                    //clientThread.Start();
+                    //clientThread.Start(); commented 'cause we have ThreadPool
+                    //}
                 }
-            }
             catch (Exception ex)
             {
                 Console.Out.WriteLineAsync(ex.Message);
                 Disconnect();
             }
+        }
+
+        protected internal void DoAcceptTcpClientCallback(IAsyncResult ar)
+        {
+            // Get the listener that handles the client request.
+            TcpListener listener = (TcpListener)ar.AsyncState;
+
+            // End the operation and display the received data on 
+            // the console.
+            TcpClient tcpClient = listener.EndAcceptTcpClient(ar);
+
+            ClientObject clientObject = new ClientObject(tcpClient, this);
+            ThreadPool.QueueUserWorkItem(new WaitCallback(clientObject.Process));// пул потоков
+
+            // Signal the calling thread to continue.
+            tcpClientConnected.Set();
+
         }
 
         // трансляция сообщения подключенным клиентам

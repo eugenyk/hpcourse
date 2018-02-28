@@ -18,8 +18,11 @@ namespace ConsoleServer
             try
             {
                 server = new ServerObject();
-                listenThread = new Thread(new ThreadStart(server.Listen));
-                listenThread.Start(); //старт потока
+                listenThread = new Thread(new ParameterizedThreadStart(server.Listen));
+                if (args != null)// if we ran Console with arguments
+                    listenThread.Start(args[0]); //старт потока
+                else
+                    listenThread.Start();
             }
             catch (Exception ex)
             {

@@ -35,12 +35,12 @@ namespace ConsoleClient
                 // запускаем новый поток для получения данных
                 Thread receiveThread = new Thread(new ThreadStart(ReceiveMessage));
                 receiveThread.Start(); //старт потока
-                Console.WriteLine("Welcome, {0}", userName);
+                Console.Out.WriteLineAsync("Welcome "+ userName);
                 SendMessage();
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.Out.WriteLineAsync(ex.Message);
             }
             finally
             {
@@ -50,7 +50,7 @@ namespace ConsoleClient
         // отправка сообщений
         static void SendMessage()
         {
-            Console.WriteLine("Message: ");
+            Console.Out.WriteLineAsync("Message: ");
 
             while (true)
             {// in an infinite loop We get messages user types
@@ -77,11 +77,12 @@ namespace ConsoleClient
                     while (stream.DataAvailable);
 
                     string message = builder.ToString();
-                    Console.WriteLine(message);//вывод сообщения
+                    await Console.Out.WriteLineAsync(message);//вывод сообщения
                 }
-                catch
+                catch(Exception e)
                 {
-                    Console.WriteLine("Connection terminated!"); //соединение было прервано
+                    await Console.Out.WriteLineAsync("Connection terminated!"); //соединение было прервано
+                    await Console.Out.WriteLineAsync(e.Message);
                     Console.ReadLine();
                     Disconnect();
                 }
