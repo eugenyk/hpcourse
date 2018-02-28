@@ -59,34 +59,24 @@ namespace IDZCs
         }
         private static void ClientHandler(Object socket)
         {
+            var afunc = new AsyncFunctions();
             var handler = (Socket)socket;
             _clients.Add(handler);
             Console.WriteLine();            
-            while (!exit) {
-                var bytes = new byte[1024];
-                var testmsg = ProtoRecieve(handler,bytes);                
+            while (!exit) {                
+                afunc.Receive(handler);
+                afunc.receiveDone.WaitOne();
+                if (afunc.message == null) continue;
+                var testmsg = afunc.message;
+                //var testmsg = ProtoRecieve(handler,bytes);                
                 if (!MessageHandler(testmsg)){
                     break;
-                }                
+                }
+                afunc.message = null;
             }
             _clients.Remove(handler);
             handler.Shutdown(SocketShutdown.Both);
             handler.Close();
-        }
-
-        private static Message ProtoRecieve(Socket socket, byte[] buffer){
-            var readedLength = 0;
-            while (readedLength < 4)
-            {
-                readedLength += socket.Receive(buffer, readedLength, 1, SocketFlags.None);
-            }
-            var dataLength = BitConverter.ToInt32(buffer, 0);
-            readedLength -= 4;
-            while (readedLength < dataLength)
-            {
-                readedLength += socket.Receive(buffer, readedLength, 1, SocketFlags.None);
-            }             
-            return Message.Parser.ParseFrom(buffer, 0, dataLength);
         }
 
         private static bool MessageHandler(Message message){
@@ -118,12 +108,11 @@ namespace IDZCs
         }
 
         private static void Broadcast(string text){
+            var afunc = new AsyncFunctions();
             foreach (var client in _clients){
                 var protomsg = new Message() { Data = "", Sender = "Server", Text = text };
-                var size = BitConverter.GetBytes(protomsg.CalculateSize());
-                var bytesSent = client.Send(size);
-                var message = protomsg.ToByteArray();
-                bytesSent = client.Send(message);
+                afunc.sendDone.Set();
+                afunc.Send(client,protomsg);                
             }
         }
     }
