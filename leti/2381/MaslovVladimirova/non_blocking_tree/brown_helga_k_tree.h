@@ -259,19 +259,21 @@ namespace cds {
 
 
             void help(std::atomic<UpdateStep *> &op) {
-                if (op.load()->type == type_replace) {
-                    std::atomic<ReplaceFlag *> op_0(dynamic_cast<ReplaceFlag *>(op.load()));
+                std::atomic<UpdateStep *> temp_op(op.load());
+                if (temp_op.load()->type == type_replace) {
+                    std::atomic<ReplaceFlag *> op_0(dynamic_cast<ReplaceFlag *>(temp_op.load()));
                     help_replace(op_0);
-                } else if (op.load()->type == type_prune) {
-                    std::atomic<PruneFlag *> op_0(dynamic_cast<PruneFlag *>(op.load()));
+                } else if (temp_op.load()->type == type_prune) {
+                    std::atomic<PruneFlag *> op_0(dynamic_cast<PruneFlag *>(temp_op.load()));
                     help_prune(op_0);
-                } else if (op.load()->type == type_mark) {
-                    std::atomic<PruneFlag *> op_0(dynamic_cast<PruneFlag *>(op.load()));
+                } else if (temp_op.load()->type == type_mark) {
+                    std::atomic<PruneFlag *> op_0(dynamic_cast<PruneFlag *>(temp_op.load()));
                     help_marked(op_0);
                 }
             }
 
-            bool help_prune(std::atomic<PruneFlag *> &op) {
+            bool help_prune(std::atomic<PruneFlag *> & _op) {
+                std::atomic<PruneFlag *> op(_op.load());
                 UpdateStep * us_0 = op.load()->ppending.load();
 
                 bool result = dynamic_cast<InternalNode*>(op.load()->p.load())->pending.
@@ -291,7 +293,8 @@ namespace cds {
                 }
             }
 
-            void help_marked(std::atomic<PruneFlag *> &op) {
+            void help_marked(std::atomic<PruneFlag *> & _op) {
+                std::atomic<PruneFlag *> op(_op.load());
                 int non_empty_node = dynamic_cast<InternalNode *>(op.load()->p.load())->number_of_non_empty_node(op.load()->l.load());
                 Node *other;
                 if (non_empty_node == -1) {
@@ -319,7 +322,8 @@ namespace cds {
                         compare_exchange_strong(node_2, node_3);
             }
 
-            void help_replace(std::atomic<ReplaceFlag *> &op) {
+            void help_replace(std::atomic<ReplaceFlag *> & _op) {
+                std::atomic<ReplaceFlag *> op(_op.load());
                 Node *l = op.load()->l.load();
                 Node *newChild = op.load()->newChild.load();
 
