@@ -13,21 +13,25 @@ namespace IDZCs
 {
     class AsyncFunctions{
 
-        public ManualResetEvent connectDone = new ManualResetEvent(false);
-        public ManualResetEvent sendDone = new ManualResetEvent(false);
-        public ManualResetEvent receiveDone = new ManualResetEvent(false);
+        public AutoResetEvent connectDone = new AutoResetEvent(false);
+        public AutoResetEvent sendDone = new AutoResetEvent(false);
+        public AutoResetEvent receiveDone = new AutoResetEvent(false);
         public Message message;
 
         public class StateObject{             
             public Socket workSocket = null;
+            public bool sizeIsKnown=false;
+            public int messageSize;
             public const int BufferSize = 256;
             public byte[] buffer = new byte[BufferSize];
-            public byte[] mainBuffer = new byte[256];
-            public int DataSize = 0;            
+            public byte[] mainBuffer = new byte[1024];
+            public byte[] messageSizeBuffer = new byte[4];
+            public int DataSize = 0;
+            public int sizeOfMessageSizeBuffer = 0;
         }
 
         public void Connect(IPEndPoint remoteEP, Socket client)        {
-            client.BeginConnect(remoteEP, new AsyncCallback(ConnectCallback), client);
+            client.BeginConnect(remoteEP, ConnectCallback, client);
             connectDone.WaitOne();
         }
 
@@ -45,7 +49,12 @@ namespace IDZCs
 
         public void Send(Socket soket, Message protomsg){
             var message = protomsg.ToByteArray();
-            soket.BeginSend(message, 0, protomsg.CalculateSize(), SocketFlags.None, new AsyncCallback(SendCallback), soket);
+            var size = BitConverter.GetBytes(protomsg.CalculateSize());
+            var bufferToSend = new byte[size.Length + message.Length];
+            Buffer.BlockCopy(size, 0, bufferToSend, 0, size.Length);            
+            Buffer.BlockCopy(message, 0, bufferToSend, size.Length, message.Length);
+            soket.BeginSend(bufferToSend, 0, bufferToSend.Length, SocketFlags.None, SendCallback, soket);
+            
         }
 
         private void SendCallback(IAsyncResult ar){
@@ -63,8 +72,7 @@ namespace IDZCs
             try{
                 StateObject state = new StateObject();
                 state.workSocket = client; 
-                client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReceiveCallback), state);
+                client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
             }
             catch (Exception e){
                 Console.WriteLine(e.ToString());
@@ -76,21 +84,46 @@ namespace IDZCs
                 StateObject state = (StateObject)ar.AsyncState;
                 Socket client = state.workSocket;                
                 int bytesRead = client.EndReceive(ar);
-                if (bytesRead > 0){
-                    //state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
-                    // bufer ++?
-                    state.DataSize += bytesRead;                    
-                    /*client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                        new AsyncCallback(ReceiveCallback), state);*/
+                if (!state.sizeIsKnown){
+                    if ((state.sizeOfMessageSizeBuffer + bytesRead) > 3){
+                        Buffer.BlockCopy(state.buffer, 0, state.messageSizeBuffer, state.sizeOfMessageSizeBuffer, 4 - state.sizeOfMessageSizeBuffer);
+                        state.messageSize = BitConverter.ToInt32(state.messageSizeBuffer, 0);
+                        var amountOfMainBytes = bytesRead + state.sizeOfMessageSizeBuffer - 4;
+                        Buffer.BlockCopy(state.buffer, bytesRead - amountOfMainBytes, state.mainBuffer, state.DataSize, amountOfMainBytes);
+                        state.DataSize += amountOfMainBytes;
+                        state.sizeIsKnown = true;
+                        if (state.DataSize == state.messageSize){
+                            message = Message.Parser.ParseFrom(state.mainBuffer, 0, state.DataSize);
+                            receiveDone.Set();
+                        }
+                        else {
+                            client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
+                        }
+                        
+                    }
+                    else{
+                        //(state.sizeOfMessageSizeBuffer + bytesRead) < 3
+                        Buffer.BlockCopy(state.buffer, 0, state.messageSizeBuffer, state.sizeOfMessageSizeBuffer, bytesRead);
+                        state.sizeOfMessageSizeBuffer += bytesRead;
+                        client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
+                    }
+                }
+                else if (state.DataSize < state.messageSize)
+                {
+                    Buffer.BlockCopy(state.buffer, 0, state.mainBuffer, state.DataSize, bytesRead);
+                    state.DataSize += bytesRead;
+                    if (state.DataSize == state.messageSize){
+                        message = Message.Parser.ParseFrom(state.mainBuffer, 0, state.DataSize);
+                        receiveDone.Set();
+                    }
+                    else{
+                        client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
+                    }
+                }
+                else {
                     message = Message.Parser.ParseFrom(state.buffer, 0, state.DataSize);
                     receiveDone.Set();
-                }
-                else{                     
-                    if (state.DataSize > 1){                        
-                        message = Message.Parser.ParseFrom(state.buffer, 0, state.DataSize);
-                    }                    
-                    receiveDone.Set();
-                }
+                }  
             }
             catch (Exception e){
                 Console.WriteLine(e.ToString());
