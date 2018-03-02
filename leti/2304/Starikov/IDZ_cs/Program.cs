@@ -29,7 +29,7 @@ namespace IDZCs
             Console.Out.WriteAsync("Для запуска сервера введите '1'\nДля запуска клиента введите '0'\n");
             var choice = Console.ReadLine();
             if (choice == "0") Client.Send();
-            Console.Out.WriteLineAsync("Введите количество потоков");
+            Console.Out.WriteLineAsync("Введите количество потоков"); 
             var threadCapacity = Convert.ToInt32(Console.ReadLine());
             ThreadPool.SetMaxThreads(threadCapacity, threadCapacity);            
             ThreadPool.SetMinThreads(2, 2);
@@ -57,8 +57,7 @@ namespace IDZCs
                 Console.ReadLine();
             }
         }
-        private static void ClientHandler(Object socket)
-        {
+        private static void ClientHandler(Object socket){
             var afunc = new AsyncFunctions();
             var handler = (Socket)socket;
             _clients.Add(handler);
@@ -66,13 +65,17 @@ namespace IDZCs
             while (!exit) {                
                 afunc.Receive(handler);
                 afunc.receiveDone.WaitOne();
-                if (afunc.message == null) continue;
+                var testmsg = afunc.message;
+                if (!MessageHandler(testmsg)){
+                    break;
+                }
+                /*if (afunc.message == null) continue;
                 var testmsg = afunc.message;
                 //var testmsg = ProtoRecieve(handler,bytes);                
                 if (!MessageHandler(testmsg)){
                     break;
                 }
-                afunc.message = null;
+                afunc.message = null;*/
             }
             _clients.Remove(handler);
             handler.Shutdown(SocketShutdown.Both);
