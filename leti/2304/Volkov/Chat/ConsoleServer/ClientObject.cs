@@ -86,15 +86,26 @@ namespace ConsoleServer
                         byte[] data2 = new byte[64]; // буфер для получаемых данных
                         StringBuilder builder2 = new StringBuilder();
                         int bytes2 = 0;
+                        int messageLenghtBefore = 0;
+                        int messageLenghtAfter = 0;
                         do// collect all strings from the Stream
                         {
                             bytes2 = await Stream.ReadAsync(data2, 0, data2.Length);
                             builder2.Append(Encoding.Unicode.GetString(data2, 0, bytes2));
+                            try
+                            {
+                                messageLenghtBefore = Convert.ToInt32(builder2.ToString().Split('|')[0]);
+                                messageLenghtAfter = builder2.Length - builder2.ToString().Split('|')[0].Length - 1;// minus message.Length, minus split char
+                            }
+                            catch// the moment when we cannot convert message
+                            {
+                                continue;
+                            }
                         }
-                        while (Stream.DataAvailable);
+                        while (Stream.DataAvailable && messageLenghtBefore == messageLenghtAfter);
                         message = builder2.ToString();// put all strings to message
                         
-                        message = String.Format("{0}: {1}", Sender, message);
+                        message = String.Format("{0}: {1}", Sender, message.Split('|')[1]);
                         await Console.Out.WriteLineAsync(message);
                         server.BroadcastMessage(message, this.Id);
                     }
@@ -119,7 +130,7 @@ namespace ConsoleServer
             }
         }// process
 
-        // чтение входящего сообщения и преобразование в строку
+        // чтение входящего сообщения из потока и преобразование в строку
         private string GetMessage()
         {
             /*

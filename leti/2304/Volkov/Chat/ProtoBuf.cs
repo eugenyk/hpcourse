@@ -1,0 +1,9 @@
+﻿using System;
+using protob
+
+public class Class1
+{
+	public Class1()
+	{
+	}
+}

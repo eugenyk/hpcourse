@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Threading;
+using ProtoBuf;
 
 namespace ConsoleClient
 {
@@ -55,7 +56,9 @@ namespace ConsoleClient
             while (true)
             {// in an infinite loop We get messages user types
                 string message = Console.ReadLine();
+                message = message.Length + "|" + message;// add Length of a message
                 byte[] data = Encoding.Unicode.GetBytes(message);
+                //int i = message.Length;
                 stream.WriteAsync(data, 0, data.Length);
             }
         }
