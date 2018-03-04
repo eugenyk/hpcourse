@@ -3,28 +3,20 @@
 
 #include <pthread.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <stdatomic.h>
-#include <unistd.h>
 #include "utils.h"
 
-struct value_state_internal;
+typedef struct value_internal value_t;
 
-/// Should be initialized by `value_init` function
-typedef struct {
-  pthread_t consumer;  // GUARDED_BY(mutex)
-  pthread_mutex_t mutex;
-  pthread_cond_t cond;  // GUARDED_BY(mutex)
-  struct value_state_internal* state_;
-} value_t;
 
-void value_init(value_t* value);
+value_t* create_value();
 
-void value_update(value_t* value, int new_value);
+pthread_t value_consumer(value_t* value);
 
-bool value_consume(value_t* value, int* result);
+void value_produce(value_t* value, int new_value);
 
-bool value_present(value_t* value);
+void value_wait_until_consumed(value_t* value);
+
+bool value_consume(value_t* value, int* consumed);
 
 void value_wait_consumer(value_t* value);
 
