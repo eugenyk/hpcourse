@@ -18,13 +18,13 @@ void* producer_routine(void* arg) {
       exit(scanf_res);
     }
 
-    ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
+    assert_zero(pthread_mutex_lock(&value->mutex));
     __require_mutex_value_update(value, x);
-    ASSERT_ZERO(pthread_cond_signal(&value->cond));
+    assert_zero(pthread_cond_signal(&value->cond));
     while (__require_mutex_value_present(value)) {
-      ASSERT_ZERO(pthread_cond_wait(&value->cond, &value->mutex));
+      assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
     }
-    ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
+    assert_zero(pthread_mutex_unlock(&value->mutex));
   }
 
   value_producer_finish(value);
@@ -41,13 +41,13 @@ void* consumer_routine(void* arg) {
 
   int* sum = calloc(1, sizeof(*sum));
   while (!value_producer_finished(value)) {
-    ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
+    assert_zero(pthread_mutex_lock(&value->mutex));
     int cur = 0;
     while (!value_producer_finished(value) && !__require_mutex_value_consume(value, &cur)) {
-      ASSERT_ZERO(pthread_cond_wait(&value->cond, &value->mutex));
+      assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
     }
-    ASSERT_ZERO(pthread_cond_signal(&value->cond));
-    ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
+    assert_zero(pthread_cond_signal(&value->cond));
+    assert_zero(pthread_mutex_unlock(&value->mutex));
     *sum += cur;
   }
 
@@ -64,7 +64,7 @@ void* consumer_interruptor_routine(void* arg) {
   LOG("[Interruptor] Started");
 
   while (!value_producer_finished(value)) {
-    ASSERT_ZERO(pthread_cancel(value->consumer));
+    assert_zero(pthread_cancel(value->consumer));
   }
 
   LOG("[Interruptor] Finished");
@@ -91,9 +91,9 @@ int run_threads() {
             "Error creating interruptor thread\n");
 
   int* res;
-  ASSERT_ZERO(pthread_join(producer, NULL));
-  ASSERT_ZERO(pthread_join(consumer, (void**) &res));
-  ASSERT_ZERO(pthread_join(interruptor, NULL));
+  assert_zero(pthread_join(producer, NULL));
+  assert_zero(pthread_join(consumer, (void**) &res));
+  assert_zero(pthread_join(interruptor, NULL));
 
   return *res;
 }

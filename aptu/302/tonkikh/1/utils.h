@@ -4,17 +4,10 @@
 #include <assert.h>
 #include <stdio.h>
 
-
-#ifdef NDEBUG
-  #define ASSERT_ZERO(cmd) do { \
-    if ((cmd) != 0) { \
-      fprintf(stderr, "%s", "Error: `"#cmd"` is not equal to zero\n"); \
-      exit(17); \
-    } \
-  } while(0)
-#else
-  #define ASSERT_ZERO(cmd) assert((cmd) == 0)
-#endif
+inline static void assert_zero(int value) {
+  (void) value;  // suppress unused variable warning in release
+  assert(value == 0);
+}
 
 #ifdef LOG_ENABLE
   #define LOG(...) do { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
