@@ -10,7 +10,7 @@ endif()
 
 find_package (Threads)
 
-add_executable(first_assignment main.c value.h utils.h)
+add_executable(first_assignment main.c value.h value.c utils.h)
 target_link_libraries (first_assignment ${CMAKE_THREAD_LIBS_INIT})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "a.out")

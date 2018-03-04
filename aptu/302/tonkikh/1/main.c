@@ -4,7 +4,7 @@ void* producer_routine(void* arg) {
   LOG("[Producer] Waiting for consumer to start");
 
   value_t* value = (value_t*) arg;
-  __acquire_mutex_value_wait_consumer(value);
+  value_wait_consumer(value);
 
   LOG("[Producer] Started");
 
@@ -19,9 +19,9 @@ void* producer_routine(void* arg) {
     }
 
     assert_zero(pthread_mutex_lock(&value->mutex));
-    __require_mutex_value_update(value, x);
+    value_update(value, x);
     assert_zero(pthread_cond_signal(&value->cond));
-    while (__require_mutex_value_present(value)) {
+    while (value_present(value)) {
       assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
     }
     assert_zero(pthread_mutex_unlock(&value->mutex));
@@ -36,14 +36,14 @@ void* consumer_routine(void* arg) {
   LOG("[Consumer] Started");
 
   value_t* value = (value_t*) arg;
-  __acquire_mutex_value_register_consumer(value);
+  value_register_consumer(value);
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
   int* sum = calloc(1, sizeof(*sum));
   while (!value_producer_finished(value)) {
     assert_zero(pthread_mutex_lock(&value->mutex));
     int cur = 0;
-    while (!value_producer_finished(value) && !__require_mutex_value_consume(value, &cur)) {
+    while (!value_producer_finished(value) && !value_consume(value, &cur)) {
       assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
     }
     assert_zero(pthread_cond_signal(&value->cond));
@@ -59,7 +59,7 @@ void* consumer_interruptor_routine(void* arg) {
   LOG("[Interruptor] Waiting for consumer to start");
 
   value_t* value = (value_t*) arg;
-  __acquire_mutex_value_wait_consumer(value);
+  value_wait_consumer(value);
 
   LOG("[Interruptor] Started");
 
