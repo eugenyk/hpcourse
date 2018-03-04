@@ -4,10 +4,14 @@
 #include <assert.h>
 #include <stdio.h>
 
-inline static void assert_zero(int value) {
-  (void) value;  // suppress unused variable warning in release
-  assert(value == 0);
-}
+#define ASSERT_ZERO(cmd) do { \
+    if ((cmd) != 0) { \
+      fprintf(stderr, "%s", "Assertion error: ("#cmd") is not equal to zero"); \
+      assert(false && "ASSERT_ZERO failed"); \
+    } \
+  } while (0)
+
+#define MAY_BE_NONZERO(cmd) (cmd)
 
 #ifdef LOG_ENABLE
   #define LOG(...) do { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)

@@ -56,7 +56,8 @@ void* consumer_interruptor_routine(void* arg) {
   LOG("[Interruptor] Started");
 
   while (!value_producer_finished(value)) {
-    assert_zero(pthread_cancel(value_consumer(value)));
+    // the consumer might have already finished its execution
+    MAY_BE_NONZERO(pthread_cancel(value_consumer(value)));
   }
 
   LOG("[Interruptor] Finished");
@@ -75,9 +76,9 @@ int run_threads() {
             "Error creating interruptor thread\n");
 
   int* res;
-  assert_zero(pthread_join(producer, NULL));
-  assert_zero(pthread_join(consumer, (void**) &res));
-  assert_zero(pthread_join(interruptor, NULL));
+  ASSERT_ZERO(pthread_join(producer, NULL));
+  ASSERT_ZERO(pthread_join(consumer, (void**) &res));
+  ASSERT_ZERO(pthread_join(interruptor, NULL));
 
   return *res;
 }
