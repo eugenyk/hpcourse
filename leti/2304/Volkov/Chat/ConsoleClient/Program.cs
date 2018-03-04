@@ -11,32 +11,34 @@ namespace ConsoleClient
 {
     class Program
     {
-        static string userName;
         private const string host = "127.0.0.1";
         private const int port = 8888;
         static TcpClient client;
         static NetworkStream stream;
+        static Message protomsg;// protobuf message
 
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
             Console.InputEncoding = Encoding.UTF8;
             Console.Write("Your name: ");
-            userName = Console.ReadLine();// get username
+
+            protomsg = new Message();
+            protomsg.Sender = Console.ReadLine();// get username
             client = new TcpClient();
             try
             {
                 client.Connect(host, port); //подключение клиента
                 stream = client.GetStream(); // получаем поток
-
-                string message = userName;
+                
+                string message = protomsg.Sender;
                 byte[] data = Encoding.Unicode.GetBytes(message);
                 stream.WriteAsync(data, 0, data.Length);// send UserName to Stream
 
                 // запускаем новый поток для получения данных
                 Thread receiveThread = new Thread(new ThreadStart(ReceiveMessage));
                 receiveThread.Start(); //старт потока
-                Console.Out.WriteLineAsync("Welcome "+ userName);
+                Console.Out.WriteLineAsync("Welcome "+ protomsg.Sender);
                 SendMessage();
             }
             catch (Exception ex)
@@ -52,12 +54,12 @@ namespace ConsoleClient
         static void SendMessage()
         {
             Console.Out.WriteLineAsync("Message: ");
-
+            //protomsg = new Message();
             while (true)
             {// in an infinite loop We get messages user types
-                string message = Console.ReadLine();
-                message = message.Length + "|" + message;// add Length of a message
-                byte[] data = Encoding.Unicode.GetBytes(message);
+                protomsg.Text = Console.ReadLine();
+                protomsg.Text = protomsg.Text.Length + "|" + protomsg.Text;// add Length of a message
+                byte[] data = Encoding.Unicode.GetBytes(protomsg.Text);
                 //int i = message.Length;
                 stream.WriteAsync(data, 0, data.Length);
             }
@@ -102,3 +104,13 @@ namespace ConsoleClient
         }
     }// Program
 }
+/*
+ * http://putridparrot.com/blog/using-protobuf-net-in-c/
+ * https://code.google.com/archive/p/protobuf-net/wikis/GettingStarted.wiki
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * */

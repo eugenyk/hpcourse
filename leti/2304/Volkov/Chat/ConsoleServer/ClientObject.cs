@@ -12,8 +12,7 @@ namespace ConsoleServer
     {
         protected internal string Id { get; private set; }// unique for a client
         protected internal NetworkStream Stream { get; private set; }// Через данный объект можно передавать сообщения серверу или, наоборот, получать данные с сервера
-        string Sender;
-        string Data;//< Internal field. Можно использовать для реализации каких-либо собственных фич у своего сервера/клиента. Однако, стоит помнить, что все сервера-клиенты должны быть совместимы друг с другом
+        static Message protomsg;// protobuf message
         TcpClient client;
         ServerObject server; // объект сервера
 
@@ -30,6 +29,7 @@ namespace ConsoleServer
             try
             {
                 Stream = client.GetStream();
+                protomsg = new Message();
                 /*
                 //string message = GetMessage();
                 var reader = new StreamReader(Stream);
@@ -54,15 +54,15 @@ namespace ConsoleServer
                     builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
                 }
                 while (Stream.DataAvailable);
-                string message = builder.ToString();// put all strings to message
-                
-                Sender = message;
+                protomsg.Text = builder.ToString();// put all strings to message
 
-                message = Sender + " joined chat";
+                protomsg.Sender = protomsg.Text;
+
+                protomsg.Text = protomsg.Sender + " joined chat";
                 // посылаем сообщение о входе в чат всем подключенным пользователям
-                server.BroadcastMessage(message, this.Id);
+                server.BroadcastMessage(protomsg.Text, this.Id);
                 Console.OutputEncoding = Encoding.UTF8;
-                await Console.Out.WriteLineAsync(message);
+                await Console.Out.WriteLineAsync(protomsg.Text);
                 // в бесконечном цикле получаем сообщения от клиента
                 while (true)
                 {
@@ -103,17 +103,17 @@ namespace ConsoleServer
                             }
                         }
                         while (Stream.DataAvailable && messageLenghtBefore == messageLenghtAfter);
-                        message = builder2.ToString();// put all strings to message
-                        
-                        message = String.Format("{0}: {1}", Sender, message.Split('|')[1]);
-                        await Console.Out.WriteLineAsync(message);
-                        server.BroadcastMessage(message, this.Id);
+                        protomsg.Text = builder2.ToString();// put all strings to message
+
+                        protomsg.Text = String.Format("{0}: {1}", protomsg.Sender, protomsg.Text.Split('|')[1]);
+                        await Console.Out.WriteLineAsync(protomsg.Text);
+                        server.BroadcastMessage(protomsg.Text, this.Id);
                     }
                     catch
                     {
-                        message = String.Format("{0}: left chat", Sender);
-                        await Console.Out.WriteLineAsync(message);
-                        server.BroadcastMessage(message, this.Id);
+                        protomsg.Text = String.Format("{0}: left chat", protomsg.Sender);
+                        await Console.Out.WriteLineAsync(protomsg.Text);
+                        server.BroadcastMessage(protomsg.Text, this.Id);
                         break;
                     }
                 }
