@@ -55,27 +55,27 @@ bool __require_mutex_value_present(value_t* value) {
 
 // ACQUIRE(value->mutex)
 void __acquire_mutex_value_wait_consumer(value_t* value) {
-  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
+  assert_zero(pthread_mutex_lock(&value->mutex));
   while (!value->consumer_started_) {
-    ASSERT_ZERO(pthread_cond_wait(&value->cond, &value->mutex));
+    assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
   }
-  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
+  assert_zero(pthread_mutex_unlock(&value->mutex));
 }
 
 // ACQUIRE(value->mutex)
 void __acquire_mutex_value_register_consumer(value_t* value) {
-  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
+  assert_zero(pthread_mutex_lock(&value->mutex));
   value->consumer_started_ = true;
   value->consumer = pthread_self();
-  ASSERT_ZERO(pthread_cond_broadcast(&value->cond));
-  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
+  assert_zero(pthread_cond_broadcast(&value->cond));
+  assert_zero(pthread_mutex_unlock(&value->mutex));
 }
 
 void value_producer_finish(value_t* value) {
-  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
+  assert_zero(pthread_mutex_lock(&value->mutex));
   atomic_store(&value->producer_finished_, true);
-  ASSERT_ZERO(pthread_cond_broadcast(&value->cond));
-  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
+  assert_zero(pthread_cond_broadcast(&value->cond));
+  assert_zero(pthread_mutex_unlock(&value->mutex));
 }
 
 bool value_producer_finished(value_t* value) {
