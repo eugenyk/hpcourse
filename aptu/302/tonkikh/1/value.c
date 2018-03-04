@@ -30,7 +30,7 @@ value_t* create_value() {
   return value;
 }
 
-pthread_t value_consumer(value_t* value) {
+pthread_t value_consumer_thread(value_t* value) {
   ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 
   if (!value->consumer_started) {

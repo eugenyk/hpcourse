@@ -10,7 +10,7 @@ typedef struct value_internal value_t;
 
 value_t* create_value();
 
-pthread_t value_consumer(value_t* value);
+pthread_t value_consumer_thread(value_t* value);
 
 void value_produce(value_t* value, int new_value);
 

@@ -36,11 +36,9 @@ void* consumer_routine(void* arg) {
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
   int* sum = calloc(1, sizeof(*sum));
-  while (!value_producer_finished(value)) {
-    int cur = 0;
-    if (value_consume(value, &cur)) {
-      *sum += cur;
-    }
+  int cur = 0;
+  while (value_consume(value, &cur)) {
+    *sum += cur;
   }
 
   LOG("[Consumer] Finished");
@@ -57,7 +55,7 @@ void* consumer_interruptor_routine(void* arg) {
 
   while (!value_producer_finished(value)) {
     // the consumer might have already finished its execution
-    MAY_BE_NONZERO(pthread_cancel(value_consumer(value)));
+    MAY_BE_NONZERO(pthread_cancel(value_consumer_thread(value)));
   }
 
   LOG("[Interruptor] Finished");
