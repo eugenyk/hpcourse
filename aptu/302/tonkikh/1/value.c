@@ -31,7 +31,7 @@ value_t* create_value() {
 }
 
 pthread_t value_consumer(value_t* value) {
-  assert_zero(pthread_mutex_lock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 
   if (!value->consumer_started) {
     int err = ENODATA;
@@ -39,33 +39,33 @@ pthread_t value_consumer(value_t* value) {
   }
   pthread_t res = value->consumer;
 
-  assert_zero(pthread_mutex_unlock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
   return res;
 }
 
 void value_produce(value_t* value, int new_value) {
-  assert_zero(pthread_mutex_lock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 
   value->value = new_value;
   value->has_value = true;
-  assert_zero(pthread_cond_signal(&value->cond));
+  ASSERT_ZERO(pthread_cond_signal(&value->cond));
 
-  assert_zero(pthread_mutex_unlock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
 }
 
 void value_wait_until_consumed(value_t* value) {
-  assert_zero(pthread_mutex_lock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
   while (value->has_value) {
-    assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
+    ASSERT_ZERO(pthread_cond_wait(&value->cond, &value->mutex));
   }
-  assert_zero(pthread_mutex_unlock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
 }
 
 bool value_consume(value_t* value, int* consumed) {
-  assert_zero(pthread_mutex_lock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 
   while (!value_producer_finished(value) && !value->has_value) {
-    assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
+    ASSERT_ZERO(pthread_cond_wait(&value->cond, &value->mutex));
   }
   bool ret = false;
   if (value->has_value) {
@@ -73,37 +73,37 @@ bool value_consume(value_t* value, int* consumed) {
     value->has_value = false;
     ret = true;
   }
-  assert_zero(pthread_cond_signal(&value->cond));
+  ASSERT_ZERO(pthread_cond_signal(&value->cond));
 
-  assert_zero(pthread_mutex_unlock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
   return ret;
 }
 
 void value_wait_consumer(value_t* value) {
-  assert_zero(pthread_mutex_lock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
   while (!value->consumer_started) {
-    assert_zero(pthread_cond_wait(&value->cond, &value->mutex));
+    ASSERT_ZERO(pthread_cond_wait(&value->cond, &value->mutex));
   }
-  assert_zero(pthread_mutex_unlock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
 }
 
 void value_register_consumer(value_t* value) {
-  assert_zero(pthread_mutex_lock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 
   value->consumer_started = true;
   value->consumer = pthread_self();
-  assert_zero(pthread_cond_broadcast(&value->cond));
+  ASSERT_ZERO(pthread_cond_broadcast(&value->cond));
 
-  assert_zero(pthread_mutex_unlock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
 }
 
 void value_producer_finish(value_t* value) {
-  assert_zero(pthread_mutex_lock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 
   atomic_store(&value->producer_finished, true);
-  assert_zero(pthread_cond_broadcast(&value->cond));
+  ASSERT_ZERO(pthread_cond_broadcast(&value->cond));
 
-  assert_zero(pthread_mutex_unlock(&value->mutex));
+  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
 }
 
 bool value_producer_finished(value_t* value) {
