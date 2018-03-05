@@ -16,6 +16,7 @@ namespace IDZCs
         public AutoResetEvent connectDone = new AutoResetEvent(false);
         public AutoResetEvent sendDone = new AutoResetEvent(false);
         public AutoResetEvent receiveDone = new AutoResetEvent(false);
+        public AutoResetEvent aceptDone = new AutoResetEvent(false);
         public Message message;
 
         public class StateObject{             
@@ -45,6 +46,26 @@ namespace IDZCs
             catch (Exception e){
                 Console.WriteLine(e.ToString());
             }
+        }
+
+        public void Accept(Socket client)
+        {
+            client.BeginAccept(AcceptCallback, client);
+            connectDone.WaitOne();
+        }
+
+        private void AcceptCallback(IAsyncResult ar)
+        {
+            try{
+                var socket = (Socket)ar.AsyncState;
+                var socket1 = socket.EndAccept(ar);
+                Program.AddConnection(socket1);
+                aceptDone.Set();
+            }
+            catch (Exception e){
+                Console.WriteLine(e.ToString());
+            }
+
         }
 
         public void Send(Socket soket, Message protomsg){
@@ -93,7 +114,7 @@ namespace IDZCs
                         state.DataSize += amountOfMainBytes;
                         state.sizeIsKnown = true;
                         if (state.DataSize == state.messageSize){
-                            message = Message.Parser.ParseFrom(state.mainBuffer, 0, state.DataSize);
+                            LockFreeQueue.Push(Message.Parser.ParseFrom(state.mainBuffer, 0, state.DataSize));
                             receiveDone.Set();
                         }
                         else {
@@ -113,7 +134,7 @@ namespace IDZCs
                     Buffer.BlockCopy(state.buffer, 0, state.mainBuffer, state.DataSize, bytesRead);
                     state.DataSize += bytesRead;
                     if (state.DataSize == state.messageSize){
-                        message = Message.Parser.ParseFrom(state.mainBuffer, 0, state.DataSize);
+                        LockFreeQueue.Push(Message.Parser.ParseFrom(state.mainBuffer, 0, state.DataSize));
                         receiveDone.Set();
                     }
                     else{
@@ -121,7 +142,7 @@ namespace IDZCs
                     }
                 }
                 else {
-                    message = Message.Parser.ParseFrom(state.buffer, 0, state.DataSize);
+                    LockFreeQueue.Push(Message.Parser.ParseFrom(state.mainBuffer, 0, state.DataSize));
                     receiveDone.Set();
                 }  
             }
