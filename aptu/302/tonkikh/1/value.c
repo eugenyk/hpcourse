@@ -1,12 +1,9 @@
 #include <stdatomic.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <errno.h>
 #include "value.h"
 
 struct value_internal {
-  pthread_t consumer;  // GUARDED_BY(mutex)
-
   int value;  // GUARDED_BY(mutex)
   bool has_value;  // GUARDED_BY(mutex)
   bool consumer_started;  // GUARDED_BY(mutex)
@@ -28,19 +25,6 @@ value_t* create_value() {
   atomic_init(&value->producer_finished, false);
 
   return value;
-}
-
-pthread_t value_consumer_thread(value_t* value) {
-  ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
-
-  if (!value->consumer_started) {
-    int err = ENODATA;
-    check_err(err, "Trying to access value consumer while it's not registered yet");
-  }
-  pthread_t res = value->consumer;
-
-  ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
-  return res;
 }
 
 void value_produce(value_t* value, int new_value) {
@@ -87,11 +71,10 @@ void value_wait_consumer(value_t* value) {
   ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
 }
 
-void value_register_consumer(value_t* value) {
+void value_consumer_start(value_t* value) {
   ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 
   value->consumer_started = true;
-  value->consumer = pthread_self();
   ASSERT_ZERO(pthread_cond_broadcast(&value->cond));
 
   ASSERT_ZERO(pthread_mutex_unlock(&value->mutex));
