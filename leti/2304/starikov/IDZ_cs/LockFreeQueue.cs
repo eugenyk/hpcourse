@@ -31,10 +31,15 @@ namespace IDZCs
                 if (Head == null){
                     return null;
                 }
-                if (Head == System.Threading.Interlocked.CompareExchange(ref Head, Head.Next, item))
-                    return item.Message;
+                if (item.Next == null){
+                    if (Head == System.Threading.Interlocked.CompareExchange(ref Head, null, item))
+                        return item.Message;
+                }
+                else{
+                    if (Head == System.Threading.Interlocked.CompareExchange(ref Head, Head.Next, item))
+                        return item.Message;
+                }
             }
-
         }
     }
 
