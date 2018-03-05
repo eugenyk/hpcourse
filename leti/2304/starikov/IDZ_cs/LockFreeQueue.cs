@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Tutorial;
 
 namespace IDZCs
 {
-    class LockFreeList{
-        public Item Head;   
-        public void Add(string text){
-            var item = new Item() {Next = null, Text = text };  
+    static class LockFreeQueue{
+        public static Item Head;   
+        public static void Push(Message message){
+            var item = new Item() {Next = null, Message = message };  
            if (Head == null){
                 if (Head == System.Threading.Interlocked.CompareExchange(ref Head, item, null))return;                
             }
             var prev = Head;
             while (true){
-               if (prev.Next == null){
+               if (prev != null && prev.Next == null){
                    if (prev.Next == System.Threading.Interlocked.CompareExchange(ref prev.Next, item, null)){
                        return;
                    }
@@ -23,10 +24,22 @@ namespace IDZCs
                prev = prev.Next;
            }
         }
+
+        public static Message Pop(){
+            while (true){
+                var item = Head;
+                if (Head == null){
+                    return null;
+                }
+                if (Head == System.Threading.Interlocked.CompareExchange(ref Head, Head.Next, item))
+                    return item.Message;
+            }
+
+        }
     }
 
     class Item{
         public Item Next;
-        public string Text;
+        public Message Message;
     }
 }
