@@ -32,7 +32,7 @@ void* consumer_routine(void* arg) {
   LOG("[Consumer] Started");
 
   value_t* value = (value_t*) arg;
-  value_register_consumer(value);
+  value_consumer_start(value);
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
   int* sum = calloc(1, sizeof(*sum));
@@ -45,17 +45,23 @@ void* consumer_routine(void* arg) {
   return sum;
 }
 
+struct interruptor_arg {
+  value_t* value;
+  pthread_t consumer_thread;
+};
+
 void* consumer_interruptor_routine(void* arg) {
   LOG("[Interruptor] Waiting for consumer to start");
 
-  value_t* value = (value_t*) arg;
+  value_t* value = ((struct interruptor_arg*) arg)->value;
+  pthread_t consumer_thread = ((struct interruptor_arg*) arg)->consumer_thread;
   value_wait_consumer(value);
 
   LOG("[Interruptor] Started");
 
   while (!value_producer_finished(value)) {
     // the consumer might have already finished its execution
-    MAY_BE_NONZERO(pthread_cancel(value_consumer_thread(value)));
+    MAY_BE_NONZERO(pthread_cancel(consumer_thread));
   }
 
   LOG("[Interruptor] Finished");
@@ -70,7 +76,12 @@ int run_threads() {
             "Error creating producer thread\n");
   check_err(pthread_create(&consumer, NULL, consumer_routine, value),
             "Error creating consumer thread\n");
-  check_err(pthread_create(&interruptor, NULL, consumer_interruptor_routine, value),
+
+  struct interruptor_arg interruptor_arg = {
+      .value = value,
+      .consumer_thread = consumer,
+  };
+  check_err(pthread_create(&interruptor, NULL, consumer_interruptor_routine, &interruptor_arg),
             "Error creating interruptor thread\n");
 
   int* res;
