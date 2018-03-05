@@ -1,0 +1,7 @@
+syntax="proto2";
+option java_package = "ChatServer2";
+message Msg {
+    required string Sender = 1;
+    required string Text = 2;
+    optional string Data = 3;
+}
