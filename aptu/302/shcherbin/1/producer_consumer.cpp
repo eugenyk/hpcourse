@@ -46,7 +46,7 @@ void* producer_routine(void *arg) {
 
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     Value *value = (Value*) arg;
-	int a;
+    int a;
     while (std::cin >> a) {
         value->update(a);
         pthread_cond_broadcast(&cond);
@@ -99,13 +99,13 @@ void* consumer_interruptor_routine(void* arg) {
     }
 
     // interrupt consumer while producer_thread is running                                          
-	// the thread locks the mutex to check if the producer has finished
-	while (!is_producer_finished) {
-		pthread_mutex_unlock(&mutex);
-		pthread_cancel(consumer_thread);
-		pthread_mutex_lock(&mutex);
-	}
-	pthread_mutex_unlock(&mutex);
+    // the thread locks the mutex to check if the producer has finished
+    while (!is_producer_finished) {
+        pthread_mutex_unlock(&mutex);
+        pthread_cancel(consumer_thread);
+        pthread_mutex_lock(&mutex);
+    }
+    pthread_mutex_unlock(&mutex);
 
     (void) arg;
     return NULL;
@@ -127,7 +127,7 @@ int run_threads() {
 
     pthread_join(producer_thread, NULL);
     pthread_join(consumer_thread, (void**) &result_p);
-	pthread_join(interruptor_thread, NULL);
+    pthread_join(interruptor_thread, NULL);
 
     pthread_cond_destroy(&cond);
     pthread_mutex_destroy(&mutex);
