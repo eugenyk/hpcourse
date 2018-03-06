@@ -10,6 +10,8 @@ typedef struct value_internal value_t;
 
 value_t* create_value();
 
+void free_value(value_t* value);
+
 void value_produce(value_t* value, int new_value);
 
 void value_wait_until_consumed(value_t* value);

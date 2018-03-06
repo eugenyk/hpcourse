@@ -27,6 +27,10 @@ value_t* create_value() {
   return value;
 }
 
+void free_value(value_t* value) {
+  free(value);
+}
+
 void value_produce(value_t* value, int new_value) {
   ASSERT_ZERO(pthread_mutex_lock(&value->mutex));
 

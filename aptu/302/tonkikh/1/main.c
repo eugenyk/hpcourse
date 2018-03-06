@@ -84,12 +84,16 @@ int run_threads() {
   check_err(pthread_create(&interruptor, NULL, consumer_interruptor_routine, &interruptor_arg),
             "Error creating interruptor thread\n");
 
-  int* res;
+  int* res_ptr;
   ASSERT_ZERO(pthread_join(producer, NULL));
-  ASSERT_ZERO(pthread_join(consumer, (void**) &res));
+  ASSERT_ZERO(pthread_join(consumer, (void**) &res_ptr));
   ASSERT_ZERO(pthread_join(interruptor, NULL));
 
-  return *res;
+  int res = *res_ptr;
+  free(res_ptr);
+  free_value(value);
+
+  return res;
 }
 
 int main() {
