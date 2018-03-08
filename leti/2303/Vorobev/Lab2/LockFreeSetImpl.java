@@ -103,7 +103,15 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     }
 
     public boolean isEmpty() {
-        return head.next.getReference() == tail;
+        while (current.getReference() != tail) {
+		if (current.isMarked()) {
+			return false;
+		}
+
+		current = current.getReference().next;
+	}
+	
+	return true;
     }
 
     public java.util.ArrayList<T> getAll() {
