@@ -2,7 +2,6 @@
 #define NBHASHTABLE_H
 
 #include <cstdio>
-#include <mutex>
 #include <atomic>
 #include <algorithm> 
 #include "ProbeBound.h"
@@ -29,7 +28,6 @@ typedef struct buckett {
 
 class NBHashTable {
 	
-	std::mutex mainMutex;
 	int kSize;
 	ProbeBound *bounds;
 	BucketT *buckets;
