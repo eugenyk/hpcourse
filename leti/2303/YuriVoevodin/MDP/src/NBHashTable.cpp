@@ -290,30 +290,6 @@ int NBHashTable::hash(NBType n) {
 }
 
 
-void NBHashTable::printHashTableInfo() {
-	mainMutex.lock();
-	printf("Bounds:\t| ");
-	for (int i = 0; i < kSize; i++) {
-		printf("%-8d | ", ProbeBound::getBound(bounds[i].load()));
-	}
-	printf("\nKeys:\t| ");
-	for (int i = 0; i < kSize; i++) {
-		if(buckets[i].key == EMPTY_FLAG) printf("%-8s | ", "-");
-		else printf("%-8d | ", buckets[i].key);
-	}
-	printf("\nScan:\t| ");
-	for (int i = 0; i < kSize; i++) {
-		printf("%-8s | ", ProbeBound::isScanning(bounds[i].load()) ? "true" : "false");
-	}
-	printf("\nState:\t| ");
-	for (int i = 0; i < kSize; i++) {
-		printf("%-8s | ", VersionState::getStateString(VersionState::getState(buckets[i].vs->load())));
-	}
-	printf("\n\n");
-	mainMutex.unlock();
-}
-
-
 // Bucket
 // Ведро
 
@@ -353,12 +329,7 @@ int NBHashTable::getProbeBound(int startIndex) {
 
 void NBHashTable::conditionallyRaiseBound(int startIndex, int probeJumps) {
 	
-	if(DEBUG) {
-		mainMutex.lock();
-		printf("Conditionally raising bound for bucket[%d], there were %d jumps\n", startIndex, probeJumps);
-		mainMutex.unlock();
-	}
-	
+		
 	while (true) {
 		int pb = bounds[startIndex].load();
 		int oldBound = ProbeBound::getBound(pb);
