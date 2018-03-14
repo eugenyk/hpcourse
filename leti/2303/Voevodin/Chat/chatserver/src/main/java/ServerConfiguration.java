@@ -12,7 +12,7 @@ public class ServerConfiguration {
     public static final int BUFFER_CAPACITY = 2048;
     private String host = "localhost";
     private int port = 8989;
-    private int threads = Runtime.getRuntime().availableProcessors();//оптимальное число потоков
+    private int threads = Runtime.getRuntime().availableProcessors();
 
     public ServerConfiguration()
     {

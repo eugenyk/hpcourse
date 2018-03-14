@@ -5,7 +5,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 //import java.util.Queue;
 
-import java.util.concurrent.ConcurrentLinkedQueue;//неблокирующая, осонована на алгоритме Скотта
+import java.util.concurrent.ConcurrentLinkedQueue;//неблокирующая, основана на алгоритме Скотта
 
 public class AsyncOutputWriter {
     static CompletionHandler<Integer, Connection> handler =
