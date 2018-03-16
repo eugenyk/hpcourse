@@ -3,7 +3,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-//import java.util.Queue;
 
 import java.util.concurrent.ConcurrentLinkedQueue;//неблокирующая, основана на алгоритме Скотта
 
@@ -49,7 +48,6 @@ public class AsyncOutputWriter {
 
                 private void finishConnection(Connection conn)
                 {
-                    //Queue<ByteBuffer> queue = conn.queue();
 
                     ConcurrentLinkedQueue<ByteBuffer> queue=conn.queue();
                     ByteBuffer buffer;
@@ -75,7 +73,6 @@ public class AsyncOutputWriter {
 
     static void offer(Connection conn, ByteBuffer buffer)
     {
-        //Queue<ByteBuffer> queue = conn.queue();
          ConcurrentLinkedQueue<ByteBuffer> queue=conn.queue();
         boolean needToWrite;
 

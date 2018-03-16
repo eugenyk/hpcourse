@@ -7,19 +7,18 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
+import java.util.concurrent.ConcurrentLinkedQueue;//неблокирующая, основана на алгоритме Скотта
 public enum CommandExecutor
 {
     INSTANCE;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private BlockingQueue<Pair> queue;
+    private ConcurrentLinkedQueue <Pair> queue;
     private Thread thread;
 
     CommandExecutor()
     {
-        queue = new LinkedBlockingQueue<>(4096);
+        queue = new ConcurrentLinkedQueue <>();
         thread = new Thread(new Task());
     }
 
@@ -27,14 +26,11 @@ public enum CommandExecutor
     public void addTask(String cmd, Client out)
     {
         Pair pair = new Pair(out, cmd);
-        try
-        {
-            queue.put(pair);
-        }
-        catch (InterruptedException e)
-        {
-            e.printStackTrace();
-        }
+
+
+            queue.offer(pair);
+
+
 
         if (thread.getState() == Thread.State.NEW)
         {
@@ -49,13 +45,7 @@ public enum CommandExecutor
         {
             while (true)
             {
-                try
-                {
-                    commandHandler(queue.take());
-                } catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                }
+                 commandHandler(queue.poll());
             }
         }
 
