@@ -108,15 +108,26 @@ void* consumer_interruptor_routine(void* arg) {
     return nullptr;
 }
 
+void verify_thread_creation(int return_code) {
+    if (return_code != 0) {
+        std::cerr << "Thread wasn't created with error #" << return_code << '\n';
+        exit(return_code);
+    }
+}
+
 int run_threads() {
     // start 3 threads and wait until they're done
     // return sum of update values seen by consumer
     Value value;
     int* result;
     pthread_t consumer, producer, consumer_interruptor;
-    pthread_create(&producer, nullptr, &producer_routine, &value);
-    pthread_create(&consumer, nullptr, &consumer_routine, &value);
-    pthread_create(&consumer_interruptor, nullptr, &consumer_interruptor_routine, &consumer);
+    int return_code;
+    return_code = pthread_create(&producer, nullptr, &producer_routine, &value);
+    verify_thread_creation(return_code);
+    return_code = pthread_create(&consumer, nullptr, &consumer_routine, &value);
+    verify_thread_creation(return_code);
+    return_code = pthread_create(&consumer_interruptor, nullptr, &consumer_interruptor_routine, &consumer);
+    verify_thread_creation(return_code);
     pthread_join(producer, nullptr);
     pthread_join(consumer, (void**)(&result));
     pthread_join(consumer_interruptor, nullptr);
