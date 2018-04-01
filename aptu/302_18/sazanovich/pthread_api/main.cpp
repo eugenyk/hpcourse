@@ -75,7 +75,8 @@ void* producer_routine(void* arg) {
 void* consumer_routine(void* arg) {
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
   auto value = (ReadOnceValue*) arg;
-  int result = 0;
+  auto result = new int;
+  (*result) = 0;
 
   pthread_mutex_lock(&consumer_mutex);
   consuming_started = true;
@@ -91,13 +92,13 @@ void* consumer_routine(void* arg) {
     if (producing_finished) {
       break;
     }
-    result += value->extract();
+    (*result) += value->extract();
 
     pthread_mutex_lock(&consumer_mutex);
     pthread_cond_broadcast(&consumer_cond);
     pthread_mutex_unlock(&consumer_mutex);
   }
-  pthread_exit(reinterpret_cast<void *>(result));
+  pthread_exit(result);
 }
 
 void* consumer_interruptor_routine(void* arg) {
@@ -138,10 +139,10 @@ int run_threads() {
   __ensure_pthread_created(return_code);
 
   pthread_join(producer_thread, nullptr);
-  int result;
-  pthread_join(consumer_thread, reinterpret_cast<void **>(&result));
+  int* result;
+  pthread_join(consumer_thread, (void**)(&result));
   pthread_join(consumer_interruptor_thread, nullptr);
-  return result;
+  return *result;
 }
 
 int main() {
