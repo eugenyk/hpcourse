@@ -50,18 +50,18 @@ void* producer_routine(void* arg) {
   std::getline(std::cin, input);
   std::istringstream iss(input);
   int x;
-  pthread_mutex_lock(&consumer_mutex);
   while (iss >> x) {
     pthread_mutex_lock(&producer_mutex);
     value->refresh(x);
     pthread_cond_broadcast(&producer_cond);
     pthread_mutex_unlock(&producer_mutex);
 
+    pthread_mutex_lock(&consumer_mutex);
     while (value->isValid()) {
       pthread_cond_wait(&consumer_cond, &consumer_mutex);
     }
+    pthread_mutex_unlock(&consumer_mutex);
   }
-  pthread_mutex_unlock(&consumer_mutex);
 
   pthread_mutex_lock(&producer_mutex);
   producing_finished = true;
@@ -75,7 +75,6 @@ void* consumer_routine(void* arg) {
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
   auto value = (ReadOnceValue*) arg;
   int result = 0;
-  pthread_mutex_lock(&producer_mutex);
 
   pthread_mutex_lock(&consumer_mutex);
   consuming_started = true;
@@ -83,9 +82,11 @@ void* consumer_routine(void* arg) {
   pthread_mutex_unlock(&consumer_mutex);
 
   while (true) {
+    pthread_mutex_lock(&producer_mutex);
     while (!value->isValid() && !producing_finished) {
       pthread_cond_wait(&producer_cond, &producer_mutex);
     }
+    pthread_mutex_unlock(&producer_mutex);
     if (producing_finished) {
       break;
     }
@@ -95,7 +96,6 @@ void* consumer_routine(void* arg) {
     pthread_cond_broadcast(&consumer_cond);
     pthread_mutex_unlock(&consumer_mutex);
   }
-  pthread_mutex_unlock(&producer_mutex);
   pthread_exit(reinterpret_cast<void *>(result));
 }
 
