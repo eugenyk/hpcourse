@@ -1,3 +1,5 @@
+package ru.spbau.concurrent;
+
 /**
  * Lock-Free множество.
  * @param <T> Тип ключей
