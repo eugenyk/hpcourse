@@ -97,15 +97,13 @@ void* consumer_interruptor_routine(void* arg) {
     while (!is_initialized) {
         pthread_cond_wait(&cond, &mutex);
     }
+    pthread_mutex_unlock(&mutex);
 
     // interrupt consumer while producer_thread is running                                          
     // the thread locks the mutex to check if the producer has finished
     while (!is_producer_finished) {
-        pthread_mutex_unlock(&mutex);
         pthread_cancel(consumer_thread);
-        pthread_mutex_lock(&mutex);
     }
-    pthread_mutex_unlock(&mutex);
 
     (void) arg;
     return NULL;
