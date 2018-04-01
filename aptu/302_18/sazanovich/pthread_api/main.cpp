@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <iostream>
 #include <sstream>
+#include <memory>
 
 class ReadOnceValue {
 public:
