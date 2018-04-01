@@ -33,20 +33,19 @@ pthread_t interruptor_thread;
 
 pthread_mutex_t mutex;
 pthread_cond_t cond;
+pthread_barrier_t barrier;
 
-bool is_initialized = false;
 bool is_producer_finished = false;
 
 void* producer_routine(void *arg) {
     // Wait for consumer to start
-    pthread_mutex_lock(&mutex);
-    while (!is_initialized) {
-        pthread_cond_wait(&cond, &mutex);
-    }
+    pthread_barrier_wait(&barrier);
 
-    // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     Value *value = (Value*) arg;
     int a;
+
+    // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
+    pthread_mutex_lock(&mutex);
     while (std::cin >> a) {
         value->update(a);
         pthread_cond_broadcast(&cond);
@@ -64,7 +63,6 @@ void* producer_routine(void *arg) {
 }
 
 void* consumer_routine(void *arg) {
-    // notify about start
     // allocate value for result
     // for every update issued by producer_thread, read the value and add to sum
     // return pointer to result
@@ -73,10 +71,10 @@ void* consumer_routine(void *arg) {
     int *result = new int;
     *result = 0;
 
+    pthread_barrier_wait(&barrier);
+
     pthread_mutex_lock(&mutex);
-    is_initialized = true;
     while (true) {
-        pthread_cond_broadcast(&cond);
         while (!value->has_value() && !is_producer_finished) {
             pthread_cond_wait(&cond, &mutex);
         }
@@ -85,6 +83,7 @@ void* consumer_routine(void *arg) {
         }
         *result += value->get();
         value->reset_has_value();
+        pthread_cond_broadcast(&cond);
     }
     pthread_mutex_unlock(&mutex);
 
@@ -93,11 +92,7 @@ void* consumer_routine(void *arg) {
 
 void* consumer_interruptor_routine(void* arg) {
     // wait for consumer to start
-    pthread_mutex_lock(&mutex);
-    while (!is_initialized) {
-        pthread_cond_wait(&cond, &mutex);
-    }
-    pthread_mutex_unlock(&mutex);
+    pthread_barrier_wait(&barrier);
 
     // interrupt consumer while producer_thread is running                                          
     // the thread locks the mutex to check if the producer has finished
@@ -116,6 +111,7 @@ int run_threads() {
     Value value;
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init(&cond, NULL);
+    pthread_barrier_init(&barrier, NULL, 3);
 
     pthread_create(&producer_thread, NULL, producer_routine, &value);
     pthread_create(&consumer_thread, NULL, consumer_routine, &value);
@@ -129,6 +125,7 @@ int run_threads() {
 
     pthread_cond_destroy(&cond);
     pthread_mutex_destroy(&mutex);
+    pthread_barrier_destroy(&barrier);
 
     // not to leave result_p hanging
     int result = *result_p;
