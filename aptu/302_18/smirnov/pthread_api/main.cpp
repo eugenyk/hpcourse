@@ -66,7 +66,13 @@ void* producer_routine(void* arg) {
         pthread_mutex_unlock(&value_mutex);
     }
 
+    // update state to FINISHED
+    // locks are to make sure we don't do it unexpectedly for consumer
+    // (fixes deadlock of signal fired between consumer waiting for it 
+    // and checking the actual state)
+    pthread_mutex_lock(&value_mutex);
     update_state(FINISHED);
+    pthread_mutex_unlock(&value_mutex);
 
     return NULL;
 }
