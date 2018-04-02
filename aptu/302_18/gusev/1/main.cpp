@@ -90,6 +90,13 @@ public:
         pthread_mutex_unlock(mutex);
     }
 
+    bool hasPending() {
+        pthread_mutex_lock(mutex);
+        bool _pending = pending;
+        pthread_mutex_unlock(mutex);
+        return _pending;
+    }
+
     void waitToStart() {
         pthread_mutex_lock(mutex);
         while (!started) {
@@ -129,7 +136,7 @@ void* consumer_routine(void* arg) {
     int *sum = new int;
     *sum = 0;
     sumProcess->start();
-    while (!sumProcess->isDone()) {
+    while (!sumProcess->isDone() || sumProcess->hasPending()) {
         try {
             *sum += sumProcess->getValue();
         } catch (FinishedException e) {}
