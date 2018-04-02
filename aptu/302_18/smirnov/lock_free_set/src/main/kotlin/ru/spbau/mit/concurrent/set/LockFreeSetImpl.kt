@@ -4,40 +4,51 @@ import java.util.concurrent.atomic.AtomicMarkableReference
 
 private typealias NodeRef<T> = AtomicMarkableReference<Node<T>>
 
-private class Node<T>(val value: T, val next: NodeRef<T> = NodeRef(null, false))
+private sealed class Node<T>(open val value: T?, next: Node<T>?) {
+    val next = NodeRef(next, false)
+}
 
-private fun <T> propagateForward(markedNext: NodeRef<T>, next: Node<T>) =
-        markedNext.compareAndSet(next, next.next.reference, false, false)
+private class HeadNode<T>(next: Node<T>? = null): Node<T>(null, next)
+
+private class TailNode<T>(override val value: T, next: Node<T>?): Node<T>(null, next)
+
+private fun <T> propagateForward(cur: Node<T>, markedNext: Node<T>) =
+        cur.next.compareAndSet(markedNext, markedNext.next.reference, false, false)
 
 class LockFreeSetImpl<in T : Comparable<T>>: LockFreeSet<T> {
-    private val head = NodeRef<T>(null, false)
+    private val head = HeadNode<T>()
 
-    private fun search(value: T): Pair<Node<T>?,NodeRef<T>> {
-        fun helper(prev: Node<T>?, cur: NodeRef<T>): Pair<Node<T>?,NodeRef<T>> =
-                when {
-                    cur.isMarked  -> {
-                        propagateForward(
-                                prev?.next ?: cur,
-                                cur.reference
-                        )               // if prev is null then cur is head
-                        search(value)   // start over
-                    }
-                    cur.reference == null || value <= cur.reference.value ->
-                        Pair(prev, cur) // we have either reached the end or found the expected position
-                    else                              ->
-                        helper(cur.reference, cur.reference.next) // simply take next node
+    private fun search(value: T): Pair<Node<T>,Node<T>?> {
+        fun helper(prev: Node<T>, curRef: NodeRef<T>): Pair<Node<T>,Node<T>?> {
+            val cur = curRef.reference
+
+            return@helper when {
+                curRef.isMarked -> {
+                    propagateForward(
+                            prev,
+                            cur
+                    )                     // remove marked
+                    search(value)         // and start over
                 }
+                cur == null || (cur is TailNode && value <= cur.value) ->
+                    Pair(prev, cur)       // we have either met the end
+                                          // or found the desired position
+                else ->
+                    helper(cur, cur.next) // otherwise simply take the next node
+            }
+        }
 
-        return helper(null, head)
+        return helper(head, head.next)
     }
 
     override fun add(value: T): Boolean {
         val (prev, cur) = search(value)
-        return if (value == cur.reference.value) {
+        return if (cur != null && value == cur.value) {
             false          // already in set
         } else {
-            val next = Node(value, cur)
-            if ((prev?.next ?: head).compareAndSet(cur.reference, next, false, false)) {
+            val next = TailNode(value, cur)
+            val succeeded = prev.next.compareAndSet(cur, next, false, false)
+            if (succeeded) {
                 true       // add succeeded
             } else {
                 add(value) // retry otherwise
@@ -50,7 +61,8 @@ class LockFreeSetImpl<in T : Comparable<T>>: LockFreeSet<T> {
     }
 
     override fun contains(value: T): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val (_, cur) = search(value)
+        return cur != null && value == cur.value
     }
 
     override fun isEmpty(): Boolean {
