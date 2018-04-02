@@ -89,11 +89,11 @@ class Value {
 std::vector<int> readNumbers() {
     std::vector<int> numbers;
     
-    while (true) {
+    while (!std::cin.eof()) {
         int n;
         std::cin >> n;
         
-        if (std::cin.eof()) {
+        if (std::cin.fail()) {
             break;
         }
         
