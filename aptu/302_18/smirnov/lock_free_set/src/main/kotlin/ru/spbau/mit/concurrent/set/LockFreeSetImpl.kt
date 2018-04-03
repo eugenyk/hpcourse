@@ -5,59 +5,88 @@ import java.util.concurrent.atomic.AtomicMarkableReference
 private typealias NodeRef<T> = AtomicMarkableReference<Node<T>>
 
 private sealed class Node<T>(open val value: T?, next: Node<T>?) {
-    val next = NodeRef(next, false)
+    private val nextRef = NodeRef(next, false)
+
+    val next: Node<T>?
+        get() = nextRef.reference
+
+    val isMarkedForDeletion
+        get() = nextRef.isMarked
+
+    fun tryCASNext(
+            expectedNext: Node<T>?,
+            newNext: Node<T>?,
+            expectedMark: Boolean,
+            newMark: Boolean
+    ) = nextRef.compareAndSet(expectedNext, newNext, expectedMark, newMark)
+
+    fun tryMarkForDeletion() = nextRef.attemptMark(nextRef.reference, true)
 }
 
 private class HeadNode<T>(next: Node<T>? = null): Node<T>(null, next)
 
 private class TailNode<T>(override val value: T, next: Node<T>?): Node<T>(null, next)
 
-private fun <T> propagateForward(cur: Node<T>, markedNext: Node<T>) =
-        cur.next.compareAndSet(markedNext, markedNext.next.reference, false, false)
+private fun <T> propagateForward(prev: Node<T>, markedCur: Node<T>) =
+        prev.tryCASNext(markedCur, markedCur.next, false, false)
 
 class LockFreeSetImpl<in T : Comparable<T>>: LockFreeSet<T> {
     private val head = HeadNode<T>()
 
-    private fun search(value: T): Pair<Node<T>,Node<T>?> {
-        fun helper(prev: Node<T>, curRef: NodeRef<T>): Pair<Node<T>,Node<T>?> {
-            val cur = curRef.reference
-
-            return@helper when {
-                curRef.isMarked -> {
-                    propagateForward(
-                            prev,
-                            cur
-                    )                     // remove marked
-                    search(value)         // and start over
+    private tailrec fun search(value: T): Pair<Node<T>,Node<T>?> {
+        tailrec fun helper(prev: Node<T>, cur: Node<T>?): Pair<Node<T>,Node<T>?>? =
+                when {
+                    (cur != null && cur.isMarkedForDeletion) -> {
+                        propagateForward(
+                                prev,
+                                cur
+                        )
+                        // remove marked
+                        // and indicate outer function to start over
+                        null
+                    }
+                    (cur == null || (cur is TailNode && value <= cur.value)) ->
+                        // we have found the desired position
+                        Pair(prev, cur)
+                    else ->
+                        // otherwise simply go to the next node
+                        helper(cur, cur.next)
                 }
-                cur == null || (cur is TailNode && value <= cur.value) ->
-                    Pair(prev, cur)       // we have either met the end
-                                          // or found the desired position
-                else ->
-                    helper(cur, cur.next) // otherwise simply take the next node
-            }
-        }
 
-        return helper(head, head.next)
+        return helper(head, head.next) ?: search(value)
     }
 
-    override fun add(value: T): Boolean {
+    override tailrec fun add(value: T): Boolean {
         val (prev, cur) = search(value)
+
         return if (cur != null && value == cur.value) {
-            false          // already in set
+            // already in set
+            false
         } else {
             val next = TailNode(value, cur)
-            val succeeded = prev.next.compareAndSet(cur, next, false, false)
+            val succeeded = prev.tryCASNext(cur, next, false, false)
             if (succeeded) {
-                true       // add succeeded
+                // add succeeded
+                true
             } else {
-                add(value) // retry otherwise
+                // retry otherwise
+                add(value)
             }
         }
     }
 
-    override fun remove(value: T): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override tailrec fun remove(value: T): Boolean {
+        val (_, cur) = search(value)
+        return if (cur == null || value != cur.value) {
+            false             // not in set already
+        } else {
+            val succeeded = cur.tryMarkForDeletion()
+            if (succeeded) {
+                true          // lazy remove by setting mark in next succeeded
+            } else {
+                remove(value) // retry otherwise
+            }
+        }
     }
 
     override fun contains(value: T): Boolean {
@@ -65,8 +94,16 @@ class LockFreeSetImpl<in T : Comparable<T>>: LockFreeSet<T> {
         return cur != null && value == cur.value
     }
 
-    override fun isEmpty(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override tailrec fun isEmpty(): Boolean {
+        val afterHead = head.next
 
+        return when {
+            afterHead == null             -> true  // there is nothing after head => empty
+            afterHead.isMarkedForDeletion -> {
+                propagateForward(head, afterHead)  // remove marked
+                isEmpty()                          // and start over
+            }
+            else                          -> false // not empty
+        }
+    }
 }
