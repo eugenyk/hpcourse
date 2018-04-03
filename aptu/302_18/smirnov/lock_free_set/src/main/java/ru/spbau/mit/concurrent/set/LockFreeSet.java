@@ -1,10 +1,10 @@
-package ru.spbau.mit.concurrent.set
+package ru.spbau.mit.concurrent.set;
 
 /**
  * Lock-Free множество.
  * @param <T> Тип ключей
  */
-interface LockFreeSet<in T : Comparable<T>> {
+public interface LockFreeSet<T extends Comparable<T>> {
     /**
      * Добавить ключ к множеству
      *
@@ -13,7 +13,7 @@ interface LockFreeSet<in T : Comparable<T>> {
      * @param value значение ключа
      * @return false если value уже существует в множестве, true если элемент был добавлен
      */
-    fun add(value: T): Boolean
+    boolean add(T value);
 
     /**
      * Удалить ключ из множества
@@ -23,7 +23,7 @@ interface LockFreeSet<in T : Comparable<T>> {
      * @param value значение ключа
      * @return false если ключ не был найден, true если ключ успешно удален
      */
-    fun remove(value: T): Boolean
+    boolean remove(T value);
 
     /**
      * Проверка наличия ключа в множестве
@@ -33,7 +33,7 @@ interface LockFreeSet<in T : Comparable<T>> {
      * @param value значение ключа
      * @return true если элемент содержится в множестве, иначе - false
      */
-    fun contains(value: T): Boolean
+    boolean contains(T value);
 
     /**
      * Проверка множества на пустоту
@@ -42,5 +42,5 @@ interface LockFreeSet<in T : Comparable<T>> {
      *
      * @return true если множество пусто, иначе - false
      */
-    fun isEmpty(): Boolean
+    boolean isEmpty();
 }

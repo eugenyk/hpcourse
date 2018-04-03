@@ -30,7 +30,7 @@ private class TailNode<T>(override val value: T, next: Node<T>?): Node<T>(null, 
 private fun <T> propagateForward(prev: Node<T>, markedCur: Node<T>) =
         prev.tryCASNext(markedCur, markedCur.next, false, false)
 
-class LockFreeSetImpl<in T : Comparable<T>>: LockFreeSet<T> {
+class LockFreeSetImpl<T : Comparable<T>> : LockFreeSet<T> {
     private val head = HeadNode<T>()
 
     private tailrec fun search(value: T): Pair<Node<T>,Node<T>?> {
