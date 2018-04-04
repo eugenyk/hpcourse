@@ -66,8 +66,8 @@ void* producer_routine(void* arg) {
     while (!consumer_started) {
         pthread_cond_wait(&consumer_start_cond, &consumer_start_mutex);
     }
-    pthread_cond_broadcast(&consumer_start_cond);
     pthread_mutex_unlock(&consumer_start_mutex);
+    pthread_cond_broadcast(&consumer_start_cond);
 
     auto value = reinterpret_cast<ValueWrapper*>(arg);
 
@@ -82,8 +82,8 @@ void* producer_routine(void* arg) {
         }
         value->update(x);
 
-        pthread_cond_broadcast(&can_consume);
         pthread_mutex_unlock(&value_mutex);
+        pthread_cond_broadcast(&can_consume);
     }
 
     producer_finished = true;
@@ -106,8 +106,8 @@ void* consumer_routine(void* arg) {
             pthread_cond_wait(&can_consume, &value_mutex);
         }
         (*sum_ptr) += value->get();
-        pthread_cond_broadcast(&can_produce);
         pthread_mutex_unlock(&value_mutex);
+        pthread_cond_broadcast(&can_produce);
     }
 
     pthread_exit(sum_ptr);
@@ -119,8 +119,9 @@ void* consumer_interruptor_routine(void* arg) {
     while (!consumer_started) {
         pthread_cond_wait(&consumer_start_cond, &consumer_start_mutex);
     }
-    pthread_cond_broadcast(&consumer_start_cond);
     pthread_mutex_unlock(&consumer_start_mutex);
+    pthread_cond_broadcast(&consumer_start_cond);
+
     while (!producer_finished) {
         pthread_cancel(consumer_tid);
     }
