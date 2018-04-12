@@ -48,7 +48,11 @@ Temporary Items
 
 # IDEA files
 .idea
-out
+out 
+
+# CMake
+cmake-build-debug/
+cmake-build-release/
 
 # Gradle files
 build/
