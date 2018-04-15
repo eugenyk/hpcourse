@@ -63,6 +63,7 @@ void* producer_routine(void* arg) {
 }
 
 void* consumer_routine(void* arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
     Value* value = (Value*) arg;
     Value* sum = new Value();
     pthread_mutex_lock(&status_mutex);               // lock
