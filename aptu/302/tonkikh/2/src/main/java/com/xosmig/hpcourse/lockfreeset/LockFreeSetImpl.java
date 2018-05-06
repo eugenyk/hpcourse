@@ -8,44 +8,49 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean add(T value) {
-        ListNode<T> newNode = new ListNode<>(value);
+        while (true) {
+            ListNode<T> newNode = new ListNode<>(value);
 
-        AtomicMarkableReference<ListNode<T>> lastNotMarkedRef = head;
-        ListNode<T> cur = head.getReference();
-        for (; cur != null; cur = cur.next.getReference()) {
+            AtomicMarkableReference<ListNode<T>> lastNotMarkedRef = head;
+            ListNode<T> cur = head.getReference();
+            for (; cur != null; cur = cur.nextNode()) {
 
-            if (cur.next.isMarked()) {
-                tryRemoveNode(cur, lastNotMarkedRef);
-                continue;
+                if (cur.isMarked()) {
+                    cur = deleteMarked(cur, lastNotMarkedRef);
+                    continue;
+                }
+
+                int compareResult = cur.value.compareTo(value);
+
+                if (compareResult == 0) {
+                    return false;
+                }
+
+                if (compareResult > 0) {
+                    break;
+                }
+
+                lastNotMarkedRef = cur.nextRef;
             }
 
-            int compareResult = cur.value.compareTo(value);
+            // cur might be null
+            newNode.nextRef.set(cur, false);
 
-            if (compareResult == 0) {
-                return false;
+            // restart if fails
+            if (lastNotMarkedRef.compareAndSet(cur, newNode, false, false)) {
+                return true;
             }
-
-            if (compareResult > 0) {
-                break;
-            }
-
-            lastNotMarkedRef = cur.next;
         }
-
-        // restart if fails
-        // cur might be null
-        newNode.next.set(cur, false);
-        return lastNotMarkedRef.compareAndSet(cur, newNode, false, false) || add(value);
     }
 
     @Override
     public boolean remove(T value) {
 
         AtomicMarkableReference<ListNode<T>> lastNotMarkedRef = head;
-        for (ListNode<T> cur = head.getReference(); cur != null; cur = cur.next.getReference()) {
+        for (ListNode<T> cur = head.getReference(); cur != null; cur = cur.nextNode()) {
 
-            if (cur.next.isMarked()) {
-                tryRemoveNode(cur, lastNotMarkedRef);
+            if (cur.isMarked()) {
+                cur = deleteMarked(cur, lastNotMarkedRef);
                 continue;
             }
 
@@ -55,18 +60,18 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                 boolean removedByMe = true;
                 ListNode<T> next;
                 do {
-                    next = cur.next.getReference();
-                    if (cur.next.isMarked()) {
+                    next = cur.nextNode();
+                    if (cur.isMarked()) {
                         removedByMe = false;
                         break;
                     }
-                } while (!cur.next.compareAndSet(next, next, false, true));
+                } while (!cur.nextRef.compareAndSet(next, next, false, true));
 
-                tryRemoveNode(cur, lastNotMarkedRef);
+                deleteMarked(cur, lastNotMarkedRef);
                 return removedByMe;
             }
 
-            lastNotMarkedRef = cur.next;
+            lastNotMarkedRef = cur.nextRef;
         }
 
         return false;
@@ -75,10 +80,10 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     @Override
     public boolean contains(T value) {
         AtomicMarkableReference<ListNode<T>> lastNotMarkedRef = head;
-        for (ListNode<T> cur = head.getReference(); cur != null; cur = cur.next.getReference()) {
+        for (ListNode<T> cur = head.getReference(); cur != null; cur = cur.nextNode()) {
 
-            if (cur.next.isMarked()) {
-                tryRemoveNode(cur, lastNotMarkedRef);
+            if (cur.isMarked()) {
+                cur = deleteMarked(cur, lastNotMarkedRef);
                 continue;
             }
 
@@ -86,7 +91,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                 return true;
             }
 
-            lastNotMarkedRef = cur.next;
+            lastNotMarkedRef = cur.nextRef;
         }
         return false;
     }
@@ -96,18 +101,36 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         return head.getReference() == null;
     }
 
-    private void tryRemoveNode(ListNode<T> cur, AtomicMarkableReference<ListNode<T>> lastNotMarkedRef) {
-        // Try to remove the element. Ignore if fails.
-        lastNotMarkedRef.compareAndSet(cur, cur.next.getReference(), false, false);
+    // Returns the last marked node in the sequence.
+    // Try to delete all the marked nodes in the sequence, but ignore if the deletion fails.
+    private ListNode<T> deleteMarked(ListNode<T> toRemove,
+                                     AtomicMarkableReference<ListNode<T>> lastNotMarkedRef) {
+        assert (toRemove.isMarked());
+        ListNode<T> prev = toRemove;
+        ListNode<T> cur = toRemove.nextNode();
+        while (cur != null && cur.isMarked()) {
+            prev = cur;
+            cur = cur.nextNode();
+        }
+        lastNotMarkedRef.compareAndSet(toRemove, cur, false, false);
+        return prev;
     }
 
-    private static class ListNode<T> {
-        public final AtomicMarkableReference<ListNode<T>> next;
+    private final static class ListNode<T> {
+        public final AtomicMarkableReference<ListNode<T>> nextRef;
         public final T value;
 
         public ListNode(T value) {
-            this.next = new AtomicMarkableReference<>(null, false);
+            this.nextRef = new AtomicMarkableReference<>(null, false);
             this.value = value;
+        }
+
+        public boolean isMarked() {
+            return nextRef.isMarked();
+        }
+
+        public ListNode<T> nextNode() {
+            return nextRef.getReference();
         }
     }
 }
