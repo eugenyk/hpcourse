@@ -42,14 +42,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean remove(final @NotNull T value) {
-        Optional<ListNode> optional = findNodeWithValue(value);
-
-        if (optional.isPresent()) {
-            optional.get().deleteLogically();
-            return true;
-        }
-
-        return false;
+        return findNodeWithValue(value).map(ListNode::deleteLogically).orElse(false);
     }
 
     @Override
@@ -165,12 +158,23 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             return data;
         }
 
-        public void deleteLogically() {
-            ListNode expectedReference = referenceToNextNode.getReference();
+        public boolean deleteLogically() {
+            ListNode reference = referenceToNextNode.getReference();
 
-            while (!referenceToNextNode.attemptMark(expectedReference, true)) {
-                expectedReference = referenceToNextNode.getReference();
+            while (!referenceToNextNode.compareAndSet(
+                reference,
+                reference,
+                false,
+                true
+            )) {
+                if (referenceToNextNode.isMarked()) {
+                    return false;
+                }
+
+                reference = referenceToNextNode.getReference();
             }
+
+            return true;
         }
 
         public boolean isLogicallyDeleted() {

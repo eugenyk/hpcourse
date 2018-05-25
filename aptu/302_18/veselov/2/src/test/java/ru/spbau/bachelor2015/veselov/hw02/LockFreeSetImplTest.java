@@ -67,7 +67,7 @@ public class LockFreeSetImplTest {
 
     @Test
     public void singleRemovementTest() throws Exception {
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 1000; i++) {
             runSingleRemovementTest();
         }
     }
