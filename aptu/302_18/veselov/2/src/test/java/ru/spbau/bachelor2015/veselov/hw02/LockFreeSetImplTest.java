@@ -1,10 +1,13 @@
 package ru.spbau.bachelor2015.veselov.hw02;
 
 import org.jetbrains.annotations.NotNull;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -62,7 +65,42 @@ public class LockFreeSetImplTest {
         assertThat(set.isEmpty(), is(equalTo(true)));
     }
 
-    private void runThreads(final @NotNull List<Thread> threads) throws InterruptedException {
+    @Test
+    public void singleRemovementTest() throws Exception {
+        for (int i = 0; i < 10000; i++) {
+            runSingleRemovementTest();
+        }
+    }
+
+    private void runSingleRemovementTest() throws Exception {
+        final int elementToRemove = 1;
+
+        LockFreeSet<Integer> set = new LockFreeSetImpl<>();
+        set.add(elementToRemove);
+
+        final int numberOfThreads = 10;
+
+        CyclicBarrier barrier = new CyclicBarrier(numberOfThreads);
+        List<Remover> threads = new ArrayList<>();
+        for (int i = 0; i < numberOfThreads; i++) {
+            threads.add(new Remover(set, elementToRemove, barrier));
+        }
+
+        runThreads(threads);
+
+        int removementsCount = 0;
+        for (Remover remover : threads) {
+            if (remover.getExecutionResult()) {
+                removementsCount++;
+            }
+        }
+
+        assertThat(removementsCount, is(equalTo(1)));
+    }
+
+    private void runThreads(
+        final @NotNull List<? extends Thread> threads
+    ) throws InterruptedException {
         for (Thread thread : threads) {
             thread.start();
         }
@@ -129,6 +167,41 @@ public class LockFreeSetImplTest {
             for (int value = lowerBound; value < upperBound; value++) {
                 set.remove(value);
             }
+        }
+    }
+
+    private class Remover extends Thread {
+        private final @NotNull LockFreeSet<Integer> set;
+
+        private final int elementToRemove;
+
+        private final @NotNull CyclicBarrier barrier;
+
+        private boolean executionResult;
+
+        public Remover(
+            final @NotNull LockFreeSet<Integer> set,
+            final int elementToRemove,
+            final @NotNull CyclicBarrier barrier
+        ) {
+            this.set = set;
+            this.elementToRemove = elementToRemove;
+            this.barrier = barrier;
+        }
+
+        public boolean getExecutionResult() {
+            return executionResult;
+        }
+
+        @Override
+        public void run() {
+            try {
+                barrier.await();
+            } catch (InterruptedException | BrokenBarrierException e) {
+                throw new RuntimeException(e);
+            }
+
+            executionResult = set.remove(elementToRemove);
         }
     }
 }
