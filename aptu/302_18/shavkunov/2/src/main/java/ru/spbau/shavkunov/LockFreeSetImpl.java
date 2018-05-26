@@ -10,8 +10,8 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     private Node<T> tail;
 
     public LockFreeSetImpl() {
-        head = new Node<T>(null);
-        tail = new Node<T>(null);
+        head = new Node<>(null);
+        tail = new Node<>(null);
 
         head.next.set(tail, false);
     }
@@ -75,9 +75,15 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public boolean isEmpty() {
-        Pair<Node<T>> pair = search(null);
+        Node<T> first = head.next.getReference();
 
-        return pair.getFirst() == head && pair.getSecond() == tail;
+        while (first != tail && first.next.isMarked()) {
+            Node<T> next = first.next.getReference();
+            head.next.compareAndSet(first, next, false, false);
+            first = head.next.getReference();
+        }
+
+        return first == tail;
     }
 
     private class Node<T extends Comparable<T>> {
@@ -100,7 +106,6 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         Node<T> rightNode = null;
 
         do {
-            boolean[] curMark = {false};
             Node<T> cur = head;
             Node<T> curNext = head.next.getReference();
 
@@ -116,11 +121,19 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                     break;
                 }
 
-                curNext = cur.next.get(curMark);
-            } while (curMark[0] ||
+                curNext = cur.next.getReference();
+            } while (cur.next.isMarked() ||
                     (searchKey != null && (cur.getKey().compareTo(searchKey) < 0)));
 
             rightNode = cur;
+
+            if (leftNodeNext == rightNode) {
+                if (rightNode != tail && rightNode.next.isMarked()) {
+                    continue;
+                } else {
+                    return new Pair<>(leftNode, rightNode);
+                }
+            }
 
             if (leftNode.next.compareAndSet(leftNodeNext, rightNode, false, false)) {
                 if (rightNode == tail || !rightNode.next.isMarked()) {
