@@ -21,16 +21,15 @@ private:
 
 pthread_mutex_t valueMutex;
 pthread_cond_t valueCondition;
-volatile bool producerOnline = false;
+volatile bool producerOnline = true;
 volatile bool consumerOnline = false;
 volatile bool valueConsumed = true;
 
 pthread_t consumerThread;
 
 void* producer_routine(void* arg) {
-    pthread_mutex_lock(&valueMutex);
+	pthread_mutex_lock(&valueMutex);
     //Wait for consumer start
-    producerOnline = true;
     while (!consumerOnline) {
         pthread_cond_wait(&valueCondition, &valueMutex);
     }
