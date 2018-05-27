@@ -43,8 +43,8 @@ void* producer_routine(void* arg) {
             pthread_cond_wait(&valueCondition, &valueMutex);
         }
         value->update(v);
-        pthread_cond_broadcast(&valueCondition);
         valueConsumed = false;
+        pthread_cond_broadcast(&valueCondition);
     }
     producerOnline = false;
     pthread_cond_broadcast(&valueCondition);
