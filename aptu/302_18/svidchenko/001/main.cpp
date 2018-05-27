@@ -21,22 +21,24 @@ private:
 
 pthread_mutex_t valueMutex;
 pthread_cond_t valueCondition;
-volatile bool producerOnline = true;
+pthread_barrier_t startBarrier;
+volatile bool producerOnline = false;
 volatile bool consumerOnline = false;
 volatile bool valueConsumed = true;
 
 pthread_t consumerThread;
 
 void* producer_routine(void* arg) {
-	pthread_mutex_lock(&valueMutex);
-    //Wait for consumer start
-    while (!consumerOnline) {
-        pthread_cond_wait(&valueCondition, &valueMutex);
-    }
-
     Value* value = (Value*)(arg);
     int v;
 
+    producerOnline = true;
+
+    //Wait for start
+    pthread_barrier_wait(&startBarrier);
+
+    pthread_mutex_lock(&valueMutex);
+    
     while (cin >> v) {
         while (!valueConsumed) {
             pthread_cond_wait(&valueCondition, &valueMutex);
@@ -53,12 +55,12 @@ void* producer_routine(void* arg) {
 
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+	consumerOnline = true;
+	
+    //Wait for start
+    pthread_barrier_wait(&startBarrier);
+	
     pthread_mutex_lock(&valueMutex);
-
-    //Notify about consumer start
-    consumerOnline = true;
-    pthread_cond_broadcast(&valueCondition);
-
     Value* value = (Value*)(arg);
     int* sumptr = new int;
     *sumptr = 0;
@@ -77,13 +79,9 @@ void* consumer_routine(void* arg) {
 }
 
 void* consumer_interruptor_routine(void* arg) {
-    pthread_mutex_lock(&valueMutex);
-    //Wait for consumer
-    while (!consumerOnline) {
-        pthread_cond_wait(&valueCondition, &valueMutex);
-    }
-    pthread_mutex_unlock(&valueMutex);
-    while (consumerOnline) {
+    pthread_barrier_wait(&startBarrier);
+
+	while (consumerOnline) {
         pthread_cancel(consumerThread);
     }
     return nullptr;
@@ -97,6 +95,7 @@ int run_threads() {
 
     pthread_mutex_init(&valueMutex, nullptr);
     pthread_cond_init(&valueCondition, nullptr);
+	pthread_barrier_init(&startBarrier, nullptr, 3);
 
     pthread_create(&producerThread, nullptr, producer_routine, &value);
     pthread_create(&consumerInterruptorThread, nullptr, consumer_interruptor_routine, nullptr);
