@@ -82,7 +82,9 @@ void* consumer_routine(void* arg) {
         }
         pthread_mutex_unlock(&mutex);
     }
+    pthread_mutex_lock(&mutex);
     consumer_status = 1;
+    pthread_mutex_unlock(&mutex);
     return res;
 }
  
