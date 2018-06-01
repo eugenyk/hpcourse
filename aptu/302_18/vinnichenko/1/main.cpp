@@ -48,26 +48,19 @@ private:
 pthread_t producer_tid;
 pthread_t consumer_tid;
 pthread_t consumer_interruptor_tid;
+pthread_barrier_t consumer_start_barrier;
 
 pthread_mutex_t value_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t consumer_start_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_cond_t can_consume = PTHREAD_COND_INITIALIZER;
 pthread_cond_t can_produce = PTHREAD_COND_INITIALIZER;
-pthread_cond_t consumer_start_cond = PTHREAD_COND_INITIALIZER;
 
 volatile bool producer_finished = false;
-volatile bool consumer_started = false;
 
 // Wait for consumer to start
 // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
 void* producer_routine(void* arg) {
-    pthread_mutex_lock(&consumer_start_mutex);
-    while (!consumer_started) {
-        pthread_cond_wait(&consumer_start_cond, &consumer_start_mutex);
-    }
-    pthread_mutex_unlock(&consumer_start_mutex);
-    pthread_cond_broadcast(&consumer_start_cond);
+    pthread_barrier_wait(&consumer_start_barrier);
 
     auto value = reinterpret_cast<ValueWrapper*>(arg);
 
@@ -95,8 +88,8 @@ void* producer_routine(void* arg) {
 // return pointer to result
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
-    consumer_started = true;
-    pthread_cond_broadcast(&consumer_start_cond);
+
+    pthread_barrier_wait(&consumer_start_barrier);
 
     auto value = reinterpret_cast<ValueWrapper*>(arg);
 
@@ -115,12 +108,7 @@ void* consumer_routine(void* arg) {
 
 // wait for consumer to start, interrupt consumer while producer is running
 void* consumer_interruptor_routine(void* arg) {
-    pthread_mutex_lock(&consumer_start_mutex);
-    while (!consumer_started) {
-        pthread_cond_wait(&consumer_start_cond, &consumer_start_mutex);
-    }
-    pthread_mutex_unlock(&consumer_start_mutex);
-    pthread_cond_broadcast(&consumer_start_cond);
+    pthread_barrier_wait(&consumer_start_barrier);
 
     while (!producer_finished) {
         pthread_cancel(consumer_tid);
@@ -134,6 +122,8 @@ int run_threads() {
     std::vector<int> vec = {1001, 2, 3, 4, 5};
 
     ValueWrapper value;
+
+    pthread_barrier_init(&consumer_start_barrier, nullptr, 3);
 
     pthread_create(&producer_tid, nullptr, producer_routine, &value);
     pthread_create(&consumer_tid, nullptr, consumer_routine, &value);
