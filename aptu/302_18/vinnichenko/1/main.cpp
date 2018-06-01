@@ -74,12 +74,14 @@ void* producer_routine(void* arg) {
             pthread_cond_wait(&can_produce, &value_mutex);
         }
         value->update(x);
-
-        pthread_mutex_unlock(&value_mutex);
         pthread_cond_broadcast(&can_consume);
     }
 
     producer_finished = true;
+
+    pthread_mutex_unlock(&value_mutex);
+    pthread_cond_broadcast(&can_consume);
+    
     pthread_exit(nullptr);
 }
 
@@ -99,9 +101,11 @@ void* consumer_routine(void* arg) {
             pthread_cond_wait(&can_consume, &value_mutex);
         }
         (*sum_ptr) += value->get();
-        pthread_mutex_unlock(&value_mutex);
         pthread_cond_broadcast(&can_produce);
     }
+
+    pthread_mutex_unlock(&value_mutex);
+    pthread_cond_broadcast(&can_consume);
 
     pthread_exit(sum_ptr);
 }
