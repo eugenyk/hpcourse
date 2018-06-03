@@ -57,11 +57,11 @@ void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 	consumerOnline = true;
 	
-    //Wait for start
+    
+    pthread_mutex_lock(&valueMutex);
     pthread_barrier_wait(&startBarrier);
 	
-    pthread_mutex_lock(&valueMutex);
-    Value* value = (Value*)(arg);
+	Value* value = (Value*)(arg);
     int* sumptr = new int;
     *sumptr = 0;
 
@@ -81,9 +81,13 @@ void* consumer_routine(void* arg) {
 void* consumer_interruptor_routine(void* arg) {
     pthread_barrier_wait(&startBarrier);
 
+    pthread_mutex_lock(&valueMutex);
 	while (consumerOnline) {
+        pthread_mutex_unlock(&valueMutex);
         pthread_cancel(consumerThread);
+        pthread_mutex_lock(&valueMutex);
     }
+    pthread_mutex_unlock(&valueMutex);
     return nullptr;
 }
 
