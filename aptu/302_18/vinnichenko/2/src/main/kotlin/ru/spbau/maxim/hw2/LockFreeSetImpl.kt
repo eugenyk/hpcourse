@@ -40,14 +40,8 @@ class LockFreeSetImpl<T : Comparable<T>> : LockFreeSet<T> {
     }
 
     override fun isEmpty(): Boolean {
-        var node = head.next.reference
-        while (node != null && node != tail) {
-            if (!node.next.isMarked()) {
-                return false
-            }
-            node = node.next.reference
-        }
-        return true
+        val (l, r) = findRangePredicate { node -> !node.next.isMarked }
+        return l === head && r === tail
     }
 
     private fun compareWithNode(value: T, node: Node<T>): Int = when (node) {
@@ -61,12 +55,19 @@ class LockFreeSetImpl<T : Comparable<T>> : LockFreeSet<T> {
     }
 
     private fun findRange(value: T): Pair<Node<T>, Node<T>> {
+        return findRangePredicate { node -> compareWithNode(value, node) <= 0 }
+    }
+
+    //находит первый элемент, подходящий под predicate, и предыдуший (считается, что tail всегда подходит по predicate)
+    //возвращает Pair(предыдущий, подходящий элемент)
+    //также выполняет helping
+    private fun findRangePredicate(predicate: (Node<T>) -> Boolean): Pair<Node<T>, Node<T>> {
         val isDeletedBuf = booleanArrayOf(false)
         loop@ while (true) {
             var prev: Node<T>? = null
             var node = head
             var nextNode = head.next.get(isDeletedBuf)
-            while (nextNode != null && compareWithNode(value, node) > 0) {
+            while (nextNode != null && (node === head || !predicate(node))) {
                 prev = node
                 node = nextNode
                 nextNode = node.next.get(isDeletedBuf)
@@ -74,6 +75,8 @@ class LockFreeSetImpl<T : Comparable<T>> : LockFreeSet<T> {
                 if (isDeletedBuf[0]) {
                     if (!prev.next.compareAndSet(node, nextNode, false, false)) {
                         continue@loop
+                    } else {
+                        node = prev
                     }
                 }
             }
