@@ -56,19 +56,20 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     public boolean isEmpty() {
         Node<T> helper = head;
-        Node<T> helper_next;
+        Node<T> current;
         do{
-            helper_next = helper.next.getReference();
-            if (helper_next == tail)
+            current = helper.next.getReference();
+            if (current == tail)
                 return true;
-            if (!helper.next.isMarked()) {
+            if (!current.next.isMarked()) {
                 return false;
             } else {
-                if (!head.next.compareAndSet(helper, helper.next.getReference(), false, false))
+                if (!helper.next.compareAndSet(current, current.next.getReference(), false, false))
                     helper = head;
             }
-        } while (helper.next.isMarked() || helper.getKey() == null);
-        return true;
+        } while (current.next.isMarked() || current.getKey() == null);
+
+      return true;
     }
 
     private class Node<U extends Comparable<U>> {
