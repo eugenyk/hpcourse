@@ -48,4 +48,18 @@ public class LockFreeSetImplTest{
             }
         });
     }
+    
+    @Test
+    public void isEmpty_simple() throws Exception {
+        LockFreeSet<Integer> set = new LockFreeSetImpl<>();
+        assertTrue(set.isEmpty());
+        set.add(1);
+        assertFalse(set.isEmpty());
+        set.remove(1);
+        assertTrue(set.isEmpty());
+        set.add(1);
+        set.add(2);
+        set.remove(2);
+        assertFalse(set.isEmpty());
+    }
 }
