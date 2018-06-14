@@ -68,7 +68,8 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                     helper = head;
             }
         } while (current.next.isMarked() || current.getKey() == null);
-        return true;
+
+      return true;
     }
 
     private class Node<U extends Comparable<U>> {
