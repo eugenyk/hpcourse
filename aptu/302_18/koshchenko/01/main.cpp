@@ -91,9 +91,7 @@ void* consumer_routine(void* arg) {
 void* consumer_interruptor_routine(void* arg) {
     waiting_consumer_starting();
     while (producer_status == 0) {
-        pthread_mutex_unlock(&mutex);
         pthread_cancel(consumer);
-        pthread_mutex_lock(&mutex);
     }
     return NULL;
 }
