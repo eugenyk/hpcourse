@@ -1,7 +1,7 @@
 .PHONY: all test clean
 
 CXX = g++
-CXXFLAGS += -Wall -Werror -pedantic -pthread -std=c++11
+CXXFLAGS += -Wall -Werror -pedantic -pthread -std=c++03
 
 PWD = $(shell pwd)
 ROOT = $(PWD)

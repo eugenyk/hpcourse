@@ -100,7 +100,7 @@ void* consumer_routine(void* arg) {
   wait_other();
 
   Value & value = *(Value*)arg;
-  long long sum = 0;
+  long sum = 0;
   while (1) {
     {
       mutex_guard guard(mutex);
@@ -121,7 +121,7 @@ void* consumer_routine(void* arg) {
 #ifdef DEBUG
   printf("consumer exit: %lld\n", sum);
 #endif
-  return new long long(sum);
+  return new long(sum);
 }
 
 
@@ -170,9 +170,9 @@ int run_threads(Value const & value, int amount_consumers) {
   pthread_join(producer, NULL);
   pthread_join(interruptor, NULL);
 
-  long long acc_result = 0;
+  long acc_result = 0;
   for (size_t i = 0; i < consumers.size(); ++i) {
-    long long * local_result;
+    long * local_result;
     pthread_join(consumers[i], (void**)&local_result);
     acc_result += *local_result;
     delete local_result;
