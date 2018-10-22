@@ -26,10 +26,14 @@ pthread_mutex_t consumer_mutex;
 pthread_cond_t ready_for_consume;
 pthread_cond_t variable_prepared;
 
+pthread_t * threads;
+
 int commonConsumersSum;
 //bool hasToWork = true;
 bool consumeProduceFlag = true;
 bool hasToStop = false;
+
+int maxSleepMs;
 
 void* producer_routine(void* arg) {
     while (true) {
@@ -57,10 +61,17 @@ void* producer_routine(void* arg) {
     return nullptr;
 }
 
-int maxSleepMs;
+void cleanup_handler(void* arg) {
+    std::cout << "cleaning up consumer " + *static_cast<int*>(arg) << std::endl;
+}
+
 volatile int consum_num = 0;
 void* consumer_routine(void* arg) {
     int tnum = ++consum_num;
+    //pthread_cleanup_push(cleanup_handler, &tnum);
+
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+
     while (true) {
     // notify about start
         pthread_mutex_lock(&consumer_mutex);
@@ -88,45 +99,54 @@ void* consumer_routine(void* arg) {
         usleep((rand() % maxSleepMs)*1000);
     }
     // return pointer to result (aggregated result for all consumers)
+    //pthread_cleanup_pop(0);
     return &commonConsumersSum;
 }
  
 void* consumer_interruptor_routine(void* arg) {
-    // wait for consumer to start
- 
-    // interrupt consumer while producer is running  
+    while (true) {
+        int tnum = rand() % *static_cast<int*>(arg);
+        int s = pthread_cancel(threads[tnum]);
+        if (s != 0) {
+            //std::cout << "interruptor: thread " << tnum << " cancelled with error\n";
+        }
+        pthread_testcancel();
+    }  
     return nullptr;                                        
 }
  
 int run_threads(int nThreads) {
     Value v;
+    pthread_t locThreads[nThreads];
+    threads = locThreads;
     // start N threads and wait until they're done
     // return aggregated sum of values
     pthread_mutex_init(&mutex, NULL);
     pthread_mutex_init(&consumer_mutex, NULL);
     pthread_cond_init(&ready_for_consume, NULL);
     pthread_cond_init(&variable_prepared, NULL);
-  
-    pthread_t threads[nThreads];
-    pthread_t prodThread;
+    
+    pthread_t prodThread, interruptThread;
     
     pthread_create(&prodThread, NULL, producer_routine, &v);
+    
     for (int i = 0; i < nThreads; i++) {
         pthread_create(&threads[i], NULL, consumer_routine, &v);
     }
+    
+    pthread_create(&interruptThread, NULL, consumer_interruptor_routine, &nThreads);
     
     pthread_join(prodThread, nullptr);
     std::cout << "run_threads: joined producer\n";
     hasToStop = true;
     pthread_cond_signal(&variable_prepared);
-    /*
-    for (int i = 0; i < nThreads; i++) {
-        pthread_cancel(threads[i]);
-    }
-    std::cout << "all consumers cancelled\n";
-    */
+    
+    pthread_cancel(interruptThread);
+    pthread_join(interruptThread, NULL);
+    
     void * resPointer = nullptr;
     pthread_join(threads[0], &resPointer);
+    
     for (int i = 1; i < nThreads; i++) {
         pthread_join(threads[i], NULL);
     }
