@@ -58,7 +58,7 @@ void *producer_routine(void *arg) {
     auto *val = static_cast<Value *>(arg);
     pthread_mutex_lock(&mutex);
     for (int num: values) {
-        std::cout << "Update " << num << std::endl;
+//        std::cout << "Update " << num << std::endl;
         val->update(num);
         is_updated = true;
         pthread_cond_broadcast(&producer_signal);
@@ -97,7 +97,7 @@ void *consumer_routine(void *arg) {
 
         if (finished) break;
 
-        std :: cout << "value is : " << val->get() << std::endl;
+//        std :: cout << "value is : " << val->get() << std::endl;
         total += val->get();
         is_updated = false;
         pthread_cond_signal(&consumer_signal);
@@ -154,7 +154,7 @@ int run_threads() {
     for (int i = 0; i < amount_of_threads; ++i) {
         pthread_create(&consumers[i], nullptr, consumer_routine, &value);
     }
-    std::cout << "Here";
+//    std::cout << "Here";
 
     pthread_join(producer, nullptr);
     pthread_join(interruptor, nullptr);
