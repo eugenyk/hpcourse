@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <windows.h>
+#include <ctime>
 using namespace std;
 
 class Value {
@@ -23,9 +25,12 @@ private:
 	int _value;
 };
 
+int MaxSleepTime;
 bool IsConsumerStart = false;
 bool IsConsumerReadSharedValue = false;
 bool IsSharedDataChanged = false;
+bool IsInputEnded = false;
+int Sum = 0;
 
 void* producer_routine(void* sharedValuePtr) {
 	while (!IsConsumerStart);
@@ -36,10 +41,14 @@ void* producer_routine(void* sharedValuePtr) {
 	while (true) {
 		int number;
 		if (!(ss >> number))
+		{
+			IsInputEnded = true;
 			break;
-		*((int *)sharedValuePtr) = number;//заменим int на Value
+		}
+		((Value *)sharedValuePtr)->update(number);
 		IsSharedDataChanged = true;
 		while (!IsConsumerReadSharedValue);
+		IsConsumerReadSharedValue = false;
 	}
 	return NULL;
 }
@@ -48,43 +57,55 @@ void* consumer_routine(void* sharedValuePtr) {
 	IsConsumerStart = true;
 	while (true)
 	{
+		if (IsInputEnded)
+			break;
 		while (!IsSharedDataChanged);
 		IsSharedDataChanged = false;
-		//добавим *sharedValuePtr к сумме
+		Sum += ((Value *)sharedValuePtr)->get();
+		IsConsumerReadSharedValue = true;
+		Sleep(rand() % (MaxSleepTime + 1));
 	}
+	return (void *)&Sum;
 }
 
-void* consumer_interruptor_routine(void* arg) {
-	// wait for consumer to start
-
-	// interrupt consumer while producer is running
+void* consumer_interruptor_routine(void* consumersIDPtr) {
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	while (!IsConsumerStart);
+	while (true)
+	{
+		vector<pthread_t> consumersID = *((vector<pthread_t> *)consumersIDPtr);
+		int i = rand() % (consumersID.size());
+		pthread_cancel(consumersID.at(i));
+		if (IsInputEnded)
+			break;
+	}
 	return NULL;
 }
 
 int run_threads(int consumersCount) {
 	if (consumersCount <= 0)
 		throw new exception();
+	Value sharedValue;
 	pthread_t producerID;
-	pthread_create(&producerID, NULL, producer_routine, NULL);//передадим sharedValuePtr
-	pthread_t interruptorID;
-	pthread_create(&interruptorID, NULL, consumer_interruptor_routine, NULL);
+	pthread_create(&producerID, NULL, producer_routine, &sharedValue);
+	srand(time(NULL));
 	vector<pthread_t> consumersID;
+	consumersID.resize(consumersCount);
 	for (int i = 0; i < consumersCount; i++)
-	{
-		pthread_t id;
-		consumersID.push_back(id);
-		pthread_create(&id, NULL, consumer_routine, NULL);//передадим sharedValuePtr
-	}
+		pthread_create(&consumersID[i], NULL, consumer_routine, &sharedValue);
+	pthread_t interruptorID;
+	pthread_create(&interruptorID, NULL, consumer_interruptor_routine, &consumersID);
 	pthread_join(producerID, NULL);
 	pthread_join(interruptorID, NULL);
 	void *result;
 	pthread_join(consumersID.at(0), &result);
 	for (int i = 1; i < consumersCount; i++)
 		pthread_join(consumersID.at(i), NULL);
-	return (*(int *)result);
+	return *((int *)result);
 }
 
 int main(int argc, char *argv[]) {
+	MaxSleepTime = atoi(argv[2]);
 	cout << run_threads(atoi(argv[1])) << endl;
 	system("pause");
 	return 0;
