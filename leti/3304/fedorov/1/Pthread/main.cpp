@@ -57,9 +57,13 @@ void* consumer_routine(void* sharedValuePtr) {
 	IsConsumerStart = true;
 	while (true)
 	{
+		while (!IsSharedDataChanged)
+		{
+			if (IsInputEnded)
+				break;
+		}
 		if (IsInputEnded)
 			break;
-		while (!IsSharedDataChanged);
 		IsSharedDataChanged = false;
 		Sum += ((Value *)sharedValuePtr)->get();
 		IsConsumerReadSharedValue = true;
