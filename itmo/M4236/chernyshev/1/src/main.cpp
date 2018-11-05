@@ -3,42 +3,33 @@
 #include <sstream>
 #include <vector>
 #include <random>
-
-#define NOT_STARTED 0
-#define WAIT_FOR_PRODUCER 1
-#define WAIT_FOR_CONSUMMER 2
-#define FINISHED 3
+#include <ctime>
+#include <cassert>
 
 class Value {
-   public:
+public:
     Value() : _value(0) {}
 
     void update(int value) { _value = value; }
 
     int get() const { return _value; }
 
-   private:
+private:
     int _value;
 };
 
-int current_status;
 int cons_thread_num = 0;
 int cons_sleep_limit = 0;
+bool is_empty_data = false;
+bool is_ready_data = false;
 pthread_mutex_t mutex;
-pthread_cond_t cond;
+pthread_cond_t cond1;
+pthread_barrier_t val_barrier;
+pthread_barrier_t cancel_barrier;
 
-void* producer_routine(void* arg) {
-    auto * val = (Value*)(arg);
+void *producer_routine(void *arg) {
+    auto *val = (Value *) (arg);
 
-    // Wait for consumer to start
-    pthread_mutex_lock(&mutex);
-    while (current_status == NOT_STARTED) {
-        pthread_cond_wait(&cond, &mutex);
-    }
-    pthread_mutex_unlock(&mutex);
-
-    // Read data, loop through each value and update the value, notify consumer,
-    // wait for consumer to process
     std::string str;
     std::getline(std::cin, str);
     std::istringstream ss(str);
@@ -48,72 +39,80 @@ void* producer_routine(void* arg) {
         numbers.push_back(input);
     }
 
-    pthread_mutex_lock(&mutex);
+
     for (auto num : numbers) {
+        pthread_mutex_lock(&mutex);
         val->update(num);
-        current_status = WAIT_FOR_CONSUMMER;
-        pthread_cond_broadcast(&cond);
-        while (current_status != WAIT_FOR_PRODUCER) {
-            pthread_cond_wait(&cond, &mutex);
-        }
+        is_ready_data = true;
+        pthread_cond_broadcast(&cond1);
+        pthread_mutex_unlock(&mutex);
+
+        pthread_barrier_wait(&val_barrier);
+
+        pthread_mutex_lock(&mutex);
+        is_ready_data = false;
+        pthread_mutex_unlock(&mutex);
+
+        pthread_barrier_wait(&val_barrier);
     }
-    current_status = FINISHED;
-    pthread_cond_broadcast(&cond);
+
+    pthread_mutex_lock(&mutex);
+    is_ready_data = true;
+    is_empty_data = true;
+    pthread_cond_broadcast(&cond1);
     pthread_mutex_unlock(&mutex);
+
+    pthread_barrier_wait(&val_barrier);
+
+    pthread_mutex_lock(&mutex);
+    is_ready_data = false;
+    pthread_mutex_unlock(&mutex);
+
+    pthread_barrier_wait(&val_barrier);
+
     return nullptr;
 }
 
-void* consumer_routine(void* arg) {
+void *consumer_routine(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
-    auto * val = (Value*)(arg);
+    pthread_barrier_wait(&cancel_barrier);
+    auto *val = (Value *) (arg);
 
-    // notify about start
-    pthread_mutex_lock(&mutex);
-    current_status = WAIT_FOR_PRODUCER;
-    pthread_cond_broadcast(&cond);
-    pthread_mutex_unlock(&mutex);
-    // for every update issued by producer, read the value and add to sum
-    // return pointer to result (aggregated result for all consumers)
-
-    int* result_sum = new int(0);
+    int *result_sum = new int(0);
     while (true) {
-        pthread_mutex_lock(&mutex);
-        if (current_status == FINISHED) {
-            pthread_mutex_unlock(&mutex);
-            break;
-        }
-        if (current_status == WAIT_FOR_CONSUMMER) {
-            *result_sum += val->get();
-            current_status = WAIT_FOR_PRODUCER;
-            pthread_cond_broadcast(&cond);
+        bool need_break = false;
 
-            pthread_mutex_unlock(&mutex);
-            timespec sleep_amount{0, rand() % (cons_sleep_limit + 1)};
-            nanosleep(&sleep_amount, nullptr);
-            pthread_mutex_lock(&mutex);
+        pthread_mutex_lock(&mutex);
+        while (!is_ready_data) {
+            pthread_cond_wait(&cond1, &mutex);
+        }
+        if (!is_empty_data) {
+            *result_sum += val->get();
+        } else {
+            need_break = true;
         }
         pthread_mutex_unlock(&mutex);
+
+        pthread_barrier_wait(&val_barrier);
+
+        pthread_barrier_wait(&val_barrier);
+
+        if (need_break) break;
     }
+
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
     return result_sum;
 }
 
-void* consumer_interruptor_routine(void* arg) {
-    auto threads = (std::vector<pthread_t>*)(arg);
+void *consumer_interruptor_routine(void *arg) {
+    auto threads = (std::vector<pthread_t> *) (arg);
+    pthread_barrier_wait(&cancel_barrier);
 
-    // wait for consumer to start
-    pthread_mutex_lock(&mutex);
-    while (current_status == NOT_STARTED) {
-        pthread_cond_wait(&cond, &mutex);
-    }
-
-    // interrupt consumer while producer is running
-    while (current_status != FINISHED) {
-        pthread_cancel(threads->at(static_cast<unsigned long>(rand() % threads->size())));
-        timespec sleep_amount{0, rand() % (cons_sleep_limit + 1)};
+    while (true) {
+        pthread_cancel(threads->at(std::rand() % threads->size()));
+        timespec sleep_amount{0, std::rand() % (cons_sleep_limit * 1000)};
         nanosleep(&sleep_amount, nullptr);
     }
-    pthread_mutex_unlock(&mutex);
     return nullptr;
 }
 
@@ -123,28 +122,38 @@ int run_threads() {
     pthread_t interruptor;
 
     // start N threads and wait until they're done
-    auto * val = new Value();
+    auto *val = new Value();
+
+    pthread_mutex_init(&mutex, nullptr);
+    pthread_cond_init(&cond1, nullptr);
+    pthread_barrier_init(&val_barrier, nullptr, static_cast<unsigned int>(cons_thread_num + 1));
+    pthread_barrier_init(&cancel_barrier, nullptr, static_cast<unsigned int>(cons_thread_num + 1));
+
+
     pthread_create(&producer, nullptr, producer_routine, val);
-    for (auto& cons : consumers) {
+    for (auto &cons : consumers) {
         pthread_create(&cons, nullptr, consumer_routine, val);
     }
     pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers);
 
     int consumer_result = 0;
     pthread_join(producer, nullptr);
-    for (auto& cons : consumers) {
-        int* result;
-        pthread_join(cons, reinterpret_cast<void**>(&result));
-        consumer_result += (*result);
+
+    pthread_cancel(interruptor);
+    pthread_join(interruptor, nullptr);
+
+    for (auto &cons : consumers) {
+        int *result;
+        pthread_join(cons, (void **) &result);
+        consumer_result = (*result);
         delete result;
     }
 
-    pthread_join(interruptor, nullptr);
 
     return consumer_result;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     cons_thread_num = std::atoi(argv[1]);
     cons_sleep_limit = std::atoi(argv[2]);
     std::cout << run_threads() << std::endl;
