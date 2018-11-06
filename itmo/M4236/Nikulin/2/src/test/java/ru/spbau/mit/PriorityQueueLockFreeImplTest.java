@@ -3,7 +3,6 @@ package ru.spbau.mit;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 import java.util.concurrent.*;
@@ -13,18 +12,20 @@ import java.util.concurrent.atomic.LongAccumulator;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
+
 public class PriorityQueueLockFreeImplTest {
     private ThreadLocalRandom random = ThreadLocalRandom.current();
 
     private Queue<Integer> makeLockFreeQueue(boolean debug) {
         return new PriorityQueueLockFreeImpl<>(debug);
+//        return new PriorityQueueLockFreeImplMok<>();
     }
 
 
     @Test
     public void pollOfferConcurrency() throws InterruptedException, ExecutionException {
         for (int testIteration = 0; testIteration < 10; testIteration++) {
-            final int amount = random.nextInt(2016, 50_000);
+            final int amount = random.nextInt(23_900, 50_000);
             final int[] storage = random.ints(amount).toArray();
 
             final AtomicInteger storageTailSize = new AtomicInteger(amount);
@@ -71,14 +72,16 @@ public class PriorityQueueLockFreeImplTest {
             ArrayList<Future<Map<Integer, Long>>> results = new ArrayList<>();
             for (int i = 0; i < amountTreads; i++) {
                 pool.submit(producer);
-                results.add(pool.submit(consumer));
+                if (Math.random() < 0.8) {
+                    results.add(pool.submit(consumer));
+                }
             }
 
             canStart.set(true);
             Thread.sleep(200, 11);
 
             TreeMap<Integer, Long> global_multiset = new TreeMap<>();
-            for (int i = 0; i < amountTreads; i++) {
+            for (int i = 0; i < results.size(); i++) {
                 Map<Integer, Long> local_multiset = results.get(i).get();
                 for (Map.Entry<Integer, Long> entry : local_multiset.entrySet()) {
                     long counter = Optional.ofNullable(global_multiset.get(entry.getKey())).orElse(0L);
@@ -97,7 +100,12 @@ public class PriorityQueueLockFreeImplTest {
             Assert.assertEquals(0, lf_pq.size());
             Assert.assertEquals(expected_multiset.size(), global_multiset.size());
             for (Map.Entry<Integer, Long> entry : expected_multiset.entrySet()) {
-                Assert.assertEquals(entry.getValue(), global_multiset.get(entry.getKey()));
+                Long expected = entry.getValue();
+                Long actual = global_multiset.get(entry.getKey());
+                if (!expected.equals(actual)) {
+                    System.out.println("check: " + entry.getKey());
+                }
+                Assert.assertEquals(expected, actual);
             }
         }
     }
@@ -105,7 +113,7 @@ public class PriorityQueueLockFreeImplTest {
 
     @Test
     public void pollOfferHalfDuplex() throws ExecutionException, InterruptedException {
-        int amount = random.nextInt(50_000, 100_000);
+        int amount = random.nextInt(10_000, 50_000);
         int[] storage = random.ints(amount).toArray();
 
         Queue<Integer> lf_pq = makeLockFreeQueue(false);
@@ -147,7 +155,7 @@ public class PriorityQueueLockFreeImplTest {
 
     @Test
     public void pollAccumulation() {
-        int amount = random.nextInt(2016, 50_000);
+        int amount = random.nextInt(2016, 10_000);
         int[] storage = random.ints(amount).toArray();
 
         Map<Integer, Long> expected_multiset = Arrays.stream(storage).boxed()

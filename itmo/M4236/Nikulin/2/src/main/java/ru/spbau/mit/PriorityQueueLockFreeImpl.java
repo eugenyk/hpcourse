@@ -4,10 +4,9 @@ package ru.spbau.mit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.AbstractQueue;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends AbstractQueue<E> implements PriorityQueueLockFree<E> {
     private final AtomicReference<Node<E>> head = new AtomicReference<>(new Node<>(null, null));
@@ -26,25 +25,31 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
     }
 
 
-    private ArrayList<E> elements() {
+    private ArrayList<SubNode<E>> nodes() {
         Node<E> p = first();
-        ArrayList<E> array = new ArrayList<>();
+        ArrayList<SubNode<E>> array = new ArrayList<>();
         while (p != null) {
             SubNode<E> subNode = p.subNode.get();
-            if (subNode.item != null) {
-                array.add(subNode.item);
-            }
+            array.add(subNode);
             p = subNode.next;
         }
         return array;
     }
 
 
+    private List<E> elements() {
+        return nodes().stream()
+                .map(sn -> sn.item)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+
     @Override
     public int size() {
         for (;;) {
-            ArrayList<E> base_array = elements();
-            ArrayList<E> check_array = elements();
+            List<E> base_array = elements();
+            List<E> check_array = elements();
             if (base_array.equals(check_array)) {
                 return base_array.size();
             }
@@ -56,17 +61,20 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
         if (debug) System.out.println("try insert " + e);
 
         Node<E> newNode;
+        outerLoop:
         for (;;) {
             Node<E> oldHead = this.head.get();
             Node<E> node = first();
             Node<E> prev = node;
 
-            SubNode<E> subNode;
+            SubNode<E> subNode, prevWalkSubNode;
             subNode = prev.subNode.get();
+            prevWalkSubNode = subNode;
 
             if (subNode.item == null && subNode.next == null) {
                 if (debug) System.out.println("queue empty");
-                final SubNode<E> newSubNode = new SubNode<>(e, null);
+                final Node<E> newHeadNode = new Node<>(e, null);
+                final SubNode<E> newSubNode = new SubNode<>(null, newHeadNode);
                 if (prev.subNode.compareAndSet(subNode, newSubNode)) {
                     if (debug) System.out.println("set under null, el = " + e);
                     return true;
@@ -82,21 +90,46 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
                 if (subNode.item != null && subNode.item.compareTo(e) >= 0) {
                     break;
                 }
+                if (subNode.item == null && prevWalkSubNode.next == node) {
+                    if (subNode.next != null)
+                    {
+                        final SubNode<E> skipSubNode = new SubNode<>(prevWalkSubNode.item, subNode.next);
+                        prev.subNode.compareAndSet(prevWalkSubNode, skipSubNode);
+                        continue outerLoop;
+                    }
+                }
+                prevWalkSubNode = subNode;
                 prev = node;
                 node = succ(node);
             }
 
             newNode = new Node<>(e, node);
+            final SubNode<E> prevSubNode = prev.subNode.get();
+            if (node == null && prevSubNode.item == null && prevSubNode.next == null) {
+                subNode = new SubNode<>(e, null);
+                if (prev.subNode.compareAndSet(prevSubNode, subNode)) {
+                    if (debug) System.out.println("after = " + e);
+                    return true;
+                }
+            } else
             if (prev != node) {
-                final SubNode<E> prevSubNode = prev.subNode.get();
                 final SubNode<E> newSubNode = new SubNode<>(prevSubNode.item, newNode);
-                if (prevSubNode.next == node && prevSubNode.item != null && prev.subNode.compareAndSet(prevSubNode, newSubNode)) {
+                if (prevSubNode.next == node
+                        && prevSubNode.item != null
+                        && prevSubNode.item.compareTo(e) <= 0
+                        && prev.subNode.compareAndSet(prevSubNode, newSubNode)) {
                     if (debug) System.out.println("insert " + e + " between [ " + prevSubNode.item + ", " + subNode.item + " ]");
                     return true;
                 }
             } else {
-                if (updateHead(oldHead, newNode)) {
+                final SubNode<E> headSubNode = oldHead.subNode.get();
+                if (oldHead == node
+                        && headSubNode.item != null
+                        && e.compareTo(headSubNode.item) <= 0
+                        && (node.subNode.get() == subNode)
+                        && updateHead(oldHead, newNode)) {
                     if (debug) System.out.println("update head, el = " + e);
+                    if (debug) System.out.println(elements());
                     return true;
                 } else {
                     if (debug) System.out.println("-- cant update head, el = " + e);
