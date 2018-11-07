@@ -57,3 +57,4 @@ cmake-build-release/
 # Gradle files
 build/
 .gradle
+/leti/3304/fedorov/LockFreePriorityQueue/nbproject/private/
