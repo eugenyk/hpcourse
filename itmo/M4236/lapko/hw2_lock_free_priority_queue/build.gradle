@@ -38,7 +38,7 @@ repositories {
 }
 
 dependencies {
-    testCompile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+    compile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile 'com.devexperts.lincheck:lincheck:2.0'
 

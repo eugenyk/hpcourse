@@ -1,8 +1,11 @@
-import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.Operation;
-import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
+import org.junit.Assert;
 import org.junit.Test;
 import priority_q.LockFreePriorityQueue;
+
+import java.util.Arrays;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 
@@ -55,5 +58,55 @@ public class LockFreePriorityQueueTest {
 
     }
 
+    @Test
+    public void order() {
+        Queue<Integer> lockFreePQ = new LockFreePriorityQueue<>();
 
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        int nElements = random.nextInt(10_000, 50_000);
+        int[] ints = random.ints(nElements).toArray();
+
+        Arrays.stream(ints)
+                .parallel()
+                .forEach(lockFreePQ::offer);
+
+
+        Assert.assertEquals(nElements, lockFreePQ.size());
+        int prev = Integer.MIN_VALUE;
+        for (int i = 0; i < nElements; i++) {
+            Integer lfpq_value = lockFreePQ.poll();
+
+            Assert.assertTrue(prev <= lfpq_value.intValue());
+            prev = lfpq_value.intValue();
+        }
+    }
+
+    @Test
+    public void parallelOffer() {
+        Queue<Integer> lockFreePQ = new LockFreePriorityQueue<>();
+        Queue<Integer> pq = new PriorityQueue<>();
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        int nElements = random.nextInt(10_000, 50_000);
+        int[] ints = random.ints(nElements).toArray();
+
+        Arrays.stream(ints)
+                .sequential()
+                .forEach(pq::offer);
+
+        Arrays.stream(ints)
+                .parallel()
+                .forEach(lockFreePQ::offer);
+
+        Assert.assertEquals(pq.size(), lockFreePQ.size());
+
+        for (int i = 0; i < nElements; i++) {
+            Integer pq_value = pq.poll();
+            Integer lfpq_value = lockFreePQ.poll();
+            Assert.assertEquals(pq.size(), lockFreePQ.size());
+            Assert.assertEquals(pq_value, lfpq_value);
+        }
+    }
 }
