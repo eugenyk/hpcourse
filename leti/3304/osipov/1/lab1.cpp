@@ -4,8 +4,10 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <time.h>
 
-#define VALGRIND_CHECK 0
+
+#define VALGRIND_CHECK 1
 
 class Value
 {
@@ -27,36 +29,36 @@ class Value
 };
 
 // Notify producer about start
-pthread_mutex_t tmutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t tcond = PTHREAD_COND_INITIALIZER;
-bool t_ready = false;
+volatile bool t_ready = false;
 // Notify consumers about value update
 pthread_mutex_t vmutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t vcond = PTHREAD_COND_INITIALIZER;
-bool v_ready = false;
+volatile bool v_ready = false;
+volatile bool end = false;
 
-bool end = false;
-unsigned max_threads;
+unsigned n_threads;
+unsigned m_sec;
 
 void *producer_routine(void *arg)
 {
-    pthread_mutex_lock(&tmutex);
+    // int count = 0;
+
+    pthread_mutex_lock(&vmutex);
     while (!t_ready)
     {
         #if !VALGRIND_CHECK
-        std::cout << "[Producer, TMUTEX] wait for a signal " << std::endl;
+        std::cout << "[Producer] wait for a signal " << std::endl;
         #endif
-        pthread_cond_wait(&tcond, &tmutex);
+        pthread_cond_wait(&tcond, &vmutex);
+        // count++;
         #if !VALGRIND_CHECK
-        std::cout << "[Producer, TMUTEX] receive a signal " << std::endl;
+        std::cout << "[Producer] receive a signal" << std::endl;
         #endif
     }
-    // assume consumers to proccess the value so they are not ready
-    t_ready = false;
-    pthread_mutex_unlock(&tmutex);
+    pthread_mutex_unlock(&vmutex);
 
     Value *value_instance = reinterpret_cast<Value *>(arg);
-    // std::cout << "[producer]Value: " << value_instance->get() << std::endl;
     std::vector<int> input_values;
     // Wait for consumer to start
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
@@ -69,39 +71,38 @@ void *producer_routine(void *arg)
         input_values.push_back(input);
     }
 
+    // count = 0;
     for (int val: input_values)
     {
         // consumers are ready, update the value
         pthread_mutex_lock(&vmutex);
         value_instance->update(val);
         #if !VALGRIND_CHECK
-        std::cout << "[Producer, VMUTEX] Broadcasting value: " << val << std::endl;
+        std::cout << "[Producer] Broadcasting value: " << val << std::endl;
         #endif
-        pthread_cond_broadcast(&vcond);
+        // count = 0;
         v_ready = true;
-        pthread_mutex_unlock(&vmutex);
+        pthread_cond_broadcast(&vcond);
         // wait for consumers
-        pthread_mutex_lock(&tmutex);
-        #if !VALGRIND_CHECK
-        std::cout << "[Producer, TMUTEX]t_ready=" << (t_ready ? "true" : "false") << std::endl;
-        #endif
         do
         {
             #if !VALGRIND_CHECK
-            std::cout << "[Producer, TMUTEX] wait for a signal " << std::endl;
+            std::cout << "[Producer] wait for a signal " << std::endl;
             #endif
-            pthread_cond_wait(&tcond, &tmutex);
+            pthread_cond_wait(&tcond, &vmutex);
+            // count ++;
             #if !VALGRIND_CHECK
-            std::cout << "[Producer, TMUTEX] receive a signal " << std::endl;
+            std::cout << "[Producer] receive a signal" << std::endl;
             #endif
         } while (!t_ready);
-        // assume consumers to proccess the value so they are not ready
-        // t_ready = false;
-        pthread_mutex_unlock(&tmutex);
+        t_ready = false;
+        v_ready = false;
+        pthread_mutex_unlock(&vmutex);
     }
     pthread_mutex_lock(&vmutex);
     end = true;
     pthread_cond_broadcast(&vcond);
+    v_ready = true;
     #if !VALGRIND_CHECK
     std::cout << "[Producer] Broadcast end" << std::endl;
     #endif
@@ -116,86 +117,87 @@ void *consumer_routine(void *arg)
     // allocate value for result
     // for every update issued by producer, read the value and add to sum
     // return pointer to result
-    static unsigned inc = 0;
-    Value *value_instance = reinterpret_cast<Value *>(arg);
-    // std::cout << "[consumer]Value: " << value_instance->get() << std::endl;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 
+    static int count = 0;
+    Value *value_instance = reinterpret_cast<Value *>(arg);
     Value *ret_val = new Value();
+
     while (1)
     {
-        // barrier for all consumers
-        pthread_mutex_lock(&tmutex);
-        inc++;
-        if (inc < max_threads)
+        // wait for data and update it
+        pthread_mutex_lock(&vmutex);
+        count ++;
+        if (count >= n_threads)
         {
             #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() << ", TMUTEX]wait for other consumers, inc:"<< inc << std::endl;
+            std::cout << "[Consumer" << pthread_self() % 1000 << "]broadcasting" << std::endl;
             #endif
-            while (!t_ready)
-            {
-                pthread_cond_wait(&tcond, &tmutex);
-            }
+            v_ready = false;
+            t_ready = true;
+            pthread_cond_broadcast(&tcond);
+            count = 0;
+        }
+        do
+        {
             #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() << ", TMUTEX]other consumers are ready" << std::endl;
+            std::cout << "[Consumer" << pthread_self() % 1000 << "]wait for value" << std::endl;
             #endif
+            pthread_cond_wait(&vcond, &vmutex);
+        } while (!v_ready);
+        // v_ready = false;
+        t_ready = false;
+
+        if (!end)
+        {
+            int v = value_instance->get();
+            #if !VALGRIND_CHECK
+            std::cout << "[Consumer" << pthread_self() % 1000 << "]get the value: " << v << std::endl;
+            #endif
+            ret_val->update(v + ret_val->get());
         }
         else
         {
             #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() << ", TMUTEX]broadcasting, inc: " << inc << std::endl;
+            std::cout << "[Consumer" << pthread_self() % 1000 << "] i'm done " << std::endl;
             #endif
-            // consumers are ready, notify the producer
-            t_ready = true;
-            pthread_cond_broadcast(&tcond);
-            inc = 0;
-        }
-        pthread_mutex_unlock(&tmutex);
-        // wait for data and update it
-        pthread_mutex_lock(&vmutex);
-        do
-        {
+            pthread_mutex_unlock(&vmutex);
             #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() << ", VMUTEX]wait for value" << std::endl;
+            std::cout << "[Consumer" << pthread_self() % 1000 << "] Value to return: " << ret_val->get() << std::endl;
             #endif
-            pthread_cond_wait(&vcond, &vmutex);
-            if (end)
-            {
-                // Not spirious wake-up
-                #if !VALGRIND_CHECK
-                std::cout << "[Consumer" << pthread_self() << ", VMUTEX] on exit" << std::endl;
-                #endif
-                pthread_exit(reinterpret_cast<void *>(ret_val));
-            }
-        } while (!v_ready);
-        #if !VALGRIND_CHECK
-        std::cout << "[Consumer" << pthread_self() << ", VMUTEX]get the value: " << value_instance->get() << std::endl;
-        #endif
-        ret_val->update(value_instance->get() + ret_val->get());
-        // invalidate the value
-        // v_ready = false;
-        t_ready = false;
-        // inc = 0;
+            pthread_exit(reinterpret_cast<void *>(ret_val));
+        }
         pthread_mutex_unlock(&vmutex);
+        unsigned time_to_sleep = rand() % m_sec;
+        timespec ts;
+        ts.tv_sec = (float)time_to_sleep / 1000.0;
+        ts.tv_nsec = 0;
+        nanosleep(&ts, nullptr);
     }
 }
 
 void *consumer_interruptor_routine(void *arg)
 {
     // wait for consumer to start
-    const unsigned msec = *reinterpret_cast<const unsigned *>(arg);
+    pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);
     // interrupt consumer while producer is running
-    // std::cout << "[interruptor]sleep for " << msec << std::endl;
+    while (!end)
+    {
+        unsigned i = rand() % n_threads;
+        pthread_cancel(consumers[i]);
+    }
 
     pthread_exit(nullptr);
 }
 
-int run_threads(unsigned n_threads, unsigned msec)
+int run_threads(unsigned threads_cnt, unsigned msec)
 {
     // start 3 threads and wait until they're done
     // return sum of update values seen by consumer
     Value *value_instance = new Value();
     Value *ret_val;
-    max_threads = n_threads;
+    n_threads = threads_cnt;
+    m_sec = msec;
     // creating of 2 + n_threads threads
     pthread_t producer;
     pthread_create(&producer, nullptr, producer_routine, value_instance);
@@ -207,7 +209,7 @@ int run_threads(unsigned n_threads, unsigned msec)
     }
 
     pthread_t interruptor;
-    pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &msec);
+    pthread_create(&interruptor, nullptr, consumer_interruptor_routine, consumers);
 
     // waiting for threads' end
     for (size_t i = 0; i < n_threads; i++)
@@ -223,14 +225,14 @@ int run_threads(unsigned n_threads, unsigned msec)
 
 int main(int argc, const char *argv[])
 {
-    int n_threads, sleep_msec;
+    int threads_cnt, sleep_msec;
     if (argc < 3)
     {
         return EXIT_FAILURE;
     }
-    n_threads = atoi(argv[1]);
+    threads_cnt = atoi(argv[1]);
     sleep_msec = atoi(argv[2]);
 
-    std::cout << run_threads((unsigned)n_threads, (unsigned)sleep_msec) << std::endl;
+    std::cout << run_threads((unsigned)threads_cnt, (unsigned)sleep_msec) << std::endl;
     return 0;
 }
