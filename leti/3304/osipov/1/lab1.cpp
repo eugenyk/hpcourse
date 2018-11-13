@@ -6,9 +6,6 @@
 #include <sstream>
 #include <time.h>
 
-
-#define VALGRIND_CHECK 1
-
 class Value
 {
   public:
@@ -42,19 +39,10 @@ unsigned m_sec;
 
 void *producer_routine(void *arg)
 {
-    // int count = 0;
-
     pthread_mutex_lock(&vmutex);
     while (!t_ready)
     {
-        #if !VALGRIND_CHECK
-        std::cout << "[Producer] wait for a signal " << std::endl;
-        #endif
         pthread_cond_wait(&tcond, &vmutex);
-        // count++;
-        #if !VALGRIND_CHECK
-        std::cout << "[Producer] receive a signal" << std::endl;
-        #endif
     }
     pthread_mutex_unlock(&vmutex);
 
@@ -71,29 +59,17 @@ void *producer_routine(void *arg)
         input_values.push_back(input);
     }
 
-    // count = 0;
     for (int val: input_values)
     {
         // consumers are ready, update the value
         pthread_mutex_lock(&vmutex);
         value_instance->update(val);
-        #if !VALGRIND_CHECK
-        std::cout << "[Producer] Broadcasting value: " << val << std::endl;
-        #endif
-        // count = 0;
         v_ready = true;
         pthread_cond_broadcast(&vcond);
         // wait for consumers
         do
         {
-            #if !VALGRIND_CHECK
-            std::cout << "[Producer] wait for a signal " << std::endl;
-            #endif
             pthread_cond_wait(&tcond, &vmutex);
-            // count ++;
-            #if !VALGRIND_CHECK
-            std::cout << "[Producer] receive a signal" << std::endl;
-            #endif
         } while (!t_ready);
         t_ready = false;
         v_ready = false;
@@ -103,9 +79,6 @@ void *producer_routine(void *arg)
     end = true;
     pthread_cond_broadcast(&vcond);
     v_ready = true;
-    #if !VALGRIND_CHECK
-    std::cout << "[Producer] Broadcast end" << std::endl;
-    #endif
     pthread_mutex_unlock(&vmutex);
 
     pthread_exit(nullptr);
@@ -130,9 +103,6 @@ void *consumer_routine(void *arg)
         count ++;
         if (count >= n_threads)
         {
-            #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() % 1000 << "]broadcasting" << std::endl;
-            #endif
             v_ready = false;
             t_ready = true;
             pthread_cond_broadcast(&tcond);
@@ -140,31 +110,17 @@ void *consumer_routine(void *arg)
         }
         do
         {
-            #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() % 1000 << "]wait for value" << std::endl;
-            #endif
             pthread_cond_wait(&vcond, &vmutex);
         } while (!v_ready);
-        // v_ready = false;
         t_ready = false;
 
         if (!end)
         {
-            int v = value_instance->get();
-            #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() % 1000 << "]get the value: " << v << std::endl;
-            #endif
-            ret_val->update(v + ret_val->get());
+            ret_val->update(value_instance->get() + ret_val->get());
         }
         else
         {
-            #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() % 1000 << "] i'm done " << std::endl;
-            #endif
             pthread_mutex_unlock(&vmutex);
-            #if !VALGRIND_CHECK
-            std::cout << "[Consumer" << pthread_self() % 1000 << "] Value to return: " << ret_val->get() << std::endl;
-            #endif
             pthread_exit(reinterpret_cast<void *>(ret_val));
         }
         pthread_mutex_unlock(&vmutex);
