@@ -33,6 +33,8 @@ pthread_cond_t variable_prepared;
 
 pthread_t * threads;
 
+pthread_barrier_t barrier;
+
 int commonConsumersSum;
 bool consumeProduceFlag = true;
 bool hasToStop = false;
@@ -68,6 +70,8 @@ void* producer_routine(void* arg) {
 
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+
+    pthread_barrier_wait(&barrier);
 
     while (true) {
     // notify about start
@@ -124,10 +128,16 @@ int run_threads(int nThreads) {
     
     pthread_create(&prodThread, NULL, producer_routine, &v);
     
+    pthread_barrier_init(&barrier, NULL, nThreads + 1);
+
     for (int i = 0; i < nThreads; i++) {
         pthread_create(&threads[i], NULL, consumer_routine, &v);
     }
     
+    pthread_barrier_wait(&barrier);
+    pthread_barrier_destroy(&barrier);
+
+
     pthread_create(&interruptThread, NULL, consumer_interruptor_routine, &nThreads);
     
     pthread_join(prodThread, nullptr);
