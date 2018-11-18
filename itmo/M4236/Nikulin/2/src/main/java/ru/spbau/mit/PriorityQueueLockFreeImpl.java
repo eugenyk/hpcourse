@@ -5,16 +5,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends AbstractQueue<E> implements PriorityQueueLockFree<E> {
     private final AtomicReference<Node<E>> head = new AtomicReference<>(new Node<>(null, null));
     private final boolean debug;
+    private final AtomicInteger amount;
 
 
     public PriorityQueueLockFreeImpl(boolean debug) {
         this.debug = debug;
+        this.amount = new AtomicInteger();
     }
 
 
@@ -47,11 +50,29 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
 
     @Override
     public int size() {
+        outerLoop:
         for (;;) {
-            List<E> base_array = elements();
-            List<E> check_array = elements();
-            if (base_array.equals(check_array)) {
-                return base_array.size();
+            Node<E> oldHead = head.get();
+            int oldAmount = amount.get();
+            ArrayList<SubNode<E>> base_array = nodes();
+            ArrayList<ArrayList<SubNode<E>>> check_arrays = new ArrayList<>();
+            for (int i = 0; i < 10; i++) {
+                Thread.yield();
+                check_arrays.add(nodes());
+            }
+            if (oldHead == head.get()
+                    && oldHead.subNode == head.get().subNode
+                    && oldAmount == amount.get()) {
+                for (ArrayList<SubNode<E>> check_array : check_arrays) {
+                    if (!base_array.equals(check_array)) {
+                        continue outerLoop;
+                    }
+                }
+                List<E> elemArray = base_array.stream().map(sn -> sn.item).filter(Objects::nonNull).collect(Collectors.toList());
+                int localAmount = elemArray.size();
+                if (oldAmount == localAmount) {
+                    return localAmount;
+                }
             }
         }
     }
@@ -77,6 +98,7 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
                 final SubNode<E> newSubNode = new SubNode<>(null, newHeadNode);
                 if (prev.subNode.compareAndSet(subNode, newSubNode)) {
                     if (debug) System.out.println("set under null, el = " + e);
+                    amount.incrementAndGet();
                     return true;
                 } else {
                     continue;
@@ -109,6 +131,7 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
                 subNode = new SubNode<>(e, null);
                 if (prev.subNode.compareAndSet(prevSubNode, subNode)) {
                     if (debug) System.out.println("after = " + e);
+                    amount.incrementAndGet();
                     return true;
                 }
             } else
@@ -119,6 +142,7 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
                         && prevSubNode.item.compareTo(e) <= 0
                         && prev.subNode.compareAndSet(prevSubNode, newSubNode)) {
                     if (debug) System.out.println("insert " + e + " between [ " + prevSubNode.item + ", " + subNode.item + " ]");
+                    amount.incrementAndGet();
                     return true;
                 }
             } else {
@@ -130,6 +154,7 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
                         && updateHead(oldHead, newNode)) {
                     if (debug) System.out.println("update head, el = " + e);
                     if (debug) System.out.println(elements());
+                    amount.incrementAndGet();
                     return true;
                 } else {
                     if (debug) System.out.println("-- cant update head, el = " + e);
@@ -142,15 +167,17 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
     @Override
     public E poll() {
         for (;;) {
+            final Node<E> oldHead = head.get();
             Node<E> p = first();
             SubNode<E> oldSubNode = p.subNode.get();
             if (oldSubNode.item == null && oldSubNode.next == null) {
                 return null;
             }
-            if (oldSubNode.item != null) {
+            if (oldSubNode.item != null && oldHead == head.get() && oldHead.subNode == head.get().subNode) {
                 final SubNode<E> newSubNode = new SubNode<>(null, oldSubNode.next);
                 if (p.subNode.compareAndSet(oldSubNode, newSubNode)) {
                     if (debug) System.out.println("    poll value = " + oldSubNode.item);
+                    amount.decrementAndGet();
                     return oldSubNode.item;
                 }
             }
@@ -160,9 +187,17 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
 
     @Override
     public E peek() {
-        Node<E> p = first();
-        SubNode<E> subNode = p.subNode.get();
-        return subNode.item;
+        for (;;) {
+            final Node<E> oldHead = head.get();
+            Node<E> p = first();
+            SubNode<E> subNode = p.subNode.get();
+            if (subNode.item == null && subNode.next == null) {
+                return null;
+            }
+            if (subNode.item != null && oldHead == head.get() && oldHead.subNode == head.get().subNode) {
+                return subNode.item;
+            }
+        }
     }
 
 

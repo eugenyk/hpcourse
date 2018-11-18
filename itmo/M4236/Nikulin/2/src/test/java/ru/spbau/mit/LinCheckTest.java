@@ -22,20 +22,20 @@ public class LinCheckTest {
         return q.offer(key);
     }
 
-//    @Operation
-//    public Integer peek() {
-//        return q.peek();
-//    }
+    @Operation
+    public Integer peek() {
+        return q.peek();
+    }
 
     @Operation
     public Integer pool() {
         return q.poll();
     }
 
-//    @Operation
-//    public Integer size() {
-//        return q.size();
-//    }
+    @Operation
+    public Integer size() {
+        return q.size();
+    }
     @Test
     public void runTest() {
         LinChecker.check(LinCheckTest.class);
