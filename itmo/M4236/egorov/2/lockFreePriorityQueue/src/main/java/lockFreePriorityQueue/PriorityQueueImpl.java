@@ -13,50 +13,44 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 	@Override
 	public boolean offer(E e) {
 		while (true) {
+
 			Node<E> h = head.get(),
 					next = h == null ? null : h.next.get();
 
-			while (h != null && next != null
-					&& !(e.compareTo(h.data) >= 0
-					&& e.compareTo(next.data) < 0))
+			while (next != null
+					&& e.compareTo(next.data) >= 0)
 			{
 				h = next;
 				next = next.next.get();
 			}
+
 			if (h == null) {
-				if (head.compareAndSet(null, new Node<E>(e)))
-				{
+				if (head.compareAndSet(null, new Node<E>(e))) {
 					size.incrementAndGet();
 					return true;
 				}
 				continue;
 			}
 
-			if (h != null && next == null) {
-				if(e.compareTo(h.data) >= 0
-						&& h.next.compareAndSet(null, new Node<E>(e)))
-				{
-					size.incrementAndGet();
-					return true;
-				}
-				
-				if(e.compareTo(h.data) < 0
-						&& head.compareAndSet(h, new Node<E>(e, h)))
-				{
+			if(e.compareTo(h.data) < 0) {
+				if (head.compareAndSet(h, new Node<E>(e, h))) {
 					size.incrementAndGet();
 					return true;
 				}
 				continue;
 			}
 
-			if (e.compareTo(h.data) >= 0
-					&& e.compareTo(next.data) < 0) {
-				if (h.next.compareAndSet(next, new Node<E>(e, next)))
-				{
+			if (next == null) {
+				if(h.next.compareAndSet(null, new Node<E>(e))) {
 					size.incrementAndGet();
 					return true;
 				}
 				continue;
+			}
+
+			if (h.next.compareAndSet(next, new Node<E>(e, next))) {
+				size.incrementAndGet();
+				return true;
 			}
 		}
 	}

@@ -49,4 +49,12 @@ public class BasicTest {
 		assertEquals(Integer.valueOf(1), q.poll());
 		assertEquals(Integer.valueOf(2), q.poll());
 	}
+
+	@Test
+	public void testDeadlock() {
+		PriorityQueue<Integer> q = new PriorityQueueImpl<>();
+		q.add(3);
+		q.add(4);
+		q.add(1);
+	}
 }

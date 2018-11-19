@@ -32,6 +32,7 @@ package lockFreePriorityQueue;
 
 import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.IIIIII_Result;
+import org.openjdk.jcstress.infra.results.II_Result;
 
 // See jcstress-samples or existing tests for API introduction and testing guidelines
 
@@ -47,13 +48,13 @@ public class ConcurrencyTest {
         q.add(1);
         q.add(2);
     }
-/*
+
     @Actor
     public void actor2() {
         q.add(1);
         q.add(2);
     }
-*/
+
     @Actor
     public void actor3() {
         q.add(3);
@@ -66,7 +67,7 @@ public class ConcurrencyTest {
     	r.r2 = q.poll();
     	r.r3 = q.poll();
     	r.r4 = q.poll();
-    	//r.r5 = q.poll();
-    	//r.r6 = q.poll();
+    	r.r5 = q.poll();
+    	r.r6 = q.poll();
     }
 }
