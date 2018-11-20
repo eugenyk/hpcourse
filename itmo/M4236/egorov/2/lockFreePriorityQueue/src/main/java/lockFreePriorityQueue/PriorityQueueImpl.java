@@ -11,18 +11,18 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 	private final AtomicInteger size = new AtomicInteger(0);
 	
 	private void findTrueHead() {
+		
 		Node<E> res = head.getReference();
-		if (res == null) {
+
+		if (head.isMarked() || res == null) {
 			return;
 		}
-
-		Node<E> next = res.next.getReference();
 		
-		while (!head.isMarked() && !res.next.compareAndSet(next, next, true, false)) {
-			next = res.next.getReference();
+		Node<E> next = res.next.getReference();;
+		
+		if (res.next.compareAndSet(next, next, true, false)) {
+			head.compareAndSet(res, next, false, true);
 		}
-		
-		head.compareAndSet(res, next, false, true);
 	}
 	
 	@Override
