@@ -28,46 +28,37 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package lockFreePriorityQueue;
+package lockFreePriorityQueue.jcstressTests;
 
 import org.openjdk.jcstress.annotations.*;
-import org.openjdk.jcstress.infra.results.IIIIII_Result;
-import org.openjdk.jcstress.infra.results.II_Result;
+import org.openjdk.jcstress.infra.results.III_Result;
+
+import lockFreePriorityQueue.PriorityQueue;
+import lockFreePriorityQueue.PriorityQueueImpl;
 
 // See jcstress-samples or existing tests for API introduction and testing guidelines
 
 @JCStressTest
-@Outcome(id = "1, 1, 2, 2, 3, 4", expect = Expect.ACCEPTABLE)
+@Outcome(id = "1, 2, 2", expect = Expect.ACCEPTABLE)
 @State
-public class ConcurrencyTest {
+public class ConcurrentAdditionTest {
 	
 	PriorityQueue<Integer> q = new PriorityQueueImpl<>();
 	
     @Actor
     public void actor1() {
         q.add(1);
-        q.add(2);
     }
 
     @Actor
     public void actor2() {
-        q.add(1);
         q.add(2);
     }
 
-    @Actor
-    public void actor3() {
-        q.add(3);
-        q.add(4);
-    }
-
     @Arbiter
-    public void testContent(IIIIII_Result r) {
+    public void testContent(III_Result r) {
+    	r.r3 = q.size();
     	r.r1 = q.poll();
     	r.r2 = q.poll();
-    	r.r3 = q.poll();
-    	r.r4 = q.poll();
-    	r.r5 = q.poll();
-    	r.r6 = q.poll();
     }
 }

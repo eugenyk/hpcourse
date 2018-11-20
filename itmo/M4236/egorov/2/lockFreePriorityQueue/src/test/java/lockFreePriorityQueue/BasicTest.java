@@ -17,7 +17,6 @@ public class BasicTest {
 		assertEquals(0, q.size());
 		
 		q.addAll(Arrays.asList(1, 4, 1, 3, 2));
-		System.out.println("numbers added");
 		
 		assertFalse(q.isEmpty());
 		assertEquals(5, q.size());

@@ -1,19 +1,18 @@
 package lockFreePriorityQueue;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class Node<E> {
 	E data;
-	AtomicReference<Node<E>> next;
+	AtomicMarkableReference<Node<E>> next;
 	
 	Node(E e) {
 		data = e;
-		next = new AtomicReference<>(null);
+		next = new AtomicMarkableReference<>(null, true);
 	}
 
 	Node(E e, Node<E> next2) {
 		data = e;
-		next = new AtomicReference<Node<E>>(next2);
+		next = new AtomicMarkableReference<Node<E>>(next2, true);
 	}
 }
