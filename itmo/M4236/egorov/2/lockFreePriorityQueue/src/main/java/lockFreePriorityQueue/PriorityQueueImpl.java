@@ -15,12 +15,8 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 		if (res == null) {
 			return;
 		}
+
 		Node<E> next = res.next.getReference();
-		
-		/*
-		if (!head.isMarked()) {
-			res.next.set(next, false);
-		}*/
 		
 		while (!head.isMarked() && !res.next.compareAndSet(next, next, true, false)) {
 			next = res.next.getReference();
@@ -34,8 +30,6 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 		while (true) {
 			
 			findTrueHead();
-			
-			AtomicMarkableReference<Node<E>> h = head;
 			
 			Node<E> hNode = head.getReference();
 			
@@ -55,27 +49,24 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 				continue;
 			}
 			
-			AtomicMarkableReference<Node<E>> next = hNode.next;
+			Node<E> nextNode = hNode.next.getReference();
 
-			while (next.getReference() != null
-					&& e.compareTo(next.getReference().data) >= 0)
+			while (nextNode != null
+					&& e.compareTo(nextNode.data) >= 0)
 			{
-				h = next;
-				next = next.getReference().next;
+				hNode = nextNode;
+				nextNode = nextNode.next.getReference();
 			}
-			
-			hNode = h.getReference();
-			Node<E> nextNode = next.getReference();
 
 			if (nextNode == null) {
-				if(next.compareAndSet(null, new Node<E>(e), true, true)) {
+				if(hNode.next.compareAndSet(null, new Node<E>(e), true, true)) {
 					size.incrementAndGet();
 					return true;
 				}
 				continue;
 			}
 
-			if (next.compareAndSet(nextNode, new Node<E>(e, nextNode), true, true)) {
+			if (hNode.next.compareAndSet(nextNode, new Node<E>(e, nextNode), true, true)) {
 				size.incrementAndGet();
 				return true;
 			}
