@@ -93,7 +93,9 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 
 	@Override
 	public E peek() {
-		findTrueHead();
+		do {
+			findTrueHead();
+		} while (!head.isMarked());
 		Node<E> head = this.head.getReference();
 		if (head == null)
 			return null;
@@ -110,7 +112,9 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 
 	@Override
 	public boolean isEmpty() {
-		findTrueHead();
+		do {
+			findTrueHead();
+		} while (!head.isMarked());
 		return head.getReference() == null;
 	}
 	
