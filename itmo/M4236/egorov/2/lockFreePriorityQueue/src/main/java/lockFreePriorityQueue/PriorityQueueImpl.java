@@ -14,13 +14,14 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 		
 		Node<E> res = head.getReference();
 
-		if (head.isMarked() || res == null) {
+		if (!head.compareAndSet(res, res, false, false))
 			return;
-		}
+
+		Node<E> next = res.next.getReference();
 		
-		Node<E> next = res.next.getReference();;
+		res.next.compareAndSet(next, next, true, false);
 		
-		if (res.next.compareAndSet(next, next, true, false)) {
+		if (res.next.compareAndSet(next, next, false, false)) {
 			head.compareAndSet(res, next, false, true);
 		}
 	}
@@ -76,7 +77,7 @@ public class PriorityQueueImpl<E extends Comparable<? super E>> extends Abstract
 	@Override
 	public E poll() {
 		Node<E> result;
-		
+
 		do {
 			findTrueHead();
 			result = head.getReference();

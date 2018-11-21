@@ -2,14 +2,13 @@
 package lockFreePriorityQueue.jcstressTests;
 
 import org.openjdk.jcstress.annotations.*;
-import org.openjdk.jcstress.infra.results.II_Result;
-
+import org.openjdk.jcstress.infra.results.III_Result;
 import lockFreePriorityQueue.PriorityQueue;
 import lockFreePriorityQueue.PriorityQueueImpl;
 
 
 @JCStressTest
-@Outcome(id = "1, 2", expect = Expect.ACCEPTABLE)
+@Outcome(id = "1, 2, -1", expect = Expect.ACCEPTABLE)
 @State
 public class AddConcPoll {
 	
@@ -42,9 +41,11 @@ public class AddConcPoll {
     }
 
     @Arbiter
-    public void testContent(II_Result r) {
+    public void testContent(III_Result r) {
     	r.r1 = q_end.poll();
     	r.r2 = q_end.poll();
+    	Integer i = q_start.poll();
+    	r.r3 = i == null ? -1 : i;
     }
     
 }
