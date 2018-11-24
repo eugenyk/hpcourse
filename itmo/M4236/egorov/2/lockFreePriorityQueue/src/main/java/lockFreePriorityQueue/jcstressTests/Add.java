@@ -5,7 +5,7 @@ import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.III_Result;
 
 import lockFreePriorityQueue.PriorityQueue;
-import lockFreePriorityQueue.PriorityQueueImpl;
+import lockFreePriorityQueue.LockFreePriorityQueue;
 
 
 @JCStressTest
@@ -13,7 +13,7 @@ import lockFreePriorityQueue.PriorityQueueImpl;
 @State
 public class Add {
 	
-	PriorityQueue<Integer> q = new PriorityQueueImpl<>();
+	PriorityQueue<Integer> q = new LockFreePriorityQueue<>();
 	
     @Actor
     public void actor1() {

@@ -8,14 +8,14 @@ import org.openjdk.jcstress.annotations.Outcome;
 import org.openjdk.jcstress.annotations.State;
 import org.openjdk.jcstress.infra.results.IIII_Result;
 import lockFreePriorityQueue.PriorityQueue;
-import lockFreePriorityQueue.PriorityQueueImpl;
+import lockFreePriorityQueue.LockFreePriorityQueue;
 
 @JCStressTest
 @Outcome(id = "1, 1, 2, 3", expect = Expect.ACCEPTABLE)
 @State
 public class ConcAddConcPoll {
-	PriorityQueue<Integer> q_start = new PriorityQueueImpl<>();
-	PriorityQueue<Integer> q_end = new PriorityQueueImpl<>();
+	PriorityQueue<Integer> q_start = new LockFreePriorityQueue<>();
+	PriorityQueue<Integer> q_end = new LockFreePriorityQueue<>();
 	
     @Actor
     public void actor1() {

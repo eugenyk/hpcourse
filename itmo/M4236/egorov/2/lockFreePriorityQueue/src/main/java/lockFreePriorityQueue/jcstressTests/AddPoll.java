@@ -6,14 +6,14 @@ import java.util.ArrayList;
 import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.III_Result;
 import lockFreePriorityQueue.PriorityQueue;
-import lockFreePriorityQueue.PriorityQueueImpl;
+import lockFreePriorityQueue.LockFreePriorityQueue;
 
 @JCStressTest
 @Outcome(id = "2, 1, 2", expect = Expect.ACCEPTABLE)
 @State
 public class AddPoll {
 	
-	PriorityQueue<Integer> q = new PriorityQueueImpl<>();
+	PriorityQueue<Integer> q = new LockFreePriorityQueue<>();
 	ArrayList<Integer> q1 = new ArrayList<>();
 	
     @Actor

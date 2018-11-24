@@ -11,7 +11,7 @@ public class BasicTest {
 
 	@Test
 	public void testSingleThreadOperations() {
-		PriorityQueue<Integer> q = new PriorityQueueImpl<>();
+		PriorityQueue<Integer> q = new LockFreePriorityQueue<>();
 		
 		assertTrue(q.isEmpty());
 		assertEquals(0, q.size());
@@ -42,7 +42,7 @@ public class BasicTest {
 	
 	@Test
 	public void testSecondInsert() {
-		PriorityQueue<Integer> q = new PriorityQueueImpl<>();
+		PriorityQueue<Integer> q = new LockFreePriorityQueue<>();
 		q.add(2);
 		q.add(1);
 		assertEquals(Integer.valueOf(1), q.poll());
@@ -51,7 +51,7 @@ public class BasicTest {
 
 	@Test
 	public void testDeadlock() {
-		PriorityQueue<Integer> q = new PriorityQueueImpl<>();
+		PriorityQueue<Integer> q = new LockFreePriorityQueue<>();
 		q.add(3);
 		q.add(4);
 		q.add(1);

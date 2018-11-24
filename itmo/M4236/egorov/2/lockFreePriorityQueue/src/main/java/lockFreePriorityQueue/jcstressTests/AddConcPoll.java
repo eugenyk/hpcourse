@@ -4,7 +4,7 @@ package lockFreePriorityQueue.jcstressTests;
 import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.III_Result;
 import lockFreePriorityQueue.PriorityQueue;
-import lockFreePriorityQueue.PriorityQueueImpl;
+import lockFreePriorityQueue.LockFreePriorityQueue;
 
 
 @JCStressTest
@@ -12,8 +12,8 @@ import lockFreePriorityQueue.PriorityQueueImpl;
 @State
 public class AddConcPoll {
 	
-	PriorityQueue<Integer> q_start = new PriorityQueueImpl<>();
-	PriorityQueue<Integer> q_end = new PriorityQueueImpl<>();
+	PriorityQueue<Integer> q_start = new LockFreePriorityQueue<>();
+	PriorityQueue<Integer> q_end = new LockFreePriorityQueue<>();
 	
     @Actor
     public void actor1() {

@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
-public class PriorityQueueImpl<E extends Comparable<? super E>> extends AbstractQueue<E> implements PriorityQueue<E> {
+public class LockFreePriorityQueue<E extends Comparable<? super E>> extends AbstractQueue<E> implements PriorityQueue<E> {
 	
 	private final AtomicMarkableReference<Node<E>> head = new AtomicMarkableReference<Node<E>>(null, true);
 	private final AtomicInteger size = new AtomicInteger(0);

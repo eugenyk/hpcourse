@@ -10,7 +10,7 @@ import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 
 @StressCTest
 public class LinCheckTest {
-	private PriorityQueue<Integer> q = new PriorityQueueImpl<>();
+	private PriorityQueue<Integer> q = new LockFreePriorityQueue<>();
 
 	@Operation
 	public Integer poll() {
