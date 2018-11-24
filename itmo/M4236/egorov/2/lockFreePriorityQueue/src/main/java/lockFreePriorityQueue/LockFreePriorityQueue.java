@@ -16,7 +16,12 @@ public class LockFreePriorityQueue<E extends Comparable<? super E>> extends Abst
 
 		if (!head.compareAndSet(res, res, false, false))
 			return;
-
+		
+		if (res == null) {
+			head.compareAndSet(null, null, false, true);
+			return;
+		}
+		
 		Node<E> next = res.next.getReference();
 		
 		res.next.compareAndSet(next, next, true, false);
@@ -81,7 +86,7 @@ public class LockFreePriorityQueue<E extends Comparable<? super E>> extends Abst
 		do {
 			findTrueHead();
 			result = head.getReference();
-		} while (result != null && !head.compareAndSet(result, result, true, false));
+		} while (!head.compareAndSet(result, result, true, false));
 		
 		if (result != null) {
 			size.decrementAndGet();
@@ -93,31 +98,37 @@ public class LockFreePriorityQueue<E extends Comparable<? super E>> extends Abst
 
 	@Override
 	public E peek() {
+		Node<E> result;
+
 		do {
 			findTrueHead();
-		} while (!head.isMarked());
-		Node<E> head = this.head.getReference();
-		if (head == null)
-			return null;
-		return head.data;
+			result = head.getReference();
+		} while (!head.compareAndSet(result, result, true, true));
+		
+		if (result != null) {
+			return result.data;
+		}
+		
+		return null;
 	}
 
-	
+	@Override
+	public boolean isEmpty() {
+		Node<E> result;
 
+		do {
+			findTrueHead();
+			result = head.getReference();
+		} while (!head.compareAndSet(result, result, true, true));
+		
+		return result == null;
+	}
+	
 	@Override
 	public int size() {
 		int s = size.get();
 		return s < 0 ? 0 : s;
 	}
-
-	@Override
-	public boolean isEmpty() {
-		do {
-			findTrueHead();
-		} while (!head.isMarked());
-		return head.getReference() == null;
-	}
-	
 	
 	@Override
 	public Iterator<E> iterator() {
