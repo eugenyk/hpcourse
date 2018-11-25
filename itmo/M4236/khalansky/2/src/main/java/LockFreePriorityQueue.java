@@ -102,20 +102,18 @@ extends AbstractQueue<E> implements PriorityQueue<E> {
        the queue.
     */
     private static<T> Node<T> nextForTaking(Node<T> head) {
-        while (true) {
-            Node<T> next = head.next.get();
-            /* We remove values that have been taken while we can. When we
-               can't, it means that either we found a value that hasn't been
-               taken or that the end of the queue has been reached. */
-            while (next != null && next.wasConsumed()) {
-                /* See a similar loop in `offer` for an explanation why we
-                   don't need to know whether throwing a value away succeeded.
-                */
-                head.next.compareAndSet(next, next.next.get());
-                next = head.next.get();
-            }
-            return next;
+        Node<T> next = head.next.get();
+        /* We remove values that have been taken while we can. When we can't, it
+           means that either we found a value that hasn't been taken or that the
+           end of the queue has been reached. */
+        while (next != null && next.wasConsumed()) {
+            /* See a similar loop in `offer` for an explanation why we don't
+               need to know whether throwing a value away succeeded.
+            */
+            head.next.compareAndSet(next, next.next.get());
+            next = head.next.get();
         }
+        return next;
     }
 
     public E peek() {
