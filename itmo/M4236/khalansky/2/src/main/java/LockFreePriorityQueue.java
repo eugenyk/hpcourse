@@ -78,8 +78,8 @@ extends AbstractQueue<E> implements PriorityQueue<E> {
                            has been consumed.
                         */
                         Node<E> checker = headNode;
-                        while (checker != null && !node.wasConsumed()) {
-                            if (checker == node) {
+                        while (checker != null) {
+                            if (checker == node || node.wasConsumed()) {
                                 return true;
                             }
                             if (checker.value != null &&
