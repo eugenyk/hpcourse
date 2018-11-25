@@ -1,3 +1,5 @@
+package ru.ifmo.ct.khalansky.hpcourse.queue;
+
 import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.I_Result;
 

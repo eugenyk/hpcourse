@@ -1,3 +1,4 @@
+package ru.ifmo.ct.khalansky.hpcourse.queue;
 import java.util.*;
 
 /**
