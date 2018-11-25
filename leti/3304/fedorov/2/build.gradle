@@ -1,0 +1,51 @@
+apply plugin: "java"
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories
+{
+
+    maven
+    {
+
+        url "https://dl.bintray.com/devexperts/Maven/"
+
+    }
+}
+
+buildscript 
+{
+    repositories 
+    {
+        jcenter()
+    }
+
+    dependencies 
+    {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+apply plugin: 'jcstress'
+
+ext
+{
+    
+    jcstressVersion = '0.3'
+    lincheckVersion = '2.0'
+}
+
+repositories 
+{
+    jcenter()
+}
+
+dependencies 
+{
+
+    compile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+    compile "com.devexperts.lincheck:lincheck:${lincheckVersion}"
+    testCompile group: "junit", name: "junit", version: "4.12"
+    testCompile "com.devexperts.lincheck:lincheck:${lincheckVersion}"
+}

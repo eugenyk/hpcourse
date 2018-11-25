@@ -1,8 +1,8 @@
 package LockFreePriorityQueue;
 import java.util.concurrent.atomic.AtomicReference;
 /**
- * Lock-free очередь с приоритетами
- * @param <E> Тип элементов
+ * Lock-free priority queue
+ * @param <E> elements type
  */
 public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQueue {
     private AtomicReference<LockFreePriorityQueueElement<E>> Head;
@@ -13,11 +13,9 @@ public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQ
     }
     
     /**
-     * Проверка очереди на пустоту
+     * Check that queue is empty
      *
-     * Метод должен быть lock-free (wait-free для уверенных в себе)
-     *
-     * @return true если очередь пуста, иначе - false
+     * @return true if queue is empty, else - false
      */
     public boolean isEmpty()
     {
@@ -27,9 +25,9 @@ public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQ
     }
     
     /**
-     * Добавление элемента в очередь
+     * Add element to queue
      *
-     * @param value добавляемый элемент
+     * @param value adding element
      */
     public void insert(E value)
     {
@@ -46,17 +44,17 @@ public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQ
     }
     
     /**
-     * Извлечение элемента из очереди
+     * Extract element from queue
      *
-     * @return элемент с наименьшим значением
+     * @return element with minimum value
      */
     public E extractMinimum()
     {
         while(true)
         {
-            if(Head.get()==null)
+			LockFreePriorityQueueElement<E> minElement = Head.get();
+            if(minElement==null)
                 return null;
-            LockFreePriorityQueueElement<E> minElement = Head.get();
             LockFreePriorityQueueElement<E> elementBeforeMin = null;
             LockFreePriorityQueueElement<E> elementAfterMin = minElement.Next.get();
             LockFreePriorityQueueElement<E> curElement = elementAfterMin;
@@ -70,7 +68,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQ
                 {
                     minElement = curElement;
                     elementBeforeMin = elementBeforeCur;
-                    elementAfterMin = elementAfterCur;
+                    elementAfterMin = minElement.Next.get();
                 }
                 if(curElement!=null)
                     curElement = curElement.Next.get();
@@ -79,18 +77,19 @@ public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQ
                 if(elementAfterCur!=null)
                     elementAfterCur = elementAfterCur.Next.get();
             }
-            AtomicReference<LockFreePriorityQueueElement<E>> elementBeforeMinNext;
             if(elementBeforeMin==null)
             {
-                elementBeforeMinNext=Head;
+				if(Head.compareAndSet(minElement, elementAfterMin))
+				{
+					return minElement.Value;
+				}
             }
             else
             {
-                elementBeforeMinNext=elementBeforeMin.Next;
-            }
-            if(elementBeforeMinNext.compareAndSet(minElement, elementAfterMin))
-            {
-                return minElement.Value;
+				if(elementBeforeMin.Next.compareAndSet(minElement, elementAfterMin)&&(minElement.Next.compareAndSet(elementAfterMin, null)))
+				{
+					return minElement.Value;
+				}
             }
         }
     }
