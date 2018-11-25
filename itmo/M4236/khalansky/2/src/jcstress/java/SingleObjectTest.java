@@ -1,14 +1,16 @@
 package ru.ifmo.ct.khalansky.hpcourse.queue;
 
 import org.openjdk.jcstress.annotations.*;
-import org.openjdk.jcstress.infra.results.I_Result;
+import org.openjdk.jcstress.infra.results.II_Result;
 
 @JCStressTest
-@Outcome(id = "5", expect = Expect.ACCEPTABLE, desc = "Queue was used.")
+@Outcome(id = "1, 5", expect = Expect.ACCEPTABLE, desc = "Queue was emptied.")
+@Outcome(id = "0, 0", expect = Expect.ACCEPTABLE, desc = "Queue was not used.")
+@Outcome(id = "1, 0", expect = Expect.ACCEPTABLE, desc = "Race.")
 @State
 public class SingleObjectTest {
 
-    LockFreePriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
+    PriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
     volatile int result = 0;
 
     @Actor
@@ -17,16 +19,10 @@ public class SingleObjectTest {
     }
 
     @Actor
-    public void actor2() {
-        Integer v = queue.poll();
-        if (v != null) {
-            result += v;
-        }
-    }
-
-    @Arbiter
-    public void arbiter(I_Result r) {
-        r.r1 = result;
+    public void actor2(II_Result r) {
+        Integer v = queue.peek();
+        r.r1 = queue.size();
+        r.r2 = v == null ? 0 : v;
     }
 
 }
