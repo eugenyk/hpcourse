@@ -5,68 +5,52 @@ import org.junit.Test;
 
 import java.util.*;
 import java.util.PriorityQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.Assert.assertFalse;
 
 public class LockFreePriorityQueueTest {
 
     private LockFreePriorityQueue<Integer> LFPQ;
-    private PriorityQueue<Integer> javaPQ;
     private List<Integer> elements;
+
+    private ThreadLocalRandom random = ThreadLocalRandom.current();
 
     @Before
     public void before() {
         LFPQ = new LockFreePriorityQueue<>();
-        javaPQ = new PriorityQueue<>();
-        elements = new Random()
-                .ints(100, -100, 101)
+        final int amount = random.nextInt(1700, 17_000);
+        elements = random
+                .ints(amount)
                 .boxed()
                 .collect(Collectors.toList());
     }
 
     @Test
-    public void testOfferSimple() {
-        putElementsToPQs();
-        Iterator<Integer> javaPQiterator = javaPQ.iterator();
-        Iterator<Integer> LFPQiterator = LFPQ.iterator();
-        while (javaPQiterator.hasNext()) {
-            assertThat(LFPQiterator.next()).isEqualTo(javaPQiterator.next());
-        }
-        assertFalse(LFPQiterator.hasNext());
+    public void testOfferAndSize() {
+        putElementsToPQ();
     }
 
     @Test
-    public void testPollSimple() {
-        putElementsToPQs();
+    public void testOfferAndPoll() {
+        putElementsToPQ();
+        Integer previous = null;
+        Integer current;
         for (int i = 0; i < elements.size(); i++) {
-            assertThat(LFPQ.poll()).isEqualTo(javaPQ.poll());
+            current = LFPQ.poll();
+            if(previous != null) {
+                assertThat(current).isGreaterThanOrEqualTo(previous);
+            }
+            previous = current;
         }
-        assertThat(LFPQ.size()).isEqualTo(0);
-        assertThat(javaPQ.size()).isEqualTo(0);
+        assertTrue(LFPQ.isEmpty());
     }
 
-    @Test
-    public void testRemoveSimple() {
-        putElementsToPQs();
-        Collections.shuffle(elements);
-        for (Integer e : elements) {
-            assertThat(LFPQ.remove(e)).isEqualTo(javaPQ.remove(e));
-            assertThat(LFPQ.peek()).isEqualTo(javaPQ.peek());
-        }
-        assertThat(LFPQ.size()).isEqualTo(0);
-        assertThat(javaPQ.size()).isEqualTo(0);
-    }
-
-    private void putElementsToPQs() {
-        assertThat(LFPQ.size()).isEqualTo(0);
-        assertThat(javaPQ.size()).isEqualTo(0);
-        for (Integer i : elements) {
-            LFPQ.offer(i);
-            javaPQ.offer(i);
-        }
+    private void putElementsToPQ() {
+        assertTrue(LFPQ.isEmpty());
+        elements.parallelStream().forEach(LFPQ::offer);
         assertThat(LFPQ.size()).isEqualTo(elements.size());
-        assertThat(javaPQ.size()).isEqualTo(elements.size());
     }
 }
