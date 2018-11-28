@@ -1,6 +1,22 @@
 #include <iostream>
 #include <pthread.h>
- 
+#include <vector>
+#include <sstream>
+#include <string>
+
+int consumersCount;
+int sleepLimit;
+
+// Consumers start condition
+pthread_cond_t consTCond = PTHREAD_COND_INITIALIZER;
+volatile bool consTReady = false;
+
+// Value update sync
+pthread_mutex_t valMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t valCond = PTHREAD_COND_INITIALIZER;
+volatile bool valReady = false;
+volatile bool inputDone = false;
+
 class Value
 {
 public:
@@ -23,58 +39,143 @@ private:
 void* producer_routine(void* arg)
 {
     Value *value = reinterpret_cast<Value *>(arg);
-    printf("\t PR val = %d\n", value->get());
-    
-    // Wait for consumer to start
- 
-    // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
 
+    // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
+    std::vector<int> numbers;
+
+    pthread_mutex_lock(&valMutex);
+    while (!consTReady)
+    {
+        pthread_cond_wait(&consTCond, &valMutex);
+    }
+    pthread_mutex_unlock(&valMutex);
+
+    std::string buf;
+    std::getline(std::cin, buf);
+    std::istringstream ss(buf);
+
+    int inputNumber;
+    while (ss >> inputNumber)
+    {
+        numbers.push_back(inputNumber);
+    }
+
+    for (auto number: numbers)
+    {
+        // consumers are ready, update the value
+        pthread_mutex_lock(&valMutex);
+        value->update(number);
+        valReady = true;
+        pthread_cond_broadcast(&valCond);
+
+        // Wait for consumer to start
+        do
+        {
+            pthread_cond_wait(&consTCond, &valMutex);
+        }
+        while (!consTReady);
+
+        consTReady = false;
+        valReady = false;
+        pthread_mutex_unlock(&valMutex);
+    }
+
+    pthread_mutex_lock(&valMutex);
+    inputDone = true;
+    pthread_cond_broadcast(&valCond);
+    valReady = true;
+    pthread_mutex_unlock(&valMutex);
+    
     pthread_exit(nullptr);
 }
  
 void* consumer_routine(void* arg)
 {
-    // notify about start
-    // allocate value for result
-    // for every update issued by producer, read the value and add to sum
-
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+    static int count = 0;
     Value *value = reinterpret_cast<Value *>(arg);
-    printf("\t CS val = %d\n", value->get());
+
+    // allocate value for result
     Value *result = new Value();
-    result->update(0);
-    
-    // return pointer to result
-    pthread_exit(reinterpret_cast<void *>(result));
+
+    while (1)
+    {
+        pthread_mutex_lock(&valMutex);
+        count ++;
+        if (count >= consumersCount)
+        {
+            valReady = false;
+            
+            // notify about start
+            consTReady = true;
+            pthread_cond_broadcast(&consTCond);
+            count = 0;
+        }
+        do
+        {
+            pthread_cond_wait(&valCond, &valMutex);
+        }
+        while (!valReady);
+
+        consTReady = false;
+
+        if (!inputDone)
+        {
+            // for every update issued by producer, read the value and add to sum
+            result->update(value->get() + result->get());
+        }
+        else
+        {
+            pthread_mutex_unlock(&valMutex);
+
+            // return pointer to result            
+            pthread_exit(reinterpret_cast<void *>(result));
+        }
+
+        pthread_mutex_unlock(&valMutex);
+
+        timespec ts;
+        ts.tv_sec = (float)(rand() % sleepLimit) / 1000.0;
+        ts.tv_nsec = 0;
+        nanosleep(&ts, nullptr);
+    }
 }
  
 void* consumer_interruptor_routine(void* arg)
 {
     // wait for consumer to start
+    pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);
     
-    // interrupt consumer while producer is running     
-    
-    const unsigned sleepLimit = *reinterpret_cast<const unsigned *>(arg);
-    printf("\t IN sleep = %d\n", sleepLimit);
+    // interrupt consumer while producer is running   
+    while (!inputDone)
+    {
+        unsigned i = rand() % consumersCount;
+        pthread_cancel(consumers[i]);
+    }
+
     pthread_exit(nullptr);
 }
  
-int run_threads(int consumersNum, int sleepLimit)
+int run_threads(int consumersNum)
 {
     // start 3 threads and wait until they're done
     Value *value = new Value();
     Value *result;
 
+    consumersCount = consumersNum;
+
     // Threads generation
     pthread_t producer;
     pthread_create(&producer, nullptr, producer_routine, value);
-    pthread_t interruptor;
-    pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &sleepLimit);
     
     pthread_t *consumers = new pthread_t[consumersNum];
     for (size_t i = 0; i < consumersNum; i++)
     {
         pthread_create(&consumers[i], nullptr, consumer_routine, value);
     }
+    
+    pthread_t interruptor;
+    pthread_create(&interruptor, nullptr, consumer_interruptor_routine, consumers);
 
     // Join consumers
     for (size_t i = 0; i < consumersNum; i++)
@@ -101,8 +202,8 @@ int main(int argc, const char *argv[])
     }
 
     int consumersNum = atoi(argv[1]);
-    int sleepLimit = atoi(argv[2]);
+    sleepLimit = atoi(argv[2]);
 
-    std::cout << run_threads(consumersNum, sleepLimit) << std::endl;
+    std::cout << run_threads(consumersNum) << std::endl;
     return 0;
 }
