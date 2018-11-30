@@ -68,7 +68,7 @@ void* consumer_routine(void* arg)
     const auto& value = *static_cast<Value*>(arg);
     static int* sum = new int { 0 };
     auto getSleepTime = []() -> useconds_t {
-        return maxSleepTime ? random() % maxSleepTime : 0;
+        return maxSleepTime ? static_cast<useconds_t>(rand()) % maxSleepTime : 0;
     };
     pthread_barrier_wait(&waitForStartAllThreads);
 
