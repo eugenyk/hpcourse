@@ -4,7 +4,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
-import java.util.PriorityQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -53,4 +52,6 @@ public class LockFreePriorityQueueTest {
         elements.parallelStream().forEach(LFPQ::offer);
         assertThat(LFPQ.size()).isEqualTo(elements.size());
     }
+
+
 }

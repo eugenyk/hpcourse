@@ -1,12 +1,27 @@
 group 'ru.ifmo'
 version '1.0-SNAPSHOT'
 
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+apply plugin: 'jcstress'
 apply plugin: 'java'
 
 sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    jcenter()
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
 }
 
 dependencies {

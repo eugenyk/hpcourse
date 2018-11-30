@@ -11,9 +11,10 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
     private final Node<E> head = new Node<>(null, NodeType.HEAD, tail);
     private AtomicInteger size = new AtomicInteger(0);
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public Iterator<E> iterator() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -33,10 +34,10 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
         Node<E> newElement = new Node<>(e);
         while (true) {
             NodePair<E> pair = findPositionFor(e);
-            Node<E> previous = pair.left;
-            Node<E> next = pair.right;
-            newElement.setNext(next, false);
-            if(previous.CASNext(next, newElement, false, false)) {
+            Node<E> previous = pair.getLeft();
+            Node<E> next = pair.getRight();
+            newElement.setNext(next);
+            if(previous.CASNext(next, newElement)) {
                 addToSize(+1);
                 return true;
             }
@@ -49,15 +50,15 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
      */
     @Override
     public E poll() {
-        if(head.getNext() == tail) {
-            return null;
-        }
         E min;
         while (true) {
             Node<E> currentMin = findMin();
+            if(currentMin == tail) {
+                return null;
+            }
             Node<E> nextMin = currentMin.getNext();
             if(currentMin.CASNext(nextMin, nextMin, false, true)) {
-                head.CASNext(currentMin, nextMin, false, false);
+                head.CASNext(currentMin, nextMin);
                 min = currentMin.getKey();
                 addToSize(-1);
                 break;
@@ -83,7 +84,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
     @Override
     public boolean contains(Object o) {
         E e = (E) o;
-        return findPositionFor(e).left.getKey().equals(e);
+        return findPositionFor(e).getLeft().getKey().equals(e);
     }
 
     private void addToSize(int change) {
@@ -120,7 +121,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
             } while (holder[0] || tmpNode.compareTo(e) <= 0);
 
             next = tmpNode;
-            if(previous.CASNext(current, next, false, false)) {
+            if(previous.CASNext(current, next)) {
                 if(next == tail || !next.nextIsMarked()) {
                     return new NodePair<>(previous, next);
                 }
@@ -136,15 +137,13 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
             return tail;
         }
         final Node<E> previous = head;
-        Node<E> current;
-        Node<E> next;
         boolean holder[] = {false};
 
         while (true) {
-            current = previous.getNext();
-            next = current.getNext(holder);
+            Node<E> current = previous.getNext();
+            Node<E> next = current.getNext(holder);
             if(holder[0]) {
-                previous.CASNext(current, next, false, false);
+                previous.CASNext(current, next);
                 continue;
             }
             return current;
@@ -160,8 +159,8 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
     }
 
     private static class Node<E extends Comparable<E>> {
-        private E key;
-        private NodeType type;
+        private final E key;
+        private final NodeType type;
         private AtomicMarkableReference<Node<E>> next;
 
         Node(E key, NodeType type, Node<E> next) {
@@ -182,12 +181,16 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
                             key.compareTo(e);
         }
 
-        public E getKey() {
+        E getKey() {
             return key;
         }
 
         boolean CASNext(Node<E> nextOld, Node<E> nextNew, boolean curMarkOld, boolean curMarkNew) {
             return next.compareAndSet(nextOld, nextNew, curMarkOld, curMarkNew);
+        }
+
+        boolean CASNext(Node<E> nextOld, Node<E> nextNew) {
+            return next.compareAndSet(nextOld, nextNew, false, false);
         }
 
         Node<E> getNext() {
@@ -198,8 +201,8 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
             return next.get(holder);
         }
 
-        void setNext(Node<E> node, boolean mark) {
-            next = new AtomicMarkableReference<>(node, mark);
+        void setNext(Node<E> node) {
+            next = new AtomicMarkableReference<>(node, false);
         }
 
         boolean nextIsMarked() {
@@ -208,8 +211,8 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
     }
 
     private static class NodePair<E extends Comparable<E>> {
-        private Node<E> left;
-        private Node<E> right;
+        private final Node<E> left;
+        private final Node<E> right;
 
         NodePair(Node<E> leftNode, Node<E> rightNode) {
             left = leftNode;
@@ -222,10 +225,6 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
         Node<E> getRight() {
             return right;
-        }
-
-        public void print() {
-            System.out.println("{" + left.getKey() + " " + left.type + ", " + right.getKey() + " " + right.type + "}");
         }
     }
 }
