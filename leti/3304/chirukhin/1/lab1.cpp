@@ -7,11 +7,11 @@
 #include <unistd.h>
 
 // from argv
-int num_consumers;
+int num_of_consumers;
 int sleep_time;
 
-int num_consumers_started = 0;
-int num_consumers_updated = 0;
+int num_of_consumers_started = 0;
+int num_of_consumers_updated = 0;
 
 pthread_mutex_t value_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -47,6 +47,9 @@ private:
 
 struct producer_args
 {
+    producer_args(Value* _value, std::vector<int> _digits)
+        : value(_value), digits(_digits) { }
+
     Value* value;
     std::vector<int> digits;
 };
@@ -54,9 +57,17 @@ struct producer_args
 struct consumer_args
 {
     consumer_args() : sum(0) { }
-    consumer_args(Value* _value) : sum(0), value(_value) { }
+
     Value* value;
     int sum;
+};
+
+struct interruptor_args
+{
+    interruptor_args(std::vector<pthread_t> _consumers)
+        : consumers(_consumers) { }
+
+    std::vector<pthread_t> consumers;
 };
 
 void* producer_routine(void* arg)
@@ -97,13 +108,15 @@ void* producer_routine(void* arg)
 
 void* consumer_routine(void* arg)
 {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
     consumer_args* args = (consumer_args*)arg;
 
     pthread_mutex_lock(&value_mutex);
 
     // count started consumers
-    num_consumers_started++;
-    if (num_consumers_started == num_consumers)
+    num_of_consumers_started++;
+    if (num_of_consumers_started == num_of_consumers)
     {
         consumers_started = true;
         pthread_cond_signal(&all_consumers_started_cond);
@@ -125,37 +138,50 @@ void* consumer_routine(void* arg)
         args->sum += (args->value)->get();
 
         // count consumers that updated sum
-        num_consumers_updated++;
-        if (num_consumers_updated == num_consumers)
+        num_of_consumers_updated++;
+        if (num_of_consumers_updated == num_of_consumers)
         {
-            num_consumers_updated = 0;
+            num_of_consumers_updated = 0;
             consumers_updated = true;
             producer_updated = false;
             pthread_cond_signal(&consumers_done_update_cond);
         }
 
         // sleep for a random time
-        int sleep_time_rnd = 0;
+        int rnd_sleep_time = 0;
         if (sleep_time != 0)
         {
-            srand(time(NULL));
-            sleep_time_rnd = rand() % sleep_time;
+            rnd_sleep_time = rand() % sleep_time;
         }
-        usleep(sleep_time_rnd * 1000);
+        usleep(rnd_sleep_time * 1000);
     }
 
     pthread_mutex_unlock(&value_mutex);
 }
 
-void* consumer_interruptor_routine(void* arg) {
-  // wait for consumer to start
+void* consumer_interruptor_routine(void* arg)
+{
+    interruptor_args* args = (interruptor_args*)arg;
 
-  // interrupt consumer while producer is running
+    // wait for consumers to start
+    pthread_mutex_lock(&value_mutex);
+    while (!consumers_started)
+    {
+        pthread_cond_wait(&all_consumers_started_cond, &value_mutex);
+    }
+    pthread_mutex_unlock(&value_mutex);
+
+    int rnd_consumer;
+    while (!done)
+    {
+        rnd_consumer = rand() % num_of_consumers;
+        pthread_cancel(args->consumers[rnd_consumer]);
+    }
 }
 
 int run_threads()
 {
-    // read digits from in stream
+    // read digits from input stream
     std::vector<int> digits;
     std::string buffer;
     std::getline(std::cin, buffer);
@@ -171,32 +197,34 @@ int run_threads()
     Value* value = new Value();
 
     // create producer
-    producer_args p_args;
-    p_args.digits = digits;
-    p_args.value = value;
-
     pthread_t producer;
+    producer_args p_args(value, digits);
     pthread_create(&producer, NULL, &producer_routine, &p_args);
 
     // create N consumers
-    pthread_t* consumers = new pthread_t[num_consumers];
-    consumer_args* c_args = new consumer_args[num_consumers];
-    for (i = 0; i < num_consumers; i++)
+    std::vector<pthread_t> consumers(num_of_consumers);
+    std::vector<consumer_args> c_args(num_of_consumers);
+    for (i = 0; i < num_of_consumers; i++)
     {
-        c_args[i] = consumer_args(value);
+        c_args[i].value = value;
         pthread_create(&consumers[i], NULL, &consumer_routine, &c_args[i]);
     }
 
+    // create interruptor
+    pthread_t interruptor;
+    interruptor_args i_args(consumers);
+    pthread_create(&interruptor, NULL, &consumer_interruptor_routine, &i_args);
+
     // wait for threads
     pthread_join(producer, NULL);
-    for (i = 0; i < num_consumers; i++)
+    for (i = 0; i < num_of_consumers; i++)
     {
         pthread_join(consumers[i], NULL);
     }
+    pthread_join(interruptor, NULL);
 
-    delete[] consumers;
-
-    return c_args[0].sum;
+    // get result from random consumer
+    return c_args[rand() % num_of_consumers].sum;
 }
 
 int main(int argc, char* argv[])
@@ -206,8 +234,10 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    num_consumers = atoi(argv[1]);
+    num_of_consumers = atoi(argv[1]);
     sleep_time = atoi(argv[2]);
+
+    srand(time(NULL));
 
     std::cout << run_threads() << std::endl;
     return 0;
