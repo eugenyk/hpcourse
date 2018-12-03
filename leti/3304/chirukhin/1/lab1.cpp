@@ -22,7 +22,7 @@ pthread_cond_t consumers_done_update_cond = PTHREAD_COND_INITIALIZER;
 bool consumers_updated = false;
 
 pthread_cond_t producer_updated_value_cond = PTHREAD_COND_INITIALIZER;
-bool producer_updated = false;
+int producer_updated_count = 0;
 
 bool done = false;
 
@@ -86,7 +86,7 @@ void* producer_routine(void* arg)
     for (it = args->digits.begin(); it != args->digits.end(); it++)
     {
         (args->value)->update(*it);
-        producer_updated = true;
+        producer_updated_count++;
         consumers_updated = false;
 
         // notify consumers
@@ -122,13 +122,15 @@ void* consumer_routine(void* arg)
         pthread_cond_signal(&all_consumers_started_cond);
     }
 
+    int local_updated_count = 0;
+
     for (;;)
     {
         // wait for producer
-        //while (!producer_updated)
-        //{
+        while ((producer_updated_count == local_updated_count) && !done)
+        {
             pthread_cond_wait(&producer_updated_value_cond, &value_mutex);
-        //}
+        }
 
         if (done)
         {
@@ -136,6 +138,7 @@ void* consumer_routine(void* arg)
         }
 
         args->sum += (args->value)->get();
+        local_updated_count++;
 
         // count consumers that updated sum
         num_of_consumers_updated++;
@@ -143,7 +146,6 @@ void* consumer_routine(void* arg)
         {
             num_of_consumers_updated = 0;
             consumers_updated = true;
-            producer_updated = false;
             pthread_cond_signal(&consumers_done_update_cond);
         }
 
