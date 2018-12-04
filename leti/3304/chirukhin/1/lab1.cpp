@@ -22,7 +22,7 @@ pthread_cond_t consumers_done_update_cond = PTHREAD_COND_INITIALIZER;
 bool consumers_updated = false;
 
 pthread_cond_t producer_updated_value_cond = PTHREAD_COND_INITIALIZER;
-int producer_updated_count = 0;
+int producer_update_count = 0;
 
 bool done = false;
 
@@ -47,11 +47,11 @@ private:
 
 struct producer_args
 {
-    producer_args(Value* _value, std::vector<int> _digits)
-        : value(_value), digits(_digits) { }
+    producer_args(Value* _value, std::vector<int> _numbers)
+        : value(_value), numbers(_numbers) { }
 
     Value* value;
-    std::vector<int> digits;
+    std::vector<int> numbers;
 };
 
 struct consumer_args
@@ -83,10 +83,10 @@ void* producer_routine(void* arg)
     }
 
     std::vector<int>:: iterator it;
-    for (it = args->digits.begin(); it != args->digits.end(); it++)
+    for (it = args->numbers.begin(); it != args->numbers.end(); it++)
     {
         (args->value)->update(*it);
-        producer_updated_count++;
+        producer_update_count++;
         consumers_updated = false;
 
         // notify consumers
@@ -99,10 +99,11 @@ void* producer_routine(void* arg)
         }
     }
 
+    done = true;
+
     pthread_mutex_unlock(&value_mutex);
 
     // notify about exit
-    done = true;
     pthread_cond_broadcast(&producer_updated_value_cond);
 }
 
@@ -118,17 +119,17 @@ void* consumer_routine(void* arg)
     if (num_of_consumers_started == num_of_consumers)
     {
         consumers_started = true;
-        pthread_cond_signal(&all_consumers_started_cond);
+        pthread_cond_broadcast(&all_consumers_started_cond);
     }
     pthread_mutex_unlock(&value_mutex);
 
-    int local_updated_count = 0;
+    int local_update_count = 0;
 
     for (;;)
     {
         // wait for producer
         pthread_mutex_lock(&value_mutex);
-        while (producer_updated_count == 0 || ((producer_updated_count == local_updated_count) && !done))
+        while ((producer_update_count == local_update_count) && !done)
         {
             pthread_cond_wait(&producer_updated_value_cond, &value_mutex);
         }
@@ -139,7 +140,7 @@ void* consumer_routine(void* arg)
         }
 
         args->sum += (args->value)->get();
-        local_updated_count++;
+        local_update_count++;
 
         // count consumers that updated sum
         num_of_consumers_updated++;
@@ -176,18 +177,16 @@ void* consumer_interruptor_routine(void* arg)
     }
     pthread_mutex_unlock(&value_mutex);
 
-    int rnd_consumer;
     while (!done)
     {
-        rnd_consumer = rand() % num_of_consumers;
-        pthread_cancel(args->consumers[rnd_consumer]);
+        pthread_cancel(args->consumers[rand() % num_of_consumers]);
     }
 }
 
 int run_threads()
 {
-    // read digits from input stream
-    std::vector<int> digits;
+    // read numbers from input stream
+    std::vector<int> numbers;
     std::string buffer;
     std::getline(std::cin, buffer);
     std::istringstream iss(buffer);
@@ -195,7 +194,7 @@ int run_threads()
 
     while (iss >> i)
     {
-        digits.push_back(i);
+        numbers.push_back(i);
     }
 
     // shared value
@@ -203,7 +202,7 @@ int run_threads()
 
     // create producer
     pthread_t producer;
-    producer_args p_args(value, digits);
+    producer_args p_args(value, numbers);
     pthread_create(&producer, NULL, &producer_routine, &p_args);
 
     // create N consumers
