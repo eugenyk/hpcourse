@@ -112,22 +112,23 @@ void* consumer_routine(void* arg)
 
     consumer_args* args = (consumer_args*)arg;
 
-    pthread_mutex_lock(&value_mutex);
-
     // count started consumers
+    pthread_mutex_lock(&value_mutex);
     num_of_consumers_started++;
     if (num_of_consumers_started == num_of_consumers)
     {
         consumers_started = true;
         pthread_cond_signal(&all_consumers_started_cond);
     }
+    pthread_mutex_unlock(&value_mutex);
 
     int local_updated_count = 0;
 
     for (;;)
     {
         // wait for producer
-        while ((producer_updated_count == local_updated_count) && !done)
+        pthread_mutex_lock(&value_mutex);
+        while (producer_updated_count == 0 || ((producer_updated_count == local_updated_count) && !done))
         {
             pthread_cond_wait(&producer_updated_value_cond, &value_mutex);
         }
@@ -148,6 +149,8 @@ void* consumer_routine(void* arg)
             consumers_updated = true;
             pthread_cond_signal(&consumers_done_update_cond);
         }
+
+        pthread_mutex_unlock(&value_mutex);
 
         // sleep for a random time
         int rnd_sleep_time = 0;
