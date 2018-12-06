@@ -11,12 +11,17 @@
 #include <iomanip>
 
 #include <cassert>
+#include <cmath>
 
 using num_t = float;
 
 size_t const block_size = 16;
 size_t const MAX_N = 1024;
 size_t const MAX_M = 9;
+
+size_t closest_work_size(size_t x) {
+    return std::ceil(x / static_cast<double>(max_block_size)) * max_block_size;
+}
 
 struct InputData {
     size_t N;
@@ -113,8 +118,15 @@ int main(int argc, char** argv) {
         kernel_gmem.setArg(3, static_cast<int>(input.N));
         kernel_gmem.setArg(4, static_cast<int>(input.M));
 
-        queue.enqueueNDRangeKernel(kernel_gmem, cl::NullRange, cl::NDRange(MAX_N, MAX_N),
-                                   cl::NDRange(block_size, block_size));
+        auto work_size = closest_work_size(input.N);
+
+        queue.enqueueNDRangeKernel(
+            kernel_gmem,
+            cl::NullRange,
+            cl::NDRange(work_size, work_size),
+            cl::NDRange(max_block_size, max_block_size)
+        );
+
         queue.enqueueReadBuffer(dev_c, CL_TRUE, 0, sizeof(num_t) * C.size(), C.data());
 
         for (size_t i = 0; i < input.N; ++i) {
