@@ -15,7 +15,7 @@
 
 using num_t = float;
 
-size_t const block_size = 16;
+size_t const max_block_size = 16;
 size_t const MAX_N = 1024;
 size_t const MAX_M = 9;
 
