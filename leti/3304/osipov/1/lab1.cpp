@@ -124,7 +124,7 @@ void *consumer_routine(void *arg)
             pthread_exit(reinterpret_cast<void *>(ret_val));
         }
         pthread_mutex_unlock(&vmutex);
-        unsigned time_to_sleep = rand() % m_sec;
+        unsigned time_to_sleep = (m_sec ? (rand() % m_sec) : 0);
         timespec ts;
         ts.tv_sec = (float)time_to_sleep / 1000.0;
         ts.tv_nsec = 0;
