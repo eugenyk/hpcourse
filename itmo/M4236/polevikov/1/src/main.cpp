@@ -64,7 +64,7 @@ void* producer_routine(void* arg) {
         pthread_mutex_lock(&mutex);
         value.update(input);
         value_status = ValueStatus::updated;
-        pthread_cond_broadcast(&cond);
+        pthread_cond_signal(&cond);
         while (value_status != ValueStatus::consumed) {
             pthread_cond_wait(&cond, &mutex);
         }
@@ -113,7 +113,7 @@ void* consumer_interruptor_routine(void* arg) {
 
     pthread_t *th_consumers = static_cast<pthread_t*>(arg);
 
-    while (job_status == JobStatus::finished) {
+    while (job_status != JobStatus::finished) {
         pthread_cancel(th_consumers[rand() % consumer_threads]);
     }
 
