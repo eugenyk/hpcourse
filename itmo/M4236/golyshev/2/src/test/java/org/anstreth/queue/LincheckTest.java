@@ -6,11 +6,10 @@ import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 @StressCTest
 public class LincheckTest {
-    private Queue<Integer> queue = new ConcurrentLinkedDeque<>();
+    private Queue<Integer> queue = new ConcurrentPriorityQueue<>();
 
     @Operation
     public void offer(Integer x) {
