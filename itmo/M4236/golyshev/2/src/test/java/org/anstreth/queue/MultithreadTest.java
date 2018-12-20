@@ -10,7 +10,7 @@ import static org.junit.Assert.assertEquals;
 public class MultithreadTest {
     @Test
     public void joining_two_queues_is_correct() throws ExecutionException, InterruptedException {
-        int N = 50000;
+        int N = 10000;
         int counterOne = 0;
         int counterTwo = 0;
 
