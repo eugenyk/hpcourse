@@ -1,180 +1,167 @@
-#include <pthread.h>
 #include <iostream>
+#include <pthread.h>
+#include <string>
+#include <sstream>
+#include <unistd.h>
+#include <vector>
 
-//Volatile — ключевое слово языков C/C++,
-// которое информирует компилятор о том, 
-// что значение переменной может меняться 
-// из вне и что компилятор не будет оптимизировать эту переменную.
-
-volatile bool isReady = false;//готов к использованию 
-volatile bool isFin = false;// заканчиваем выполнение
-
-pthread_mutex_t producer_mutex;//produser_muter типа pthread_mutex_t(глобальный мьютекс, доступный всем потокам)
-pthread_mutex_t consumer_mutex;//consumer_muter типа pthread_mutex_t(глобальный мьютекс, доступный всем потокам)
-pthread_cond_t producer_signal;//produser_signal типа pthread_mutex_t
-pthread_cond_t consumer_signal;//consumer_muter типа pthread_mutex_t
+using namespace std;
 
 class Value {
 public:
     Value() : _value(0) { }
- 
+
     void update(int value) {
         _value = value;
     }
- 
+
     int get() const {
         return _value;
     }
- 
+
 private:
     int _value;
 };
- 
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condStartConsumer = PTHREAD_COND_INITIALIZER;
+pthread_cond_t condReadyConsumer = PTHREAD_COND_INITIALIZER;
+pthread_cond_t condReadyValue = PTHREAD_COND_INITIALIZER;
+
+volatile bool start_consumer = false;
+volatile bool isReadyConsumer = false;
+volatile int countReady = 0;
+volatile bool isOver = false;
+
+unsigned long numConsumers;
+unsigned int sleepTime;
+int count_producer_update = 0;
+
 void* producer_routine(void* arg) {
+    Value* value = reinterpret_cast<Value*>(arg);
+    // Wait for consumer to start
 
-// Задача producer-потока - получить на вход список чисел, 
-// и по очереди использовать каждое значение из этого списка
-// для обновления переменной разделяемой между потоками. После
-// этого поток должен дождаться реакции одного из consumer-потоков, 
-// и продолжить обновление значений только после того как поток-consumer
-// принял это изменение. Функция исполняющая код этого потока 
-// producer_routine должна принимать указатель на объект типа Value,
-// и использовать его для обновления.
+    pthread_mutex_lock(&mutex);
+    while(!start_consumer) 
+        pthread_cond_wait(&condStartConsumer, &mutex);
+    pthread_mutex_unlock(&mutex);
 
-  // Wait for consumer to start
- 
-  // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
+    // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
+    //Read data
+    string line;
+    getline(cin, line);
+    istringstream stream(line);
+    //loop through each value and update the value
+    int number;
 
- int count_numerous;//нужна для считывания строки (сюда читаем)
- 
- Value *value = (Value*)arg; // указатель на объект типа Value, 
-
-  while(std::cin >> count_numerous) { //Считываем строку в цикле в переменную count_numerous (перебираем значения)
-      
-          value->update(count_numerous);//обновляем значения переменной разделяемой между потоками
-          
-          //Блокировка: теперь к ресурсам имеет доступ только один
-          //поток, который владеет мьютексом. Он же единственный, 
-          //кто может его разблокировать
-          pthread_mutex_lock(&producer_mutex);
-          
-          isReady = true; //меняем значение глобальной переменной на true
-
-          //Блокированный поток пробуждается с помощью вызовов pthread_cond_signal()
-
-          pthread_cond_signal(&producer_signal);//другой поток устанавливает условие  producer-signal (уведомляем потребителя)
-          pthread_mutex_unlock(&producer_mutex);//разблокировали producer-поток
-
-          pthread_mutex_lock(&consumer_mutex); //захватываем мьютекс consumer-потока
-          
-          while (isReady) { //если готов к использованию
-            //pthread_cond_wait() всегда возвращает запертый мьютекс, который принадлежит вызывающему потоку, даже если возникла ошибка.
-              pthread_cond_wait(&consumer_signal, &consumer_mutex);//также перед возвратом повторно захватывает мьютекс (ждем, пока потребитель обработает)
-          }
-          
-          pthread_mutex_unlock(&consumer_mutex); //разблокировали поток
+    while (1) {
+        if (!(stream >> number)) {
+            isOver = true;
+            break;
         }
+        value->update(number);
+        //notify consumer
+        isReadyConsumer = false;
+        count_producer_update++;
+        pthread_cond_broadcast(&condReadyValue);
 
-        isFin = true; //флаг конца использования
-        
-        pthread_cond_signal(&producer_signal); //другой поток устанавливает условие  producer-signal (уведомили потребителя)
-
-}
- 
-void* consumer_routine(void* arg) {
-  // Задача consumer-потоков отреагировать на каждое изменение 
-  // переменной data и набирать сумму полученных значений. 
-  // После того как достигнуто последнее обновление, функция потока 
-  // должна вернуть результирующую сумму. Также этот поток должен
-  // защититься от попыток потока-interruptor его остановить.
-  // Функция исполняющая код этого потока consumer_routine должна
-  // принимать указатель на тот же объект типа Value, и читать из
-  // него обновления. После суммирования переменной поток должен
-  // заснуть на случайное количество миллисекунд, верхний предел
-  // будет передан на вход приложения. Во время сна поток не должен
-  // мешать другим потокам consumer выполнять свои задачи, если они есть
-  // notify about start
-  // for every update issued by producer, read the value and add to sum
-  // return pointer to result (aggregated result for all consumers)
-  //изменение статуса восприимчивости к удалению потока управления 
-  // PTHREAD_CANCEL_DISABLE - новое значение статуса (допустимость удаления);
-  // NULL - старое значение статуса или NULL. 
-  //При успешном завершении функция возвращает 0, в противном случае - код ошибки.
-  
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-    
-    Value *value = (Value*)arg; // указатель на объект типа Value, 
-    
-    int *summa = new int; 
-    *summa = 0; //сначала сумма = 0
-
-    while(!isFin){
-      pthread_mutex_lock(&producer_mutex);
-      while (!isReady && !isFin) {
-        pthread_cond_wait(&producer_signal, &producer_mutex);
-      }
-      pthread_mutex_unlock(&producer_mutex);
-      if (isFin) {
-          break;
-      }
-
-      *summa += value->get();
-
-      pthread_mutex_lock(&consumer_mutex);
-      isReady = false;
-      pthread_cond_signal(&consumer_signal);
-      pthread_mutex_unlock(&consumer_mutex);  
+        //wait for consumer to process
+        pthread_mutex_lock(&mutex);
+        while(!isReadyConsumer)
+            pthread_cond_wait(&condReadyConsumer, &mutex);
+        pthread_mutex_unlock(&mutex);
     }
-    return summa;
+    pthread_cond_broadcast(&condReadyValue);
+    return nullptr;
+
 }
- 
+
+void* consumer_routine(void* arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+    Value* value = reinterpret_cast<Value*>(arg);
+
+    // notify about start
+    pthread_mutex_lock(&mutex);
+    countReady++;
+    pthread_mutex_unlock(&mutex);
+    if (countReady == numConsumers) {
+        start_consumer = true;
+        pthread_cond_broadcast(&condStartConsumer);
+        countReady = 0;
+    }
+    int count_consumer_update = 0;
+    // for every update issued by producer, read the value and add to sum
+    Value * sum = new Value();
+
+    while (!isOver){
+        pthread_mutex_lock(&mutex);
+        while((count_consumer_update == count_producer_update) && !isOver)
+            pthread_cond_wait(&condReadyValue, &mutex);
+        pthread_mutex_unlock(&mutex);
+        if (isOver) break;
+        sum->update(sum->get() + value->get());
+        count_consumer_update++;
+        countReady++;
+        if (countReady == numConsumers) {
+            countReady = 0;
+            isReadyConsumer = true;
+            pthread_cond_signal(&condReadyConsumer);
+        }
+        usleep((rand() % (sleepTime + 1)) * 1000);
+
+    }
+
+    // return pointer to result (aggregated result for all consumers)
+    return reinterpret_cast<void*>(sum);
+}
+
 void* consumer_interruptor_routine(void* arg) {
+    vector<pthread_t*>* consumers = reinterpret_cast<vector<pthread_t*>*>(arg);
 
-  // wait for consumer to start
- 
-  // interrupt consumer while producer is running
+    pthread_mutex_lock(&mutex);
+    while(!start_consumer) 
+        pthread_cond_wait(&condStartConsumer, &mutex);
+    pthread_mutex_unlock(&mutex);
 
-  // Задача потока-interruptor проста: пока происходит
-  // процесс обновления значений, он должен постоянно
-  // пытаться остановить случайный поток consumer
-  // (вычисление случайного потока происходит перед
-  // каждой попыткой остановки). Как только поток producer 
-  // произвел последнее обновление, этот поток завершается.
-  // wait for consumer to start
- 
-  // interrupt consumer while producer is running                                          
-
-  while (!isFin) {
-    pthread_cancel(*(pthread_t*)arg);
-  }                                          
+    while(!isOver){
+        unsigned long i = rand() % (consumers->size());
+        pthread_cancel(*(consumers->at(i)));
+    }
+    return nullptr;
 }
- 
+
 int run_threads() {
-  // start N threads and wait until they're done
-  // return aggregated sum of values
-  
-  pthread_t producer_thread;
-  pthread_t consumer_thread;
-  pthread_t consumer_interruptor_thread;
-  pthread_cond_init(&producer_signal, NULL);
-  pthread_cond_init(&consumer_signal, NULL);
-  Value value;
-  int *summa;
+    srand(time(NULL));
 
-  pthread_create(&producer_thread, NULL, producer_routine, &value);
-  pthread_create(&consumer_thread, NULL, consumer_routine, &value);
-  pthread_create(&consumer_interruptor_thread, NULL, consumer_interruptor_routine, &consumer_thread);
+    Value* value = new Value();
 
-  pthread_join(producer_thread, NULL);
-  pthread_join(consumer_thread, (void**)&summa);
+    pthread_t producer;
+    pthread_create(&producer, nullptr, producer_routine, value);
 
-  int res = *summa;
-  delete summa;
-  return res;
-  return 0;
+    vector<pthread_t> consumers(numConsumers);
+    for (int i = 0; i < numConsumers; i++)
+        pthread_create(&consumers[i], nullptr, consumer_routine, value);
+
+    pthread_t interruptor;
+    pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers);
+
+    pthread_join(producer, nullptr);
+    pthread_join(interruptor, nullptr);
+    void* sum;
+    pthread_join(consumers[0], &sum);
+    for (int i = 1; i < numConsumers; i++)
+        pthread_join(consumers[i], nullptr);
+
+    return (reinterpret_cast<Value*>(sum))->get();
 }
- 
-int main() {
-    std::cout << run_threads() << std::endl;
+
+int main(int argc, const char *argv[]) {
+    if (argc != 3) {
+        cout << "Incorrect of arguments";
+        return 1;
+    }
+    numConsumers = atoi(argv[1]);
+    sleepTime = atoi(argv[2]);
+    std::cout <<std::to_string(run_threads()) << std::endl;
     return 0;
 }
