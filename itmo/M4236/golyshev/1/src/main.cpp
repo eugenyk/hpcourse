@@ -28,24 +28,17 @@ enum class Status {
 static size_t N_THREADS;
 static long int MAX_SLEEP;
 
-static bool started = false;
 static bool finished = false;
-Status status{Status::CONSUMER_READY};
+static Status status{Status::CONSUMER_READY};
 
 pthread_mutex_t value_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t start_signal = PTHREAD_COND_INITIALIZER;
 pthread_cond_t producer_signal = PTHREAD_COND_INITIALIZER;
 pthread_cond_t consumer_signal = PTHREAD_COND_INITIALIZER;
 
+pthread_barrier_t start_barrier;
+
 void* producer_routine(void* arg) {
     // Wait for consumer to start
-    if (!started) {
-        pthread_mutex_lock(&value_mutex);
-        while (!started) {
-            pthread_cond_wait(&start_signal, &value_mutex);
-        }
-        pthread_mutex_unlock(&value_mutex);
-    }
 
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     auto value = static_cast<Value*>(arg);
@@ -59,6 +52,12 @@ void* producer_routine(void* arg) {
     while (ss >> current) {
         numbers.push_back(current);
     }
+
+    // sleep on barrier before locking
+    // first signal may be lost, if no consumer is sleeping on the lock
+    // this is not a problem, because producer will go to sleep when status
+    // is set to PRODUCER_READY, and next locked consumer will see that
+    pthread_barrier_wait(&start_barrier);
 
     pthread_mutex_lock(&value_mutex);
 
@@ -78,7 +77,7 @@ void* producer_routine(void* arg) {
     return nullptr;
 }
 
-void sleep_with_mutex_release(pthread_mutex_t& mutex) {
+static void sleep_with_mutex_release(pthread_mutex_t& mutex) {
     pthread_mutex_unlock(&mutex);
     timespec sleep_amount{0, rand() % (MAX_SLEEP + 1)};
     if (nanosleep(&sleep_amount, nullptr) == -1) {
@@ -93,14 +92,10 @@ void* consumer_routine(void* arg) {
     int sum = 0;
     auto value = static_cast<Value const*>(arg);
 
+    pthread_barrier_wait(&start_barrier);
     pthread_mutex_lock(&value_mutex);
 
     // notify about start
-    if (!started) {
-        started = true;
-        pthread_cond_broadcast(&start_signal);
-    }
-
     // for every update issued by producer, read the value and add to sum
     // return pointer to result (aggregated result for all consumers)
     while (!finished) {
@@ -127,17 +122,11 @@ void* consumer_interruptor_routine(void* arg) {
     // interrupt consumer while producer is running
     auto threads = static_cast<std::vector<pthread_t> const*>(arg);
 
-    pthread_mutex_lock(&value_mutex);
-    while (!started) {
-        pthread_cond_wait(&start_signal, &value_mutex);
-    }
+    pthread_barrier_wait(&start_barrier);
 
     while (!finished) {
         pthread_cancel(threads->at(rand() % threads->size()));
-        sleep_with_mutex_release(value_mutex);
     }
-
-    pthread_mutex_unlock(&value_mutex);
 
     return nullptr;
 }
@@ -148,6 +137,8 @@ int run_threads(Value* value) {
     pthread_t producer;
     pthread_t interruptor;
     std::vector<pthread_t> consumers(N_THREADS);
+
+    pthread_barrier_init(&start_barrier, nullptr, N_THREADS + 2);
 
     pthread_create(&producer, nullptr, producer_routine, value);
     for (auto& t: consumers) {
@@ -167,6 +158,8 @@ int run_threads(Value* value) {
         delete result;
     }
 
+    pthread_barrier_destroy(&start_barrier);
+
     return total;
 }
 
@@ -179,8 +172,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    N_THREADS = std::atoi(argv[1]);
-    MAX_SLEEP = std::atol(argv[2]) * 1'000'000;
+    N_THREADS = size_t(std::stol(argv[1]));
+    MAX_SLEEP = std::stol(argv[2]) * 1'000'000;
     cout << "Number of threads is " << N_THREADS << endl;
     cout << "Max sleep value is " << MAX_SLEEP << "us" << endl;
 
