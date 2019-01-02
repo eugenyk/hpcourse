@@ -174,12 +174,10 @@ int main(int argc, char** argv) {
 
     N_THREADS = size_t(std::stol(argv[1]));
     MAX_SLEEP = std::stol(argv[2]) * 1'000'000;
-    cout << "Number of threads is " << N_THREADS << endl;
-    cout << "Max sleep value is " << MAX_SLEEP << "us" << endl;
 
     Value value;
     int total = run_threads(&value);
-    cout << "Total sum is " << total << endl;
+    cout << total << endl;
 
     return 0;
 }
