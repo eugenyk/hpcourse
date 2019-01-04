@@ -130,11 +130,10 @@ int run_threads() {
     Value value;
 
     pthread_create(&th_producer, NULL, producer_routine, &value);
-    pthread_create(&th_interruptor, NULL, consumer_interruptor_routine,
-                   th_consumers);
     for (int i = 0; i < consumer_threads; ++i) {
         pthread_create(&th_consumers[i], NULL, consumer_routine, &value);
     }
+    pthread_create(&th_interruptor, NULL, consumer_interruptor_routine, th_consumers);
 
     pthread_join(th_producer, NULL);
     pthread_join(th_interruptor, NULL);
