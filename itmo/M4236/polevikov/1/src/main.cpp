@@ -101,8 +101,10 @@ void* consumer_routine(void* arg) {
 
         // usleep takes microseconds, so the
         // delay should be multiplied by 10^3
-        unsigned delay = (rand() % max_consumer_delay) * 1000;
-        usleep(delay);
+        if (max_consumer_delay > 0) {
+            unsigned delay = (rand() % max_consumer_delay) * 1000;
+            usleep(delay);
+        }
     }
 
     return &sum;
