@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "build & run file",
+        "type": "shell",
+        "command": "clang++",
+        "args": [
+          "-std=c++17",
+          "-stdlib=libc++",
+          "-o",
+          "main",
+          "main.cpp"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+  }
