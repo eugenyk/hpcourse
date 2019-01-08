@@ -25,7 +25,9 @@ static void producer_routine_impl(int *value) {
         pthread_mutex_unlock(&value_lock);
     }
     eof = 1;
+    pthread_mutex_lock(&value_lock);
     pthread_cond_broadcast(&value_ready_cond);
+    pthread_mutex_unlock(&value_lock);
 }
 
 static int consumer_routine_impl(int *value) {
