@@ -47,34 +47,15 @@ public final class PriorityQueueLockFreeImpl<E extends Comparable<E>> extends Ab
                 .collect(Collectors.toList());
     }
 
-
     @Override
     public int size() {
-        outerLoop:
-        for (;;) {
-            Node<E> oldHead = head.get();
-            int oldAmount = amount.get();
-            ArrayList<SubNode<E>> base_array = nodes();
-            ArrayList<ArrayList<SubNode<E>>> check_arrays = new ArrayList<>();
-            for (int i = 0; i < 10; i++) {
-                Thread.yield();
-                check_arrays.add(nodes());
-            }
-            if (oldHead == head.get()
-                    && oldHead.subNode == head.get().subNode
-                    && oldAmount == amount.get()) {
-                for (ArrayList<SubNode<E>> check_array : check_arrays) {
-                    if (!base_array.equals(check_array)) {
-                        continue outerLoop;
-                    }
-                }
-                List<E> elemArray = base_array.stream().map(sn -> sn.item).filter(Objects::nonNull).collect(Collectors.toList());
-                int localAmount = elemArray.size();
-                if (oldAmount == localAmount) {
-                    return localAmount;
-                }
-            }
-        }
+        throw new UnsupportedOperationException();
+    }
+
+
+    @Override
+    public boolean isEmpty() {
+        return peek() == null;
     }
 
     @Override

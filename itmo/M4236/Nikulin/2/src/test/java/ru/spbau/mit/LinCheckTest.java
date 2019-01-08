@@ -33,8 +33,8 @@ public class LinCheckTest {
     }
 
     @Operation
-    public Integer size() {
-        return q.size();
+    public boolean isEmpty() {
+        return q.isEmpty();
     }
     @Test
     public void runTest() {

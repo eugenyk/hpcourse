@@ -203,14 +203,4 @@ public class PriorityQueueLockFreeImplTest {
             Assert.assertEquals(expected_value, actual_value);
         }
     }
-
-    @Test
-    public void size() {
-        Queue<Integer> pq = makeLockFreeQueue(false);
-        int amount = random.nextInt(2016, 50_000);
-        random.ints(amount)
-                .parallel()
-                .forEach(pq::offer);
-        Assert.assertEquals("size must be the same", amount, pq.size());
-    }
 }
