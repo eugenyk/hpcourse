@@ -6,7 +6,7 @@
     http://www.cse.chalmers.se/~tsigas/papers/JPDC-Lock-free-skip-lists-and-Queues.pdf
 */
 
-package main.priorityqueue;
+package chirukhin.lab2.priorityqueue;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicMarkableReference;

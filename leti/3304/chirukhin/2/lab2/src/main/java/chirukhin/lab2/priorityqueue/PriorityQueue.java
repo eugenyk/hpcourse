@@ -1,4 +1,4 @@
-package main.priorityqueue;
+package chirukhin.lab2.priorityqueue;
 
 import java.util.Queue;
 

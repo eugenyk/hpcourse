@@ -30,25 +30,34 @@
  */
 package chirukhin.lab2;
 
-import org.openjdk.jcstress.annotations.*;
-import org.openjdk.jcstress.infra.results.II_Result;
+import chirukhin.lab2.priorityqueue.LockFreePriorityQueue;
 
-// See jcstress-samples or existing tests for API introduction and testing guidelines
+import org.openjdk.jcstress.annotations.*;
+import org.openjdk.jcstress.infra.results.III_Result;
+
+import static org.openjdk.jcstress.annotations.Expect.*;
 
 @JCStressTest
-// Outline the outcomes here. The default outcome is provided, you need to remove it:
-@Outcome(id = "0, 0", expect = Expect.ACCEPTABLE, desc = "Default outcome.")
+@Outcome(id = "1, 2, 1", expect = ACCEPTABLE, desc = "All ok.")
+@Outcome(expect = FORBIDDEN)
 @State
-public class ConcurrencyTest {
+public class ConsumerTest {
+    private final LockFreePriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
 
-    @Actor
-    public void actor1(II_Result r) {
-        // Put the code for first thread here
+    public ConsumerTest() {
+        queue.offer(1);
+        queue.offer(2);
+        queue.offer(3);
     }
 
     @Actor
-    public void actor2(II_Result r) {
-        // Put the code for second thread here
+    public void actor1(III_Result result) {
+        result.r1 = queue.poll();
+        result.r2 = queue.poll();
     }
 
+    @Arbiter
+    public void arbiter1(III_Result result) {
+        result.r3 = queue.size();
+    }
 }
