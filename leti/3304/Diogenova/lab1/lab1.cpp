@@ -14,7 +14,6 @@ int N;
 bool end_of_read = false;
 
 pthread_mutex_t sum_mut = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  sum_cond;
 int all_sum = 0;
 
 class Value {
@@ -65,10 +64,8 @@ void* producer_routine(void* arg) {
 int get_and_set_sum(int change) {
     int current_sum = 0;
     pthread_mutex_lock(&sum_mut);
-    pthread_cond_wait(&sum_cond, &sum_mut);
     all_sum += change;
     current_sum = all_sum;
-    pthread_cond_broadcast(&sum_cond);
     pthread_mutex_unlock(&sum_mut);
     return current_sum;
 }
@@ -104,7 +101,7 @@ void* consumer_routine(void* arg) {
         my_val = get_and_set_sum(change);
 
         int sleep = rand() % time_to_sleep;
-        usleep(sleep * 1000);
+        usleep(sleep);
     }
     if (my_val != all_sum) {
         my_val = get_and_set_sum(0);
@@ -118,7 +115,7 @@ void* consumer_interruptor_routine(void* arg) {
     int new_rand;
     while (!end_of_read) {
         double r = ((double) rand() / (RAND_MAX));
-        new_rand = ceil(r * N);
+        new_rand = ceil(r * (N-1));
         pthread_cancel(consumers[new_rand]);
     }
     pthread_exit(NULL);
