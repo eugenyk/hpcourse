@@ -14,6 +14,7 @@ volatile bool consTReady = false;
 // Value update sync
 pthread_mutex_t valMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t valCond = PTHREAD_COND_INITIALIZER;
+pthread_barrier_t barrier;
 volatile bool valReady = false;
 volatile bool inputDone = false;
 
@@ -43,12 +44,8 @@ void* producer_routine(void* arg)
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     std::vector<int> numbers;
 
-    pthread_mutex_lock(&valMutex);
     while (!consTReady)
-    {
-        pthread_cond_wait(&consTCond, &valMutex);
-    }
-    pthread_mutex_unlock(&valMutex);
+        pthread_barrier_wait(&barrier);
 
     std::string buf;
     std::getline(std::cin, buf);
@@ -167,6 +164,7 @@ int run_threads(int consumersNum)
     // Threads generation
     pthread_t producer;
     pthread_create(&producer, nullptr, producer_routine, value);
+    pthread_barrier_init(&barrier, nullptr, 1);
     
     pthread_t *consumers = new pthread_t[consumersNum];
     for (size_t i = 0; i < consumersNum; i++)
@@ -185,6 +183,7 @@ int run_threads(int consumersNum)
 
     pthread_join(producer, nullptr);
     pthread_join(interruptor, nullptr);
+    pthread_barrier_destroy(&barrier);
 
     delete[] consumers;
 
