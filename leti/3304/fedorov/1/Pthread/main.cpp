@@ -5,7 +5,8 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <windows.h>
+//#include <windows.h>
+#include <unistd.h>
 #include <ctime>
 using namespace std;
 
@@ -55,6 +56,7 @@ void* producer_routine(void* sharedValuePtr) {
 
 void* consumer_routine(void* sharedValuePtr) {
 	IsConsumerStart = true;
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	while (true)
 	{
 		while (!IsSharedDataChanged)
@@ -67,13 +69,13 @@ void* consumer_routine(void* sharedValuePtr) {
 		IsSharedDataChanged = false;
 		Sum += ((Value *)sharedValuePtr)->get();
 		IsConsumerReadSharedValue = true;
-		Sleep(rand() % (MaxSleepTime + 1));
+		usleep(rand() % (MaxSleepTime * 1000 + 1));
+//		usleep(1000);
 	}
 	return (void *)&Sum;
 }
 
 void* consumer_interruptor_routine(void* consumersIDPtr) {
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	while (!IsConsumerStart);
 	while (true)
 	{
@@ -111,6 +113,6 @@ int run_threads(int consumersCount) {
 int main(int argc, char *argv[]) {
 	MaxSleepTime = atoi(argv[2]);
 	cout << run_threads(atoi(argv[1])) << endl;
-	system("pause");
+//	system("pause");
 	return 0;
 }
