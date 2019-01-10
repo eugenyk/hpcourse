@@ -122,8 +122,11 @@ void* consumer_routine(void* arg) {
 
         pthread_mutex_unlock(&v_mutex);
 
+	unsigned sleepTime = 0;
+	if (sleepLimit != 0)
+		sleepTime = rand() % sleepLimit;
         timespec ts;
-        ts.tv_sec = (float)(rand() % sleepLimit) / 1000.0;
+        ts.tv_sec = (float)sleepTime / 1000.0;
         ts.tv_nsec = 0;
         nanosleep(&ts, NULL);
     }
