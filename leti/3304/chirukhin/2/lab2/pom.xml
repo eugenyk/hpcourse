@@ -55,6 +55,17 @@ THE POSSIBILITY OF SUCH DAMAGE.
             <artifactId>jcstress-core</artifactId>
             <version>${jcstress.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.devexperts.lincheck</groupId>
+            <artifactId>lincheck</artifactId>
+            <version>2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>RELEASE</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <properties>
@@ -117,5 +128,12 @@ THE POSSIBILITY OF SUCH DAMAGE.
             </plugin>
         </plugins>
     </build>
+
+    <repositories>
+        <repository>
+            <id>jcenter</id>
+            <url>https://dl.bintray.com/devexperts/Maven/</url>
+        </repository>
+    </repositories>
 
 </project>
