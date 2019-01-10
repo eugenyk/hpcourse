@@ -21,6 +21,7 @@ class Value
     int _value;
 };
 pthread_cond_t tcond = PTHREAD_COND_INITIALIZER;
+pthread_barrier_t mybarrier;
 volatile bool t_ready = false;
 pthread_mutex_t vmutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t vcond = PTHREAD_COND_INITIALIZER;
@@ -30,12 +31,7 @@ unsigned n_threads;
 unsigned m_sec;
 void *producer_routine(void *arg)
 {
-    pthread_mutex_lock(&vmutex);
-    while (!t_ready)
-    {
-        pthread_cond_wait(&tcond, &vmutex);
-    }
-    pthread_mutex_unlock(&vmutex);
+    pthread_barrier_wait(&mybarrier);
     Value *value_instance = reinterpret_cast<Value *>(arg);
     std::vector<int> input_values;
     std::string buf;
@@ -73,6 +69,7 @@ void *producer_routine(void *arg)
     static int count = 0;
     Value *value_instance = reinterpret_cast<Value *>(arg);
     Value *ret_val = new Value();
+    pthread_barrier_wait(&mybarrier);
      while (1)
     {
         pthread_mutex_lock(&vmutex);
@@ -122,6 +119,7 @@ void *producer_routine(void *arg)
     Value *ret_val;
     n_threads = threads_cnt;
     m_sec = msec;
+    pthread_barrier_init(&mybarrier, nullptr, n_threads + 1);
     pthread_t producer;
     pthread_create(&producer, nullptr, producer_routine, value_instance);
     pthread_t *consumers = new pthread_t[n_threads];
