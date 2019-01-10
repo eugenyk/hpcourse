@@ -2,7 +2,6 @@
 #include <pthread.h>
 #include <sstream>
 #include <unistd.h>
-#include <vector>
 #include <random>
 
 using namespace std;
@@ -35,8 +34,9 @@ namespace {
 
     int totalSum = 0;
 
-    vector<pthread_t> consumers;
     pthread_mutex_t consumersMutex;
+    pthread_t* consumers;
+    volatile unsigned consumersStartedCount = 0;
 }
 
 void* producer_routine(void* arg)
@@ -72,7 +72,7 @@ void* consumer_routine(void* arg)
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 
     pthread_mutex_lock(&consumersMutex);
-    consumers.push_back(pthread_self());
+    consumers[consumersStartedCount++] = pthread_self();
     pthread_mutex_unlock(&consumersMutex);
 
     const auto& value = *static_cast<Value*>(arg);
@@ -112,8 +112,8 @@ void* consumer_interruptor_routine(void* arg)
         static random_device random;
 
         pthread_mutex_lock(&consumersMutex);
-        if (!consumers.empty()) {
-            uniform_int_distribution<unsigned long> index(0, consumers.size() - 1);
+        if (consumersStartedCount > 0) {
+            uniform_int_distribution<unsigned long> index(0, consumersStartedCount - 1);
             pthread_cancel(consumers[index(random)]);
         }
         pthread_mutex_unlock(&consumersMutex);
@@ -136,20 +136,18 @@ int run_threads(int consumersCount)
 
     pthread_t producer;
     pthread_t interruptor;
-    consumers.resize(static_cast<size_t>(consumersCount));
+    consumers = new pthread_t[consumersCount];
 
     pthread_create(&producer, nullptr, &producer_routine, &value);
     pthread_create(&interruptor, nullptr, &consumer_interruptor_routine, nullptr);
-    for (pthread_t& consumer : consumers)
-        pthread_create(&consumer, nullptr, &consumer_routine, &value);
+    for (int i = 0; i < consumersCount; ++i)
+        pthread_create(&consumers[i], nullptr, &consumer_routine, &value);
 
     pthread_join(producer, nullptr);
     pthread_join(interruptor, nullptr);
     void* consumerRetval = nullptr;
-    for (const pthread_t& consumer : consumers)
-        pthread_join(consumer, &consumerRetval);
-
-    consumers.clear();
+    for (int i = 0; i < consumersCount; ++i)
+        pthread_join(consumers[i], &consumerRetval);
 
     pthread_mutex_destroy(&valueMutex);
     pthread_cond_destroy(&readCondition);
