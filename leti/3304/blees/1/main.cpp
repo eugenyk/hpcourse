@@ -44,8 +44,7 @@ void* producer_routine(void* arg)
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     std::vector<int> numbers;
 
-    while (!consTReady)
-        pthread_barrier_wait(&barrier);
+    pthread_barrier_wait(&barrier);
 
     std::string buf;
     std::getline(std::cin, buf);
@@ -94,6 +93,7 @@ void* consumer_routine(void* arg)
 
     // allocate value for result
     Value *result = new Value();
+    pthread_barrier_wait(&barrier);
 
     while (1)
     {
@@ -105,9 +105,11 @@ void* consumer_routine(void* arg)
             
             // notify about start
             consTReady = true;
+            
             pthread_cond_broadcast(&consTCond);
             count = 0;
         }
+
         do
         {
             pthread_cond_wait(&valCond, &valMutex);
@@ -164,7 +166,7 @@ int run_threads(int consumersNum)
     // Threads generation
     pthread_t producer;
     pthread_create(&producer, nullptr, producer_routine, value);
-    pthread_barrier_init(&barrier, nullptr, 1);
+    pthread_barrier_init(&barrier, nullptr, consumersNum + 1);
     
     pthread_t *consumers = new pthread_t[consumersNum];
     for (size_t i = 0; i < consumersNum; i++)
@@ -183,7 +185,6 @@ int run_threads(int consumersNum)
 
     pthread_join(producer, nullptr);
     pthread_join(interruptor, nullptr);
-    pthread_barrier_destroy(&barrier);
 
     delete[] consumers;
 
