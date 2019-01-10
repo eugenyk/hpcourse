@@ -13,7 +13,6 @@ int time_to_sleep = 0;
 int N;
 bool end_of_read = false;
 
-pthread_mutex_t sum_mut = PTHREAD_MUTEX_INITIALIZER;
 int all_sum = 0;
 
 class Value {
@@ -61,24 +60,13 @@ void* producer_routine(void* arg) {
     pthread_exit(NULL);
 }
 
-int get_and_set_sum(int change) {
-    int current_sum = 0;
-    pthread_mutex_lock(&sum_mut);
-    all_sum += change;
-    current_sum = all_sum;
-    pthread_mutex_unlock(&sum_mut);
-    return current_sum;
-}
-
-int get_val(Value* var) {
-    int change = 0;
-
+void add_val(Value* var) {
     pthread_mutex_lock(&get_mut);
-
     while (toggle) {
         pthread_cond_wait(&update_cond, &get_mut);
     }
-    change = var->get();
+
+    all_sum += var->get();
     pthread_cond_broadcast(&read_cond);
 
     if (!end_of_read) {
@@ -86,27 +74,20 @@ int get_val(Value* var) {
     }
 
     pthread_mutex_unlock(&get_mut);
-    return change;
 }
 
 void* consumer_routine(void* arg) {
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     Value* var = reinterpret_cast<Value*>(arg);
-    int my_val = 0;
-    int change = 0;
-    while (!end_of_read) {
-        change = get_val(var);
-        my_val += change;
-        my_val = get_and_set_sum(change);
 
-        int sleep = rand() % time_to_sleep;
+    while (!end_of_read) {
+        add_val(var);
+
+        int sleep = time_to_sleep ? rand() % time_to_sleep : 0;
         usleep(sleep);
     }
-    if (my_val != all_sum) {
-        my_val = get_and_set_sum(0);
-    }
-    pthread_exit((void *)my_val);
+    pthread_exit((void *)all_sum);
 }
 
 void* consumer_interruptor_routine(void* arg) {
