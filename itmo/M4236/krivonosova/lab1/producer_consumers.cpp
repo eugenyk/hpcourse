@@ -17,11 +17,7 @@ bool toggle = true;
 int time_to_sleep = 0;
 int N;
 bool end_of_read = false;
-
-pthread_mutex_t sum_mut = PTHREAD_MUTEX_INITIALIZER;
 int all_sum = 0;
-bool change = true;
-
 
 
 class Value {
@@ -41,26 +37,27 @@ private:
 };
 
 
+
 void* producer_routine(void* arg)
 {
     // Wait for consumer to start
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     Value* var = reinterpret_cast<Value*>(arg);
     std::string input_line;
-
     std::getline(std::cin, input_line);
     int input_value = 0;
     std::istringstream is(input_line);
-
     while (is >> input_value) {
-        
+
         pthread_mutex_lock(&get_mut);
         while (!toggle) {
             pthread_cond_wait(&read_cond, &get_mut);
         }
+
         var->update(input_value);
         toggle = !toggle;
 //        printf("producer  %d value update: %d \n",  pthread_self(), input_value);
+
         pthread_cond_signal(&udate_cond);
         pthread_mutex_unlock(&get_mut);
     }
@@ -71,59 +68,40 @@ void* producer_routine(void* arg)
     }
     var->update(0);
     toggle = !toggle;
+//    printf("producer  %d value update: %d \n",  pthread_self(), input_value);
     end_of_read = true;
-//    printf("end of read \n");
     pthread_cond_broadcast(&udate_cond);
     pthread_mutex_unlock(&get_mut);
+
+
     pthread_exit(NULL);
-}
-
-int get_and_set_sum(int change) {
-    int curent_sum = 0;
-    pthread_mutex_lock(&sum_mut);
-    all_sum += change;
-    curent_sum = all_sum;
-//    printf("consumer %d change %d, new sum: %d \n", pthread_self(), change, all_sum);
-    pthread_mutex_unlock(&sum_mut);
-    return curent_sum;
-}
-
-int get_val(Value* var) {
-    int change = 0;
-    pthread_mutex_lock(&get_mut);
-    while (toggle) {
-        pthread_cond_wait(&udate_cond, &get_mut);
-    }
-    change = var->get();
-//    printf("consumer %d get_new value: %d \n",  pthread_self(), change);
-    pthread_cond_broadcast(&read_cond);
-    if (!end_of_read) {
-        toggle = !toggle;
-    }
-    pthread_cond_broadcast(&read_cond);
-    pthread_mutex_unlock(&get_mut);
-    return change;
 }
 
 
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     Value* var = reinterpret_cast<Value*>(arg);
-    int my_val = 0;
-    int change = 0;
     while (!end_of_read) {
-        change = get_val(var);
-        my_val = get_and_set_sum(change);
-        change = 0;
+        pthread_mutex_lock(&get_mut);
+        while (toggle) {
+            pthread_cond_wait(&udate_cond, &get_mut);
+        }
+        all_sum += var->get();
+        toggle = !toggle;
+//        printf("%d consumer get value %d \n", pthread_self(), var->get());
+
+        if (end_of_read) {
+            toggle = !toggle;
+        }
+        pthread_cond_broadcast(&read_cond);
+        pthread_mutex_unlock(&get_mut);
 
         int sleep = rand() % time_to_sleep;
         usleep(sleep * 1000);
    }
-    if (my_val != all_sum) {
-        my_val = get_and_set_sum(0);
-    }
-//    printf("%d consumer end of get \n", pthread_self());
-    pthread_exit((void *)my_val);
+    int my_sum = 0;
+    my_sum = all_sum;
+    pthread_exit((void *)my_sum);
 }
 
 
