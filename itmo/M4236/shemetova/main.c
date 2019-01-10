@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #ifdef __APPLE__
@@ -10,6 +11,10 @@
 
 #define MAX_SOURCE_SIZE (0x100000)
 
+int closest_size(int size, int block) {
+    return ceil(size/(float) block)*block;
+}
+
 int main(int argc, char* argv[]) {
 	
 	if (argc < 2) {
@@ -19,6 +24,7 @@ int main(int argc, char* argv[]) {
 	
 	int const MAX_N = 1024;
 	int const MAX_M = 9;
+	size_t const MAX_BLOCK = 16;
     // Initialize the two input matrices
     FILE* file = fopen(argv[1], "r"); 
 
@@ -29,9 +35,10 @@ int main(int argc, char* argv[]) {
 	
 	int N, M;
 	int sc;
+	int scanf_res;
 	
-	sc = fscanf(file, "%d,", &N);
-	sc = fscanf(file, "%d,", &M);
+	scanf_res = fscanf(file, "%d,", &N);
+	scanf_res = fscanf(file, "%d,", &M);
 	
 	
 	float* A = (float *)malloc(N * N * sizeof(float));
@@ -145,8 +152,9 @@ int main(int argc, char* argv[]) {
     }
     
     // Execute the OpenCL kernel on the list
-	const size_t local[2] = { 16, 16 };
-    const size_t global[2] = { 1024, 1024 };
+	int grid = closest_size(N, MAX_BLOCK);
+	const size_t local[2] = { MAX_BLOCK, MAX_BLOCK };
+    const size_t global[2] = { grid, grid };
     ret = clEnqueueNDRangeKernel(command_queue, kernel, 2, NULL, 
             global, local, 0, NULL, NULL);
     if (ret != CL_SUCCESS)

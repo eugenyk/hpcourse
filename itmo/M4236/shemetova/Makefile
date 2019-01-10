@@ -8,7 +8,7 @@ else
 endif
 
 main: main.c
-	gcc main.c -o main -O2 /usr/lib/x86_64-linux-gnu/libOpenCL.so.1
+	gcc main.c -o main -O2 /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 -lm
 
 clean:
 	rm -rf main
