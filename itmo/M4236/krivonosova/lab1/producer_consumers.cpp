@@ -112,9 +112,7 @@ void* consumer_interruptor_routine(void* arg) {
     pthread_t *consumers = reinterpret_cast<pthread_t*>(arg);
     int new_rand;
     while (!end_of_read) {
-        double r = ((double) rand() / (RAND_MAX));
-        new_rand = ceil(r * N);
-        pthread_cancel(consumers[new_rand]);
+        pthread_cancel(consumers[rand() % N]);
     }
     pthread_exit(NULL);
 
