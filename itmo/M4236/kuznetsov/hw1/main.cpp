@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <unistd.h>
+#include <cassert>
 
 class Value {
 public:
@@ -133,7 +134,7 @@ void* producer_routine(void* arg) {
 		value->update(next_value);
 		status = signal_status::VALUE_READY;
 
-		pthread_cond_broadcast(&new_value_prepared);
+		pthread_cond_signal(&new_value_prepared);
 
 		while (status != signal_status::VALUE_CONSUMED) {
 			pthread_cond_wait(&value_consumed, &producer_consumer_mutex);
@@ -142,6 +143,12 @@ void* producer_routine(void* arg) {
 	}
 	stop_consumers();
 	return nullptr;
+}
+
+void sleep_for_random_time(uint32_t max_sleeping_time) {
+	assert(max_sleeping_time > 0);
+	uint32_t sleeping_time = ((uint32_t) random() % max_sleeping_time) * 1000;
+	usleep(sleeping_time);
 }
 
 void* consumer_routine(void* arg) {
@@ -176,8 +183,9 @@ void* consumer_routine(void* arg) {
 		}
 		pthread_cond_signal(&value_consumed);
 		pthread_mutex_unlock(&producer_consumer_mutex);
-		uint32_t sleeping_time = ((uint32_t)random() % max_sleeping_time) * 1000;
-		usleep(sleeping_time);
+		if (max_sleeping_time > 0) {
+			sleep_for_random_time(max_sleeping_time);
+		}
 	}
 
 	// Allow consumer to be cancelled
