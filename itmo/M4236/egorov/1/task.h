@@ -141,12 +141,13 @@ int run_threads(int nThreads) {
     pthread_create(&interruptThread, NULL, consumer_interruptor_routine, &nThreads);
     
     pthread_join(prodThread, nullptr);
-    hasToStop = true;
-    pthread_cond_signal(&variable_prepared);
     
     pthread_cancel(interruptThread);
     pthread_join(interruptThread, NULL);
     
+    hasToStop = true;
+    pthread_cond_signal(&variable_prepared);
+
     void * resPointer = nullptr;
     pthread_join(threads[0], &resPointer);
     
