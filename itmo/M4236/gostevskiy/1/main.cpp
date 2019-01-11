@@ -2,7 +2,7 @@
 #include <iostream>
 #include <unistd.h>
 
-int sum = 0;
+//int sum = 0;
 int num_threads;
 pthread_cond_t cond_prod = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_cons = PTHREAD_COND_INITIALIZER;
@@ -27,6 +27,8 @@ private:
     int _value;
 };
 
+Value sum;
+
 void* producer_routine(void* arg) {
     // Wait for consumer to start
     Value* val = static_cast<Value*>(arg);
@@ -49,9 +51,11 @@ void* producer_routine(void* arg) {
         pthread_cond_signal(&cond_cons);
         pthread_mutex_unlock(&mt);
     }
-    while (changed);
+//    while (changed);
+    pthread_mutex_lock(&mt);
     the_end = true;
     pthread_cond_broadcast(&cond_cons);
+    pthread_mutex_unlock(&mt);
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
 
 }
@@ -63,11 +67,11 @@ void* consumer_routine(void* arg) {
     while (true) {
         pthread_mutex_lock(&mt);
         while (!changed && !the_end) pthread_cond_wait(&cond_cons, &mt);
-        if (the_end) {
+        if (the_end && !changed) {
             pthread_mutex_unlock(&mt);
             break;
         }
-        sum += static_cast<Value*>(arg)->get();
+        sum.update(sum.get() + static_cast<Value*>(arg)->get());
         changed = false;
         pthread_cond_signal(&cond_prod);
         pthread_mutex_unlock(&mt);
