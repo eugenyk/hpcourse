@@ -32,7 +32,6 @@ bool IsSharedDataChanged = false;
 bool IsInputEnded = false;
 pthread_mutex_t Mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t DataChangedCondition = PTHREAD_COND_INITIALIZER;
-pthread_cond_t ConsumerStartCondition = PTHREAD_COND_INITIALIZER;
 int ConsumersCount;
 
 void* producer_routine(void* sharedValuePtr) {
@@ -52,14 +51,13 @@ void* producer_routine(void* sharedValuePtr) {
 		}
 		pthread_mutex_lock(&Mutex);
 		((Value *)sharedValuePtr)->update(number);
+        	while (IsSharedDataChanged)
+            		pthread_cond_wait(&DataChangedCondition, &Mutex);
 		IsSharedDataChanged = true;
         	pthread_cond_broadcast(&DataChangedCondition);
-           	pthread_cond_wait(&ConsumerStartCondition, &Mutex);
-        	IsSharedDataChanged = false;
 		pthread_mutex_unlock(&Mutex);
 	}
 	pthread_mutex_lock(&Mutex);
-    	IsSharedDataChanged = true;
     	pthread_cond_broadcast(&DataChangedCondition);
 	pthread_mutex_unlock(&Mutex);
 	return NULL;
@@ -68,27 +66,20 @@ void* producer_routine(void* sharedValuePtr) {
 void* consumer_routine(void* sharedValuePtr) {
 	IsConsumerStart = true;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	static int count = 0;
-    	Value *sum = new Value();
+    	static Value *sum = new Value();
 	while (true)
 	{
 		pthread_mutex_lock(&Mutex);
-        	count++;
-        	if (count >= ConsumersCount)
-        	{
-            		pthread_cond_broadcast(&ConsumerStartCondition);
-            		count = 0;
-        	}
-        	do
-		{
+        	while (!IsSharedDataChanged && !IsInputEnded)
             		pthread_cond_wait(&DataChangedCondition, &Mutex);
-		}while (!IsSharedDataChanged);
-		if (IsInputEnded)
+		if (!IsSharedDataChanged)
 		{
 			pthread_mutex_unlock(&Mutex);
 			break;
 		}
 		sum->update(sum->get() + ((Value *)sharedValuePtr)->get());
+		IsSharedDataChanged = false;
+        	pthread_cond_broadcast(&DataChangedCondition);
 		pthread_mutex_unlock(&Mutex);
 		usleep(rand() % (MaxSleepTime * 1000 + 1));
 //		usleep(1000);
