@@ -116,7 +116,7 @@ void* consumer_routine(void* arg)
 
         do
         {
-            ;pthread_cond_wait(&valCond, &valMutex);
+            pthread_cond_wait(&valCond, &valMutex);
         }
         while (!valReady);
 
