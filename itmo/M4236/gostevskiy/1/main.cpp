@@ -39,6 +39,7 @@ void* producer_routine(void* arg) {
         int elem;
         for (int j = i; j < data.size(); ++j) {
             if (data[j] == ' ' || j == data.size() - 1) {
+                if (j == data.size() - 1) j++;
                 elem = std::stoi(data.substr(i, j));
                 i = j;
                 break;
@@ -53,6 +54,7 @@ void* producer_routine(void* arg) {
     }
 //    while (changed);
     pthread_mutex_lock(&mt);
+    while (changed) pthread_cond_wait(&cond_prod, &mt);
     the_end = true;
     pthread_cond_broadcast(&cond_cons);
     pthread_mutex_unlock(&mt);
@@ -68,6 +70,7 @@ void* consumer_routine(void* arg) {
         pthread_mutex_lock(&mt);
         while (!changed && !the_end) pthread_cond_wait(&cond_cons, &mt);
         if (the_end && !changed) {
+            pthread_cond_signal(&cond_prod);
             pthread_mutex_unlock(&mt);
             break;
         }
@@ -75,7 +78,7 @@ void* consumer_routine(void* arg) {
         changed = false;
         pthread_cond_signal(&cond_prod);
         pthread_mutex_unlock(&mt);
-        sleep(std::rand() % 5);
+        sleep(std::rand() % 1);
     }
     return &sum;
     // for every update issued by producer, read the value and add to sum
