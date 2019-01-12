@@ -147,11 +147,12 @@ int run_threads() {
   
   //ждем завершения потока
   pthread_join(produser_thread, NULL);
+  pthread_join(interruptor_thread, NULL);
   //ожидаем выполнение всех потоков
   void *returnValue; 
   for(int i = 0; i < threads_num; i++)
       pthread_join(threads[i], &returnValue);
-  pthread_join(interruptor_thread, NULL);
+  
   int* res =  static_cast<int*>(returnValue);
   return *res;
 }
