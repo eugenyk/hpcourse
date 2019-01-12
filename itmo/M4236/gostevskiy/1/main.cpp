@@ -59,7 +59,7 @@ void* producer_routine(void* arg) {
     pthread_cond_broadcast(&cond_cons);
     pthread_mutex_unlock(&mt);
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
-
+    pthread_exit(NULL);
 }
 
 void* consumer_routine(void* arg) {
@@ -89,7 +89,7 @@ void* consumer_interruptor_routine(void* arg) {
     // wait for consumer to start
     pthread_barrier_wait(&barrier);
     while (!the_end) pthread_cancel(static_cast<pthread_t*>(arg)[std::rand() % num_threads]);
-    return nullptr;
+    pthread_exit(NULL);
     // interrupt consumer while producer is running
 }
 
@@ -109,13 +109,14 @@ int run_threads() {
     pthread_create(&inter, nullptr, consumer_interruptor_routine, cons);
     pthread_join(prod, nullptr);
     int* res;
+    pthread_join(inter, nullptr);
     pthread_join(*cons, (void**)&res);
     for (int i = 1; i < num_threads; ++i) pthread_join(cons[i], nullptr);
-    pthread_join(inter, nullptr);
     return *res;
 }
 
 int main(int argc, char* argv[]) {
+
     num_threads = std::atoi(argv[1]);
     std::cout << run_threads() << std::endl;
     return 0;
