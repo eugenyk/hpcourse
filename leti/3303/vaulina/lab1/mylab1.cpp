@@ -11,11 +11,9 @@
 
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t start_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t condition =  PTHREAD_COND_INITIALIZER;
+pthread_cond_t data_ready =  PTHREAD_COND_INITIALIZER;
 
-bool value_updated =  true;
-bool start = false;
+bool value_updated =  false;
 bool finish = false;
 
 int sleep_time;
@@ -34,10 +32,11 @@ std::vector<std::string> split(const std::string& s, char delimiter)
     tokens.push_back(token);
   }
   return tokens;
-  }
+}
 
 std::vector<int> get_values_list(){
-  std::string str = "";
+    std::string str = "";
+    std::cout<<"Enter a list of numbers"<<std::endl;
     std::getline(std::cin, str);
     std::vector<std::string> nums_str = split(str,' ');
     std::vector<int> nums;
@@ -68,26 +67,18 @@ void* producer_routine(void* arg) {
 // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
   std::vector<int> numlist =  get_values_list();
   Value* v =  static_cast<Value*>(arg);
-  std::cout << "начинаем считать" << std::endl;
-   pthread_mutex_lock(&mutex);
-       
-        (*v).update(numlist.back());
-        value_updated = true;
-        numlist.pop_back();   
-      pthread_mutex_unlock(&mutex);
-  while (!(numlist.empty())){
-    
+  do{
     pthread_mutex_lock(&mutex);
-
-        pthread_cond_wait(&condition, &mutex); 
-        std::cout << "producer_routine " << std::endl;
+      if(!value_updated){
         (*v).update(numlist.back());
         value_updated = true;
         numlist.pop_back();   
-      pthread_mutex_unlock(&mutex);
-      
-  }
-  finish = true;
+      }
+    pthread_mutex_unlock(&mutex);
+  }while (!(numlist.empty()));
+  pthread_mutex_lock(&mutex);
+    finish = true;
+  pthread_mutex_unlock(&mutex);
 }
  
 void* consumer_routine(void* arg) {
@@ -96,23 +87,26 @@ void* consumer_routine(void* arg) {
   // return pointer to result (aggregated result for all consumers)
   
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-std::cout << "запущен consumer_routine" << std::endl;
-  Value* v =  static_cast<Value*>(arg);
-  srand( time( 0 ) );
-  while(value_updated||!finish){
 
-    pthread_mutex_lock(&mutex);
+// Get thread Id of calling thread
+  pthread_t thId = pthread_self();
+  Value* v =  static_cast<Value*>(arg);
+    srand( time( 0 ) );
     
-      if(value_updated){
-         sum+=(*v).get(); 
-         std::cout <<pthread_self()<<" "<< (*v).get() << std::endl;
-         value_updated = false;
-         pthread_cond_broadcast( &condition);
-   
-      }
-    pthread_mutex_unlock(&mutex);
-    usleep((rand() % sleep_time +1 )*1000);
+    while(true){
+      pthread_mutex_lock(&mutex);
+        if(!value_updated&&finish){
+          pthread_mutex_unlock(&mutex);
+          break;
+        }
+        if(value_updated){
+             sum+=(*v).get(); 
+             value_updated = false;
+        }
+      pthread_mutex_unlock(&mutex);
+      usleep((rand() % (sleep_time +1) )*1000);
   }
+    
   void* ptr = &sum;
   return ptr;
 }
@@ -122,15 +116,17 @@ void* consumer_interruptor_routine(void* arg) {
   // interrupt consumer while producer is running 
   pthread_t* threads = static_cast<pthread_t*>(arg);
   srand( time( 0 ) );
-  int b = 1;
-  while(!finish){
-    int i = rand() % threads_num;
+  //int b = 1;
+  while(true){
     pthread_mutex_lock(&mutex);
-    pthread_cond_wait(&condition, &mutex); 
-    pthread_cancel(threads[i]);
+      if(finish){
+        pthread_mutex_unlock(&mutex);
+          break;
+      }
     pthread_mutex_unlock(&mutex);
-    
-    } 
+    int i = rand() % threads_num;
+    pthread_cancel(threads[i]);
+  } 
   
 }
  
@@ -138,7 +134,6 @@ int run_threads() {
   // start N threads and wait until they're done
   // return aggregated sum of values
   Value value;
-  std::cout << "Запускаю потоки" << std::endl;
   pthread_t produser_thread;
   pthread_create(&produser_thread, NULL, producer_routine,  &value);
   pthread_t* threads = (pthread_t*) malloc(threads_num * sizeof(pthread_t));
