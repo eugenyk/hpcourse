@@ -91,8 +91,8 @@ void* consumer_routine(void* arg) {
         }
         sum += value->get();
         status = CONSUMER_READY;
-        pthread_mutex_unlock(&mutex);
         pthread_cond_broadcast(&producer_monitor);
+        pthread_mutex_unlock(&mutex);
 
         int time = rand() % MAX_SLEEP_TIME;
         usleep(static_cast<__useconds_t>(time * 1000));
@@ -103,28 +103,10 @@ void* consumer_routine(void* arg) {
 
 void* consumer_interruptor_routine(void* arg) {
     auto consumers = static_cast<const std::vector<pthread_t> *>(arg);
-
-    // wait for consumer to start
-    if(status == NOT_STARTED) {
-        pthread_mutex_lock(&mutex);
-        while (status != STARTED) {
-            pthread_cond_wait(&producer_monitor, &mutex);
-        }
-        pthread_mutex_unlock(&mutex);
-    }
 //     interrupt consumer while producer is running
     while (status != FINISHED) {
-        pthread_mutex_lock(&mutex);
-        while (status != CONSUMER_READY && status != FINISHED ) {
-            pthread_cond_wait(&producer_monitor, &mutex);
-        }
-        if(status == FINISHED) {
-            pthread_mutex_unlock(&mutex);
-            break;
-        }
         auto i = static_cast<size_t>(rand() % CONSUMER_NUMBER);
         pthread_cancel(reinterpret_cast<pthread_t>(consumers->at(i)));
-        pthread_mutex_unlock(&mutex);
     }
     return nullptr;
 }
