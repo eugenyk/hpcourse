@@ -47,20 +47,20 @@ void* producer_routine(void* arg) {
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     auto value = static_cast<Value *>(arg);
 
+    pthread_mutex_lock(&mutex);
     int num;
     while (std::cin >> num) {
-        pthread_mutex_lock(&mutex);
         value->update(num);
         status = PRODUCER_READY;
-        pthread_cond_broadcast(&consumer_monitor);
+        pthread_cond_signal(&consumer_monitor);
         while (status != CONSUMER_READY) {
             pthread_cond_wait(&producer_monitor, &mutex);
         }
-        pthread_mutex_unlock(&mutex);
     }
 
     status = FINISHED;
     pthread_cond_broadcast(&consumer_monitor);
+    pthread_mutex_unlock(&mutex);
 
     return static_cast<void *>(value);
 }
