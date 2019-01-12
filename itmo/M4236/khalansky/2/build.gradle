@@ -1,0 +1,29 @@
+group 'ru.ifmo.ct.khalansky'
+version '1.0'
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+apply plugin: 'jcstress'
+
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'com.devexperts.lincheck', name: 'lincheck', version: '2.0'
+}
