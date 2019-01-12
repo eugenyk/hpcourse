@@ -30,6 +30,7 @@ static int MAX_DELAY;
 int result;
 
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_barrier_t barrier_started;
 pthread_cond_t cond_producer = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_consumer = PTHREAD_COND_INITIALIZER;
 states state = BEFORE_STARTED;
@@ -82,6 +83,8 @@ void *consumer_routine(void *arg) {
     Value *value = static_cast<Value *>(arg);
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 
+    pthread_barrier_wait(&barrier_started);
+
     // notify about start
     pthread_mutex_lock(&m);
     if (state == BEFORE_STARTED) {
@@ -117,11 +120,12 @@ void *consumer_routine(void *arg) {
 void *consumer_interruptor_routine(void *arg) {
     std::vector<pthread_t> &consumers = *static_cast<std::vector<pthread_t> *> (arg);
 
-    // Wait for consumer to start
-    pthread_mutex_lock(&m);
-    while (state != STARTED)
-        pthread_cond_wait(&cond_producer, &m);
-    pthread_mutex_unlock(&m);
+    // Wait for consumers to start
+    pthread_barrier_wait(&barrier_started);
+//    pthread_mutex_lock(&m);
+//    while (state != STARTED)
+//        pthread_cond_wait(&cond_producer, &m);
+//    pthread_mutex_unlock(&m);
 
     // interrupt consumer while producer is running
     pthread_mutex_lock(&m);
@@ -168,7 +172,11 @@ int main(int argc, char *argv[]) {
     N_CONSUMERS = std::atoi(argv[1]);
     MAX_DELAY = std::atoi(argv[2]);
 
+    pthread_barrier_init(&barrier_started, NULL, N_CONSUMERS + 1);
+
     std::cout << run_threads() << std::endl;
+
+    pthread_barrier_destroy(&barrier_started);
 
     return 0;
 }
