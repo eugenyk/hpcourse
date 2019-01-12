@@ -20,7 +20,8 @@ class LockFreePriorityQueue<E : Comparable<E>> : PriorityQueue<E>, AbstractQueue
     override fun offer(e: E): Boolean {
         while (true) {
             val (prev, next) = findPosition(e)
-            if (prev.changeNext(next, Node(e, next))) {
+            val newNext = Node(e, next)
+            if (prev.changeNext(next, newNext)) {
                 totalSize.incrementAndGet()
                 return true
             }
@@ -28,8 +29,8 @@ class LockFreePriorityQueue<E : Comparable<E>> : PriorityQueue<E>, AbstractQueue
     }
 
     override fun peek(): E? {
+        var first = head.next
         while (true) {
-            val first = head.next
             if (first === head) {
                 return null
             }
@@ -37,6 +38,8 @@ class LockFreePriorityQueue<E : Comparable<E>> : PriorityQueue<E>, AbstractQueue
             if (!first.isMarked) {
                 return first.value
             }
+
+            first = first.next
         }
     }
 
@@ -101,8 +104,8 @@ class LockFreePriorityQueue<E : Comparable<E>> : PriorityQueue<E>, AbstractQueue
 
     private class Node<E>(val value: E? = null, next: Node<E>? = null) {
         private val mark = AtomicMarkableReference(next, false)
-        val next: Node<E> = mark.reference!!
-        val isMarked = mark.isMarked
+        val next: Node<E> get() = mark.reference!!
+        val isMarked get() = mark.isMarked
 
         fun mark(next: Node<E>) =
                 mark.compareAndSet(next, next, false, true)
