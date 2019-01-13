@@ -124,8 +124,8 @@ int run_threads() {
     }
     pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers);
 
-    pthread_join(producer, nullptr);
     pthread_join(interruptor, nullptr);
+    pthread_join(producer, nullptr);
 
     // return aggregated sum of values
     int result = 0;
