@@ -8,7 +8,7 @@ import com.devexperts.dxlab.lincheck.LinChecker
 import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest
 
 @StressCTest
-@Param(name = "e", gen = IntGen::class, conf = "1:1000")
+@Param(name = "e", gen = IntGen::class, conf = "1:10000")
 class PriorityQueueLinearizationTest {
 
     val queue = LockFreePriorityQueue<Int>()
@@ -21,6 +21,9 @@ class PriorityQueueLinearizationTest {
 
     @Operation
     fun poll(): Int? = queue.poll()
+
+    @Operation
+    fun empty(): Boolean = queue.isEmpty()
 
     @Test
     fun runTest() {

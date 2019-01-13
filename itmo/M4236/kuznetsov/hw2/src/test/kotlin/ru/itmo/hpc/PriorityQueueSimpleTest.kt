@@ -15,7 +15,6 @@ class LockFreePriorityQueueTest {
     fun `test offer works correctly in parallel`() {
         val list = permutation(10000)
         list.parallelStream().forEach { queue.offer(it) }
-        assertEquals(10000, queue.size)
 
         for (i in 1..10000) {
             assertEquals(i, queue.peek())
@@ -52,7 +51,6 @@ class LockFreePriorityQueueTest {
 
         pollingThreads.forEach { it.join() }
 
-        assertEquals(5000, queue.size)
         for (i in 5001..10000) {
             assertEquals(i, queue.peek())
             assertEquals(i, queue.poll())
@@ -76,7 +74,7 @@ class LockFreePriorityQueueTest {
         }
         threads.forEach { it.join() }
 
-        assertEquals(0, queue.size)
+        assertTrue(queue.isEmpty())
     }
 
     @Test
@@ -114,8 +112,6 @@ class LockFreePriorityQueueTest {
 
         offeringThreads.forEach { it.join() }
         pollingThreads.forEach { it.join() }
-
-        assertEquals(5000, queue.size - pollsOnEmptyQueue.get())
 
         // We cannot say anything about remaining values, because we don't know
         // at which moment every value was offered.

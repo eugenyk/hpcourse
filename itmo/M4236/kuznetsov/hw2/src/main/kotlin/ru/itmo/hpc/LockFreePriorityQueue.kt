@@ -2,15 +2,12 @@ package ru.itmo.hpc
 
 import java.util.*
 import java.util.concurrent.atomic.AtomicMarkableReference
-import java.util.concurrent.atomic.LongAdder
 
 /**
  * Implementation based on the concepts of Harris list
  * @link https://timharris.uk/papers/2001-disc.pdf
  */
 class LockFreePriorityQueue<E: Comparable<E>>: AbstractQueue<E>(), PriorityQueue<E> {
-
-    private val queueSize = LongAdder()
 
     override fun offer(e: E): Boolean {
 
@@ -22,7 +19,6 @@ class LockFreePriorityQueue<E: Comparable<E>>: AbstractQueue<E>(), PriorityQueue
                             Node(e, current),
                             false,
                             false)) {
-                queueSize.increment()
                 return true
             }
         }
@@ -31,6 +27,9 @@ class LockFreePriorityQueue<E: Comparable<E>>: AbstractQueue<E>(), PriorityQueue
     override fun iterator(): MutableIterator<E> {
         TODO("not implemented")
     }
+
+    override val size: Int
+        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
 
     override fun peek(): E? {
         return getInsertPosition().current.data
@@ -50,14 +49,14 @@ class LockFreePriorityQueue<E: Comparable<E>>: AbstractQueue<E>(), PriorityQueue
                 return null
             val next = appropriateNode.nextNode
             if (appropriateNode.compareAndSetNext(next, next, false, true)) {
-                queueSize.decrement()
                 return appropriateNode.data
             }
         }
     }
 
-    override val size: Int get() {
-        return queueSize.sum().toInt()
+    override fun isEmpty(): Boolean {
+        val (prev, curr) = getInsertPosition()
+        return (prev == HEAD && curr == TAIL)
     }
 
     inner class Node<E: Comparable<E>>(
