@@ -13,7 +13,7 @@ public class JCStressQueueTest {
     public static class AddManyTest {
         @State
         public static class QState {
-            Queue<Integer> queue = new HPPriorityQueue<>();
+            Queue<Integer> queue = new LockFreePriorityQueue<>();
         }
 
         @Actor
@@ -71,7 +71,7 @@ public class JCStressQueueTest {
     public static class PeekTest {
         @State
         public static class QState {
-            Queue<Integer> queue = new HPPriorityQueue<>();
+            Queue<Integer> queue = new LockFreePriorityQueue<>();
         }
 
         @Actor

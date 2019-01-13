@@ -10,7 +10,7 @@ import org.junit.Test;
 @Param(name = "element", gen = IntGen.class, conf = "1:1000")
 @StressCTest
 public class LinCheckQueueTest {
-    private HPPriorityQueue<Integer> queue = new HPPriorityQueue<>();
+    private LockFreePriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
 
 
     @Operation

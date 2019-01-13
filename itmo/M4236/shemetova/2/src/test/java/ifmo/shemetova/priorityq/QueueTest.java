@@ -14,7 +14,7 @@ public class QueueTest {
 
     @Test
     public void oneThreadTest() {
-        HPPriorityQueue queue = new HPPriorityQueue<Integer>();
+        LockFreePriorityQueue queue = new LockFreePriorityQueue<Integer>();
         assertTrue(queue.isEmpty());
         assertTrue(queue.offer(2));
         assertFalse(queue.isEmpty());
@@ -32,7 +32,7 @@ public class QueueTest {
 
     @Test
     public void addManyTest() {
-        HPPriorityQueue queue = new HPPriorityQueue<Integer>();
+        LockFreePriorityQueue queue = new LockFreePriorityQueue<Integer>();
         CountDownLatch latch = new CountDownLatch(1000);
         for (int i = 0; i < 1000; i++) {
             final int j = i;
@@ -59,7 +59,7 @@ public class QueueTest {
 
     @Test
     public void addAndDeleteTest() {
-        HPPriorityQueue queue = new HPPriorityQueue<Integer>();
+        LockFreePriorityQueue queue = new LockFreePriorityQueue<Integer>();
         CountDownLatch latch = new CountDownLatch(1500);
         for (int i = 1000; i > 0; i--) {
             final int j = i;

@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 //https://www.cl.cam.ac.uk/research/srg/netos/papers/2001-caslists.pdf
 
 
-public class HPPriorityQueue<E extends Comparable<E>> extends AbstractQueue<E> implements PriorityQueue<E> {
+public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueue<E> implements PriorityQueue<E> {
 
     private Node<E> head; //empty, next shows first element
     private Node<E> tail; //empty, after the last element
@@ -80,7 +80,7 @@ public class HPPriorityQueue<E extends Comparable<E>> extends AbstractQueue<E> i
 
     }
 
-    public HPPriorityQueue() {
+    public LockFreePriorityQueue() {
         head = new Node<E>(null);
         tail = new Node<E>(null);
         head.setNext(tail);
@@ -91,7 +91,7 @@ public class HPPriorityQueue<E extends Comparable<E>> extends AbstractQueue<E> i
     }
 
     public boolean isEmpty() {
-        return size.get() == 0;
+        return peek() == null;
     }
 
     public Iterator<E> iterator() {
