@@ -133,7 +133,7 @@ void* consumer_interruptor_routine(void* arg) {
     if(status == 0) {
         //Waiting
         pthread_mutex_lock(&mutex);
-        while(status != 1)
+        while(status == 0)
         {
             pthread_cond_wait(&cond_p, &mutex);
         }
