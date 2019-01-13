@@ -63,7 +63,7 @@ void* producer_routine(void* arg) {
         value->update(number);
         // notify consumer
         status = 2;
-        pthread_cond_signal(&cond_c);
+         pthread_cond_broadcast(&cond_c);
         // wait time to work
         while (status != 3)
         {
@@ -212,6 +212,9 @@ int main(int argc, const char *argv[]) {
     }
     N = atoi(argv[1]);
     sleepLimit = atoi(argv[2]);
+   if (sleepLimit <= 0){
+	sleepLimit = 1;
+   }
     std::cout << run_threads() << std::endl;
     return 0;
 }
