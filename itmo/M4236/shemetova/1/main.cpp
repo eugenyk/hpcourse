@@ -162,11 +162,13 @@ int run_threads() {
     std::vector<pthread_t> consumers(consumer_number);
     
     pthread_create(&producer, nullptr, producer_routine, &shared::value);
-    pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers);
+    
     
     for (auto& cons : consumers) {
         pthread_create(&cons, nullptr, consumer_routine, &shared::value);
     }
+ 
+    pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers); //bug fix, interuptor should start after consumer threads
     
 
     pthread_join(producer, nullptr);
