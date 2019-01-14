@@ -40,7 +40,7 @@ void* producer_routine(void* arg) {
 
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     //Read data
-    string input, tmp;
+    string input;
     cout << "Enter numbers:\n\t";
     getline(cin, input);
     stringstream stream(input);
