@@ -100,7 +100,7 @@ class LockFreePriorityQueue<E : Comparable<E>> : PriorityQueue<E>, AbstractQueue
         }
     }
 
-    override fun isEmpty(): Boolean = size == 0
+    override fun isEmpty(): Boolean = peek() == null
 
     private class Node<E>(val value: E? = null, next: Node<E>? = null) {
         private val mark = AtomicMarkableReference(next, false)
