@@ -1,9 +1,10 @@
 package LockFreePriorityQueue;
+import java.util.Queue;
 /**
  * Очередь с приоритетами
  * @param <E> Тип элементов
  */
-public interface PriorityQueue<E extends Comparable<E>> 
+public interface PriorityQueue<E extends Comparable<E>> extends Queue<E>
 {
  
     /**
