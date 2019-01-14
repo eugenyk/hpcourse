@@ -185,25 +185,24 @@ public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQ
                 if(elementAfterCur!=null)
                     elementAfterCur = elementAfterCur.Next.get();
             }
-			AtomicReference<LockFreePriorityQueueElement<E>> minElementNextReference = new AtomicReference<>(minElement.Next.get());
             if(elementBeforeMin==null)
             {
-				if((minElementNextReference.compareAndSet(elementAfterMin, elementAfterMin))&&
-					(Head.compareAndSet(minElement, elementAfterMin)))
+				if(Head.compareAndSet(minElement, elementAfterMin))
 				{
 					if(minElement.Next.compareAndSet(elementAfterMin, null))
 						return minElement.Value;
-					Head.compareAndSet(elementAfterMin, minElement);
+					if(!Head.compareAndSet(elementAfterMin, minElement))
+						Head.get().Next=new AtomicReference<>(minElement);
 				}
             }
             else
             {
-				if((minElementNextReference.compareAndSet(elementAfterMin, elementAfterMin))&&
-					(elementBeforeMin.Next.compareAndSet(minElement, elementAfterMin)))
+				if(elementBeforeMin.Next.compareAndSet(minElement, elementAfterMin))
 				{
 					if((minElement.Next.compareAndSet(elementAfterMin, null)))
 						return minElement.Value;
-					elementBeforeMin.Next.compareAndSet(elementAfterMin, minElement);
+					if(!elementBeforeMin.Next.compareAndSet(elementAfterMin, minElement))
+						elementBeforeMin.Next.get().Next=new AtomicReference<>(minElement);
 				}
             }
 		}
@@ -244,25 +243,24 @@ public class LockFreePriorityQueue<E extends Comparable<E>> implements PriorityQ
                 if(elementAfterCur!=null)
                     elementAfterCur = elementAfterCur.Next.get();
             }
-			AtomicReference<LockFreePriorityQueueElement<E>> minElementNextReference = new AtomicReference<>(minElement.Next.get());
             if(elementBeforeMin==null)
             {
-				if((minElementNextReference.compareAndSet(elementAfterMin, elementAfterMin))&&
-					(Head.compareAndSet(minElement, elementAfterMin)))
+				if(Head.compareAndSet(minElement, elementAfterMin))
 				{
 					if(minElement.Next.compareAndSet(elementAfterMin, null))
 						return minElement.Value;
-					Head.compareAndSet(elementAfterMin, minElement);
+					if(!Head.compareAndSet(elementAfterMin, minElement))
+						Head.get().Next=new AtomicReference<>(minElement);
 				}
             }
             else
             {
-				if((minElementNextReference.compareAndSet(elementAfterMin, elementAfterMin))&&
-					(elementBeforeMin.Next.compareAndSet(minElement, elementAfterMin)))
+				if(elementBeforeMin.Next.compareAndSet(minElement, elementAfterMin))
 				{
 					if((minElement.Next.compareAndSet(elementAfterMin, null)))
 						return minElement.Value;
-					elementBeforeMin.Next.compareAndSet(elementAfterMin, minElement);
+					if(!elementBeforeMin.Next.compareAndSet(elementAfterMin, minElement))
+						elementBeforeMin.Next.get().Next=new AtomicReference<>(minElement);
 				}
             }
 		}
