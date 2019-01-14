@@ -1,164 +1,196 @@
 #include <iostream>
 #include <pthread.h>
 #include <sstream>
-#include "unistd.h"
 #include <vector>
+#include <unistd.h>
 
-using namespace std;
-class Information {
+class Value {
 public:
-	Information() {
-		this->info = 0;
+	Value() : _value(0) {}
+
+	void update(int value) {
+		_value = value;
 	}
 
-	void update(int info) {
-		this->info = info;
-	}
 	int get() const {
-		return this->info;
+		return _value;
 	}
 
 private:
-	int info;
-
+	int _value;
 };
 
+struct thread_data {
+	unsigned thread_id;
+	unsigned max_consumer_sleep_time;
+	Value *value;
+	long *sum;
+};
 
-namespace {
-	pthread_barrier_t barrier;
-	pthread_mutex_t mutex;
-	pthread_cond_t cond;
+pthread_mutex_t consumer_start_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t consumer_start_condition = PTHREAD_COND_INITIALIZER;
+bool is_consumer_started = false;
 
-	volatile bool flag = false;
-	volatile bool isFinished = false;
-	unsigned maxSleepTime = 0;
+pthread_mutex_t value_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t value_write_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t value_read_cond = PTHREAD_COND_INITIALIZER;
+bool is_data_ready = false;
 
-}
+bool is_data_over = false;
 
-void* producer(void* arg)
-{
-	Information& info = *static_cast<Information*>(arg);
-	pthread_barrier_wait(&barrier);
-	string inputInfo;
-	getline(cin, inputInfo);
-	istringstream iss(inputInfo);
+void *producer_routine(void *arg) {
+	Value *value = (Value *)arg;
 
-	do 
-	{
-		int newValue = 0;
-		iss >> newValue;
-		pthread_mutex_lock(&mutex);
-		while (flag)
-		{
-			pthread_cond_wait(&cond, &mutex);
-		}
-		info.update(newValue);
-		isFinished = iss.eof();
-		flag = true;
-		pthread_mutex_unlock(&mutex);
-		pthread_cond_signal(&cond);
+	// Wait for consumer to start
+	pthread_mutex_lock(&consumer_start_mutex);
+	while (!is_consumer_started) {
+		pthread_cond_wait(&consumer_start_condition, &consumer_start_mutex);
+	}
+	pthread_mutex_unlock(&consumer_start_mutex);
 
-	} while (!isFinished);
+	// Read data, loop through each value and update the value, notify consumer, wait for consumer to process
 
-	pthread_cond_broadcast(&cond);
-	pthread_exit(nullptr);
+	std::string line;
+	std::getline(std::cin, line);
 
-}
+	std::istringstream line_stream(line);
 
-void* consumer(void* arg)
-{
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
-	const auto& info = *static_cast<Information*>(arg);
-	static int* sum = new int{ 0 };
-	auto getSleepTime = []() -> useconds_t {
-		return maxSleepTime ? static_cast<useconds_t>(rand()) % maxSleepTime : 0;
-	};
-	pthread_barrier_wait(&barrier);
-	do {
-		pthread_mutex_lock(&mutex);
-		while (!flag && !isFinished)
-			pthread_cond_wait(&cond, &mutex);
-
-		if (!flag) {
-			pthread_mutex_unlock(&mutex);
-			pthread_exit(sum);
-		}
-
-		(*sum) += info.get();
-
-		flag = false;
-		pthread_mutex_unlock(&mutex);
-		pthread_cond_broadcast(&cond);
-		usleep(getSleepTime());
-	} while (true);
-
-}
-
-
-void* consumer_interruptor(void* arg)
-{
-	const auto& consumers = *static_cast<std::vector<pthread_t>*>(arg);
-	pthread_barrier_wait(&barrier);
-
-	while (!isFinished) {
-		unsigned long index = static_cast<unsigned long>(random()) % consumers.size();
-		pthread_cancel(consumers[index]);
-		usleep(1);
+	std::vector<int> numbers;
+	int n;
+	while (line_stream >> n) {
+		numbers.push_back(n);
 	}
 
-	pthread_exit(nullptr);
+	pthread_mutex_lock(&value_mutex);
+
+	for (int i : numbers) {
+		value->update(i);
+		is_data_ready = true;
+
+		pthread_cond_signal(&value_write_cond);
+
+		while (is_data_ready) {
+			pthread_cond_wait(&value_read_cond, &value_mutex);
+		}
+	}
+
+	is_data_over = true;
+	pthread_cond_broadcast(&value_write_cond);
+
+	pthread_mutex_unlock(&value_mutex);
+
+	pthread_exit(NULL);
 }
 
+void *consumer_routine(void *arg) {
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	thread_data *data = (thread_data *)arg;
 
-int run_threads(int consummersCount)
-{
-	// todo check retval and exit if not null
-	pthread_barrier_init(&barrier, nullptr, static_cast<unsigned>(consummersCount + 2));
-	pthread_mutex_init(&mutex, nullptr);
-	pthread_cond_init(&cond, nullptr);
+	// notify about start
+	pthread_mutex_lock(&consumer_start_mutex);
+	if (!is_consumer_started) {
+		is_consumer_started = true;
+		pthread_cond_broadcast(&consumer_start_condition);
+	}
+	pthread_mutex_unlock(&consumer_start_mutex);
 
-	Information info;
+	// for every update issued by producer, read the value and add to sum
+	// return pointer to result (aggregated result for all consumers)
 
+	while (true) {
+		pthread_mutex_lock(&value_mutex);
+
+		while (!is_data_ready && !is_data_over) {
+			pthread_cond_wait(&value_write_cond, &value_mutex);
+		}
+
+		if (is_data_over) {
+			pthread_mutex_unlock(&value_mutex);
+			pthread_exit(data->sum);
+		}
+
+		*(data->sum) += data->value->get();
+		is_data_ready = false;
+
+		pthread_cond_signal(&value_read_cond);
+
+		pthread_mutex_unlock(&value_mutex);
+
+		double sleep_time = data->max_consumer_sleep_time * 1000 * rand_r(&(data->thread_id)) / double(RAND_MAX);
+		usleep((__useconds_t)sleep_time);
+	}
+}
+
+void *consumer_interruptor_routine(void *arg) {
+	std::vector<pthread_t> *consumers = (std::vector<pthread_t> *) arg;
+
+	// wait for consumer to start
+	pthread_mutex_lock(&consumer_start_mutex);
+	while (!is_consumer_started) {
+		pthread_cond_wait(&consumer_start_condition, &consumer_start_mutex);
+	}
+	pthread_mutex_unlock(&consumer_start_mutex);
+
+	// interrupt consumer while producer is running
+	while (!is_data_over) {
+		pthread_cancel(consumers->at(rand() % consumers->size()));
+	}
+
+	pthread_exit(NULL);
+}
+
+int run_threads(int N, int max_consumer_sleep_time) {
+	srand((unsigned)time(NULL));
+
+	Value *value = new Value();
+	long *sum = new long(0);
+
+	// start N threads and wait until they're done
 	pthread_t producer;
-	pthread_t interaptor;
-	std::vector<pthread_t> consumers(static_cast<unsigned long>(consummersCount));
+	pthread_create(&producer, NULL, producer_routine, value);
 
-	pthread_create(&producer, nullptr, &producer, &info);
-	pthread_create(&interaptor, nullptr, &consumer_interruptor, &consumers);
-	for (pthread_t& consumer : consumers)
-		pthread_create(&consumer, nullptr, &consumer, &info);
+	std::vector<pthread_t> consumers;
+	for (unsigned i = 0; i < N; i++) {
+		thread_data *data = new thread_data();
+		data->value = value;
+		data->max_consumer_sleep_time = (unsigned)max_consumer_sleep_time;
+		data->sum = sum;
+		data->thread_id = i;
 
-	pthread_join(producer, nullptr);
-	pthread_join(interaptor, nullptr);
-	void* consumerRetval = nullptr;
-	for (const pthread_t& consumer : consumers)
-		pthread_join(consumer, &consumerRetval);
-
-	int sum = 0;
-	if (nullptr != consumerRetval) {
-		int* consumerRetvalInt = static_cast<int*>(consumerRetval);
-		sum = *consumerRetvalInt;
-		delete consumerRetvalInt;
+		pthread_t consumer;
+		pthread_create(&consumer, NULL, consumer_routine, (void *)data);
+		consumers.push_back(consumer);
 	}
 
-	return sum;
+	pthread_t consumer_interruptor;
+	pthread_create(&consumer_interruptor, NULL, consumer_interruptor_routine, &consumers);
+
+	void *result = NULL;
+
+	pthread_join(producer, NULL);
+	pthread_join(consumer_interruptor, NULL);
+	pthread_join(consumers[0], &result);
+	for (int i = 1; i < N; i++) {
+		pthread_join(consumers[i], NULL);
+	}
+
+	// return aggregated sum of values
+	return *(int *)result;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char *argv[]) {
 	if (argc != 3) {
-		std::cerr << "Must 2 cmd-line arguments." << std::endl;
+		std::cout << "Incorrect number of arguments" << std::endl;
 		return -1;
 	}
 
-	int consumersCount = atoi(argv[1]);
-	maxSleepTime = static_cast<unsigned>(atoi(argv[2]));
+	int num_of_consumers = atoi(argv[1]);
+	int max_consumer_sleep_time = atoi(argv[2]);
 
-	if (consumersCount <= 0) {
-		std::cerr << "Illigal 1-st argument. Must consumers count greather than zerro." << std::endl;
-		return -2;
+	if (num_of_consumers < 1 || max_consumer_sleep_time < 0) {
+		std::cout << "Incorrect arguments" << std::endl;
 	}
 
-	std::cout << run_threads(consumersCount) << std::endl;
+	std::cout << run_threads(num_of_consumers, max_consumer_sleep_time) << std::endl;
 	return 0;
 }
