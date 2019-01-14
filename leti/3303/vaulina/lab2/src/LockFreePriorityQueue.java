@@ -163,23 +163,27 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
         Node<E> next = null;
         Node<E> last = null;
 
-        boolean[] to_delete = {false};
-        first = head.getReference();
-        current = first.next.getReference();
-        last = tail.getReference();
+        while(true){
+            boolean[] to_delete = {false};
+            first = head.getReference();
+            current = first.next.getReference();
+            last = tail.getReference();
 
-        if (current == last){
-            return true;
-        } else {
-            next = current.next.get(to_delete);
-            if (to_delete[0])
-            {
-                if (first.next.compareAndSet(current, next, false, false))
+            if (current == last){
+                return true;
+            } else {
+                next = current.next.get(to_delete);
+                if (to_delete[0])
                 {
-                    node_counter.decrementAndGet();
+                    if (first.next.compareAndSet(current, next, false, false))
+                    {
+                        node_counter.decrementAndGet();
+                        continue;
+                    }
                 }
             }
+            return false;
         }
-        return false;
+
     }
 }
