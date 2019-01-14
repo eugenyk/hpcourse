@@ -23,57 +23,41 @@ private:
     int _value;
 };
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+ bool isEnd = false;
 
-pthread_cond_t condStartConsumer = PTHREAD_COND_INITIALIZER;
-volatile bool isStartConsumer = false;
-
-pthread_cond_t condReadyConsumer = PTHREAD_COND_INITIALIZER;
-volatile bool isReadyConsumer = false;
-volatile int countReady = 0;
-
-pthread_cond_t condReadyValue = PTHREAD_COND_INITIALIZER;
-volatile bool isEnd = false;
+pthread_barrier_t barrierStart;
+pthread_barrier_t barrierReadyValue;
+pthread_barrier_t barrierUpdateValue;
 
 unsigned int sleepLimit;
 unsigned long countConsumers;
-int count_producer_update = 0;
 
 void* producer_routine(void* arg) {
     Value* value = reinterpret_cast<Value*>(arg);
     // Wait for consumer to start
 
-    pthread_mutex_lock(&mutex);
-    while(!isStartConsumer) pthread_cond_wait(&condStartConsumer, &mutex);
-    pthread_mutex_unlock(&mutex);
+    pthread_barrier_wait(&barrierStart);
 
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
     //Read data
-    string input;
+    string input, tmp;
     cout << "Enter numbers:\n\t";
     getline(cin, input);
     stringstream stream(input);
     //loop through each value and update the value
     int number;
-
     while (true) {
         if (!(stream >> number)) {
             isEnd = true;
+            pthread_barrier_wait(&barrierReadyValue);
             break;
         }
         value->update(number);
         //notify consumer
-        isReadyConsumer = false;
-        count_producer_update++;
-        pthread_cond_broadcast(&condReadyValue);
-
+        pthread_barrier_wait(&barrierReadyValue);
         //wait for consumer to process
-        pthread_mutex_lock(&mutex);
-        while(!isReadyConsumer)
-            pthread_cond_wait(&condReadyConsumer, &mutex);
-        pthread_mutex_unlock(&mutex);
+        pthread_barrier_wait(&barrierUpdateValue);
     }
-    pthread_cond_broadcast(&condReadyValue);
     return nullptr;
 
 }
@@ -82,58 +66,52 @@ void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
     Value* value = reinterpret_cast<Value*>(arg);
 
-    // notify about start
-    pthread_mutex_lock(&mutex);
-    countReady++;
-    pthread_mutex_unlock(&mutex);
-    if (countReady == countConsumers) {
-        isStartConsumer = true;
-        pthread_cond_broadcast(&condStartConsumer);
-        countReady = 0;
-    }
-    int count_consumer_update = 0;
-    // for every update issued by producer, read the value and add to sum
+    pthread_barrier_wait(&barrierStart);
+
     Value * sum = new Value();
 
-
-    while (!isEnd){
-        pthread_mutex_lock(&mutex);
-        while((count_consumer_update == count_producer_update) && !isEnd) {
-            pthread_cond_wait(&condReadyValue, &mutex);
-        }
-        pthread_mutex_unlock(&mutex);
+    while (true){
+        pthread_barrier_wait(&barrierReadyValue);
         if (isEnd) break;
         sum->update(sum->get() + value->get());
-        count_consumer_update++;
-        countReady++;
-        if (countReady == countConsumers) {
-            countReady = 0;
-            isReadyConsumer = true;
-            pthread_cond_signal(&condReadyConsumer);
-        }
         usleep((rand() % (sleepLimit + 1))*1000);
+        pthread_barrier_wait(&barrierUpdateValue);
 
     }
-
     // return pointer to result (aggregated result for all consumers)
     return reinterpret_cast<void*>(sum);
 }
 
 void* consumer_interruptor_routine(void* arg) {
-    vector<pthread_t*>* consumers = reinterpret_cast<vector<pthread_t*>*>(arg);
+    vector<pthread_t>* consumers = reinterpret_cast<vector<pthread_t>*>(arg);
 
-    pthread_mutex_lock(&mutex);
-    while(!isStartConsumer) pthread_cond_wait(&condStartConsumer, &mutex);
-    pthread_mutex_unlock(&mutex);
+    pthread_barrier_wait(&barrierStart);
 
     while(!isEnd){
         unsigned long i = rand() % (consumers->size());
-        pthread_cancel(*(consumers->at(i)));
+        pthread_cancel((consumers->at(i)));
     }
     return nullptr;
 }
 
 int run_threads() {
+
+    int status = pthread_barrier_init(&barrierStart, nullptr, countConsumers + 2);
+    if (status != 0) {
+        printf("run_threads error: can't init barrier, status = %d\n", status);
+        exit(-1);
+    }
+    status = pthread_barrier_init(&barrierReadyValue, nullptr, countConsumers + 1);
+    if (status != 0) {
+        printf("run_threads error: can't init barrier, status = %d\n", status);
+        exit(-1);
+    }
+    status = pthread_barrier_init(&barrierUpdateValue, nullptr, countConsumers + 1);
+    if (status != 0) {
+        printf("run_threads error: can't init barrier, status = %d\n", status);
+        exit(-1);
+    }
+
     // start N threads and wait until they're done
     Value* value = new Value();
 
@@ -154,6 +132,9 @@ int run_threads() {
     for (int i = 1; i < countConsumers; i++)
         pthread_join(consumers[i], nullptr);
     // return aggregated sum of values
+    pthread_barrier_destroy(&barrierStart);
+    pthread_barrier_destroy(&barrierReadyValue);
+    pthread_barrier_destroy(&barrierUpdateValue);
     return (reinterpret_cast<Value*>(sum))->get();
 }
 
@@ -161,7 +142,7 @@ int main(int argc, const char *argv[]) {
     srand(time(NULL));
     if (argc != 3) {
         cout << "Parameter error:\n\t1st argument - number of consumer-thread\n\t2st argument - max sleep limit\n";
-        return 1;
+        return -1;
     }
     countConsumers = atoi(argv[1]);
     sleepLimit = atoi(argv[2]);
