@@ -61,22 +61,22 @@ void* producer_routine(void* arg) {
     getline(cin, nums);
     stringstream inStream;
     inStream << nums;
-	
+	int num_cons = count_consumers; 
+	pthread_mutex_lock(&lock);
     while(!done)
     {
         int number;
-        if (inStream >> number)
+        if (inStream >> number && num_cons > 0)
         {
+			num_cons--;
             shared_arg->update(number);
             count_producer_update++;
             pthread_cond_broadcast(&cond_update_producer);
-            pthread_mutex_lock(&lock);
 			consumer_update = false;
             while(!consumer_update) 
 			{
 				pthread_cond_wait(&cond_update_consumer, &lock);
 			}
-            pthread_mutex_unlock(&lock);
         } 
 		else 
 		{
@@ -84,6 +84,7 @@ void* producer_routine(void* arg) {
         }
     }
 	
+	pthread_mutex_unlock(&lock);
     pthread_cond_broadcast(&cond_update_producer);
 }
  
@@ -113,7 +114,6 @@ void* consumer_routine(void* arg) {
 		 {
 			pthread_cond_wait(&cond_update_producer, &lock);
 		 }
-		 pthread_mutex_unlock(&lock);
 		 
 		 if (done)
 		 {
@@ -121,9 +121,8 @@ void* consumer_routine(void* arg) {
 		 }
 	 
 		 result->update(result->get() + shared_arg->get());
-		 pthread_mutex_lock(&lock);
 		 count_consumers_updated++;
-		 pthread_mutex_unlock(&lock);
+		 
 		 count_local_update++;
 		 
 		 if (count_consumers_updated == count_consumers)
@@ -132,10 +131,12 @@ void* consumer_routine(void* arg) {
 			 count_consumers_updated = 0;
 			 pthread_cond_signal(&cond_update_consumer);
 		 }
-		 
+		 pthread_mutex_unlock(&lock);
+
 		 usleep(rand() % (max_sleep_time * 1000 + 1));
 	}
-	 
+	
+	pthread_mutex_unlock(&lock);	 
     // return pointer to result (aggregated result for all consumers)
     return (void*) result;
 }
@@ -179,7 +180,7 @@ int run_threads() {
 	pthread_create(&interruptor, NULL, consumer_interruptor_routine, &consumers);
 	
 	pthread_join(producer, NULL);
-    	pthread_join(interruptor, NULL);
+    pthread_join(interruptor, NULL);
 	pthread_join(consumers[0], &res);
 	
     for (int i = 1; i < count_consumers; i++)
