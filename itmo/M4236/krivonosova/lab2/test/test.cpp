@@ -5,7 +5,7 @@
 #include <cds/init.h>
 #include <vector>
 #include <zconf.h>
-#include "queue.h"
+#include "../src/queue.h"
 
 void producer(lock_free_priority_queue<int> &queue, int n)
 {
