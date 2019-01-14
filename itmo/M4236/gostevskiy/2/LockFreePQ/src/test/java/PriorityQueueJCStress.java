@@ -33,7 +33,7 @@ public class PriorityQueueJCStress {
         }
     }
 
-    @Actor
+    @Arbiter
     public void arbiter(I_Result r) {
         Integer pred = queue.poll();
         while (pred == null) pred = queue.poll();
