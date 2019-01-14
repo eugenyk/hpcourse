@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+}
+
+group 'ru.itmo.gostevskiy'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile 'com.devexperts.lincheck:lincheck:2.0'
+}
