@@ -28,7 +28,7 @@ public class PriorityQueueJCStress {
 
     @Actor
     public void actor2() {
-        for (int i = 0; i < 10; i += 2) {
+        for (int i = 1; i < 10; i += 2) {
             queue.offer(i);
         }
     }
@@ -40,7 +40,7 @@ public class PriorityQueueJCStress {
         for (int i = 0; i < 9; i++) {
             Integer cur = queue.poll();
             if (cur == null) continue;
-            assert(cur - pred % 2 == 0 && pred > cur);
+            assert((cur - pred) % 2 != 0 || pred < cur);
             r.r1 = cur;
             pred = cur;
         }
