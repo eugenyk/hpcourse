@@ -29,13 +29,13 @@ class LockFreePriorityQueue<T : Comparable<T>> : PriorityQueue<T>, AbstractQueue
         throw UnsupportedOperationException()
     }
 
-    override fun peek(): T {
+    override fun peek(): T? {
         while (true) {
             val first = fakeHead
             val curr = first.nextAndMark.reference
 
             if (curr == fakeTail) {
-                throw NoSuchElementException()
+                return null
             } else {
                 val cmk = curr.nextAndMark.isMarked
                 val succ = curr.nextAndMark.reference
@@ -76,6 +76,8 @@ class LockFreePriorityQueue<T : Comparable<T>> : PriorityQueue<T>, AbstractQueue
 
     override val size: Int
         get() = atomic_size.get()
+
+    override fun isEmpty(): Boolean = peek() == null
 
     private class Node<T>(var key: T? = null, next: Node<T>? = null, marked: Boolean = false) {
         val nextAndMark = AtomicMarkableReference<Node<T>>(next, marked)

@@ -25,9 +25,14 @@ class LockFreeQueueTest {
         return q.poll()
     }
 
-    @Operation(handleExceptionsAsResult = arrayOf(NoSuchElementException::class))
-    fun peek(): Int {
+    @Operation()
+    fun peek(): Int? {
         return q.peek()
+    }
+
+    @Operation
+    fun isEmpty(): Boolean {
+        return q.isEmpty()
     }
 
     @Test
