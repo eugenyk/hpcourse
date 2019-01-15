@@ -61,14 +61,12 @@ void* producer_routine(void* arg) {
     getline(cin, nums);
     stringstream inStream;
     inStream << nums;
-	int num_cons = count_consumers; 
 	pthread_mutex_lock(&lock);
     while(!done)
     {
         int number;
-        if (inStream >> number && num_cons > 0)
+        if (inStream >> number)
         {
-			num_cons--;
             shared_arg->update(number);
             count_producer_update++;
             pthread_cond_broadcast(&cond_update_producer);
