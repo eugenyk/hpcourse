@@ -85,7 +85,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
 	}
 
 	public boolean isEmpty() {
-		return size() == 0;
+		return peek()== null;
 	}
 	private Element<E> internalPeek() {
 		final Element<E> prevEle = head;
