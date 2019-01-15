@@ -69,7 +69,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
 
     @Override
     public boolean isEmpty() {
-        return size_.compareAndSet(0, 0);
+        return peek() == null;
     }
 
     static class Node<T> {
@@ -115,7 +115,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     }
 
     private NodePair<E> findPlaceToInsert(E e) {
-        while(true) {
+        while (true) {
             Node<E> prev = head;
             Node<E> cur = head.next.getReference();
             Node<E> next;
@@ -136,8 +136,8 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
             } while (holder[0] || temp.val == null || temp.val.compareTo(e) <= 0);
 
             next = temp;
-            if(prev.CASNext(cur, next)) {
-                if(next == tail || !next.next.isMarked()) {
+            if (prev.CASNext(cur, next)) {
+                if (next == tail || !next.next.isMarked()) {
                     return new NodePair<>(prev, next);
                 }
             }
