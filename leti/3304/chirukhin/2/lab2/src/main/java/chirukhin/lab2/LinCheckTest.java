@@ -27,23 +27,28 @@ public class LinCheckTest {
     }
 
     @Operation
-    public Object poll() {
+    public Integer poll() {
         return q.poll();
     }
 
     @Operation(handleExceptionsAsResult = NoSuchElementException.class)
-    public Object remove() {
+    public Integer remove() {
         return q.remove();
     }
 
     @Operation
-    public Object peek() {
+    public Integer peek() {
         return q.peek();
     }
 
     @Operation(handleExceptionsAsResult = NoSuchElementException.class)
-    public Object element() {
+    public Integer element() {
         return q.element();
+    }
+
+    @Operation
+    public Boolean isEmpty() {
+        return q.isEmpty();
     }
 
     @Test

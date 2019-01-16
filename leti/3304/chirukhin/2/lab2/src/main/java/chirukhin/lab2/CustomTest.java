@@ -92,6 +92,8 @@ public class CustomTest {
             e.printStackTrace();
         }
 
+        assert (queue.isEmpty());
+
         // check sum
         int sumAdded = 0;
         int sumPolled = 0;

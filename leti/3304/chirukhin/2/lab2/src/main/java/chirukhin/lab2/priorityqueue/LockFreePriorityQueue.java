@@ -108,16 +108,6 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
             n2 = tn2.n2;
             n1 = tn2.n1;
 
-            if ((compare(e, n2.data.getReference()) == 0)
-                    && (!n2.data.isMarked())) {
-                if (n2.data.compareAndSet(n2.data.getReference(), e, false,
-                        false)) {
-                    return true;
-                } else {
-                    continue;
-                }
-            }
-
             if (kk == 0) {
                 newN.next.add(new AtomicMarkableReference<>(n2, false));
                 kk++;
@@ -286,7 +276,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
                 tempn1 = n1.next.get(i);
                 n2 = tempn1.getReference();
             } while (!tempn1.compareAndSet(n2, n2, false, true)
-                    && !tempn1.isMarked()); // REVIEW different from paper
+                    && !tempn1.isMarked());
         }
 
         prev = head;
