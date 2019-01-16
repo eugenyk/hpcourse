@@ -7,17 +7,10 @@
 
 using namespace std;
 
-static  int N = 0;
-static  int sleepLimit = 0;
-pthread_mutex_t mutex;
-pthread_cond_t cond_c, cond_p, cond_s;
-pthread_barrier_t barrier;
-bool done = 0;
-int status = 0; // 0 Not started
-// 1 Started
-// 2 Producer's time to work
-// 3 Consumer's time to work
-// 4 Finished
+static  int N;
+static  int sleepLimit ;
+pthread_barrier_t barrier_wait, barrier_new_value, barrier_update_value;
+bool done = false;
 
 class Value {
 public:
@@ -42,15 +35,7 @@ void* producer_routine(void* arg) {
     int data_val;
     Value* value = (Value*)arg;
 
-    if(status != 1) {
-        pthread_mutex_lock(&mutex);
-	}
-	
-    while (status != 1) {
-        pthread_cond_wait(&cond_s, &mutex);
-    }
-    pthread_mutex_unlock(&mutex);
-    
+    pthread_barrier_wait(&barrier_wait);
 
     //read data
     string input;
@@ -58,68 +43,43 @@ void* producer_routine(void* arg) {
     getline(cin,input);
     stringstream stream(input);
     int number;
-	
     while (stream >> number)
     {
-        pthread_mutex_lock(&mutex);
         // update the value
         value->update(number);
         // notify consumer
-        status = 2;
-         pthread_cond_signal(&cond_c);
-        // wait time to work
-        while (status != 3)
-        {
-            pthread_cond_wait(&cond_p, &mutex);
-        }
-
-        pthread_mutex_unlock(&mutex);
+        pthread_barrier_wait(&barrier_new_value);
+        pthread_barrier_wait(&barrier_update_value);
     }
-
-    // notify about the end
-    pthread_mutex_lock(&mutex);
     // notify that we finished
-    status = 4;
-    pthread_cond_broadcast(&cond_c);
-    pthread_mutex_unlock(&mutex);
-
+    done = true;
+    pthread_barrier_wait(&barrier_new_value);
     return nullptr;
 }
 
 void* consumer_routine(void* arg) {
-//	The task of consumer flows is to respond to each change in the 
+//	The task of consumer flows is to respond to each change in the
 //	data variable and type the sum of the values ​​obtained.
-	
+
 // temporarily prevent other threads from terminating the thread
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-    
- 
-    pthread_mutex_lock(&mutex);
-    status = 1;
-    pthread_cond_broadcast(&cond_s);
-    pthread_mutex_unlock(&mutex);
-    
-    Value* value = (Value*)arg;
-    static  int result = 0;
 
+    pthread_barrier_wait(&barrier_wait);
+
+    Value* value = (Value*)arg;
+    int* result = new int;
     while (true) {
-        pthread_mutex_lock(&mutex);
-        while (status != 4 && status != 2) {
-            pthread_cond_wait(&cond_c, &mutex);
-        }
-        if(status == 4) {
-            pthread_mutex_unlock(&mutex);
+        pthread_barrier_wait(&barrier_new_value);
+        if(done) {
             break;
         }
-        result += value->get();
-        status = 3;
-        pthread_cond_signal(&cond_p);
-        pthread_mutex_unlock(&mutex);
+        *result += value->get();
         int time = rand() % sleepLimit;
         usleep(static_cast<__useconds_t>(time * 1000));
+        pthread_barrier_wait(&barrier_update_value);
     }
     //pthread_setcancelstate (PTHREAD_CANCEL_ENABLE,  NULL);
-    return &result;
+    return (void *)result;
 }
 
 
@@ -128,23 +88,13 @@ void* consumer_routine(void* arg) {
 void* consumer_interruptor_routine(void* arg) {
 
     pthread_t* consumer_threads = (pthread_t*)arg;
-    
+    int randIdC;
 
-    if(status != 1) {
-        //Waiting
-        pthread_mutex_lock(&mutex);
-	}
-    while(status != 1)
-    {
-        pthread_cond_wait(&cond_s, &mutex);
-    }
-    pthread_mutex_unlock(&mutex);
-    
+    pthread_barrier_wait(&barrier_wait);
 
     // Try to interrupt consumer while producer is running
-    while (status != 4) {
-	
-		int randIdC = rand() % N;
+    while (!done) {
+        randIdC = rand()%N;
         pthread_cancel(consumer_threads[randIdC]);
     }
 
@@ -154,29 +104,27 @@ void* consumer_interruptor_routine(void* arg) {
 
 int run_threads() {
     //Init 3 type of threads
-	
     pthread_t producer_thread;
     pthread_t consumers_thread[N];
     pthread_t interruptor_thread;
 
     Value val ;
-    int *answer ;
+    void* answer ;
     //Init
-    pthread_mutex_init(&mutex, NULL);
-    pthread_cond_init(&cond_c, NULL);
-    pthread_cond_init(&cond_p, NULL);
-	pthread_cond_init(&cond_s, NULL);
+    pthread_barrier_init(&barrier_wait, nullptr, N + 2);
+    pthread_barrier_init(&barrier_new_value, nullptr, N + 1);
+    pthread_barrier_init(&barrier_update_value, nullptr, N + 1);
 
-    //Create threads
+
+        //Create threads
     if (pthread_create(&producer_thread, NULL, producer_routine, &val))
     {
         perror("Cannot create producer_thread!");
     }
-
     for (int i = 0; i < N; ++i){
         pthread_create(&consumers_thread[i], NULL, consumer_routine, &val);
     }
-    
+
     if (pthread_create(&interruptor_thread, NULL, consumer_interruptor_routine, consumers_thread))
     {
         perror("Cannot create interrupter_thread!");
@@ -186,14 +134,13 @@ int run_threads() {
     pthread_join(producer_thread, NULL);
     pthread_join(interruptor_thread, NULL);
     for (int i = 0; i < N; ++i) {
-        pthread_join(consumers_thread[i],(void**)&answer);
+        pthread_join(consumers_thread[i], &answer);
     }
     //Destroy
-    pthread_mutex_destroy(&mutex);
-    pthread_cond_destroy(&cond_c);
-    pthread_cond_destroy(&cond_p);
-	pthread_cond_destroy(&cond_s);
-    return *answer;
+    pthread_barrier_destroy(&barrier_wait);
+    pthread_barrier_destroy(&barrier_new_value);
+    pthread_barrier_destroy(&barrier_update_value);
+    return *(int*)answer;
 }
 
 int main(int argc, const char *argv[]) {
@@ -205,9 +152,9 @@ int main(int argc, const char *argv[]) {
     }
     N = atoi(argv[1]);
     sleepLimit = atoi(argv[2]);
-   if (sleepLimit <= 0){
-	sleepLimit = 1;
-   }
+    if (sleepLimit <= 0){
+        sleepLimit = 1;
+    }
     std::cout << run_threads() << std::endl;
     return 0;
 }
