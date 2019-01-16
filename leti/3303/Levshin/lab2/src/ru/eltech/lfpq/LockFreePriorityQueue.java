@@ -13,9 +13,9 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     private AtomicInteger count;
 
     private class Interval {
-        public LockFreePriorityQueueNode<E> previous;
-        public LockFreePriorityQueueNode<E> current;
-        public Interval(LockFreePriorityQueueNode<E> previous, LockFreePriorityQueueNode<E> current)
+        LockFreePriorityQueueNode<E> previous;
+        LockFreePriorityQueueNode<E> current;
+        Interval(LockFreePriorityQueueNode<E> previous, LockFreePriorityQueueNode<E> current)
         {
             this.previous = previous;
             this.current = current;
@@ -99,10 +99,10 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
 
     public E remove() {
         boolean[] currentMayBeDeleted = {false};
-        LockFreePriorityQueueNode<E> first = null;
-        LockFreePriorityQueueNode<E> curr = null;
-        LockFreePriorityQueueNode<E> next = null;
-        LockFreePriorityQueueNode<E> last = null;
+        LockFreePriorityQueueNode<E> first;
+        LockFreePriorityQueueNode<E> curr;
+        LockFreePriorityQueueNode<E> next;
+        LockFreePriorityQueueNode<E> last;
         while (true)
         {
             first = head.getReference();
@@ -174,10 +174,10 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     }
     @Override
     public  boolean isEmpty(){
-        LockFreePriorityQueueNode<E> first = null;
-        LockFreePriorityQueueNode<E> curr = null;
-        LockFreePriorityQueueNode<E> next = null;
-        LockFreePriorityQueueNode<E> last = null;
+        LockFreePriorityQueueNode<E> first;
+        LockFreePriorityQueueNode<E> curr;
+        LockFreePriorityQueueNode<E> next;
+        LockFreePriorityQueueNode<E> last;
 
         boolean[] currentMayBeDeleted = {false};
         first = head.getReference();
@@ -194,6 +194,11 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
                 {
                     count.decrementAndGet();
                 }
+                first = head.getReference();
+                curr = first.next.getReference();
+                last = tail.getReference();
+
+                return curr == last;
             }
         }
         return false;
