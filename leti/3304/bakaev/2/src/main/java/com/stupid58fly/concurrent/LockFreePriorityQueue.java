@@ -2,13 +2,11 @@ package com.stupid58fly.concurrent;
 
 import java.util.AbstractQueue;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueue<E> implements PriorityQueue<E>  {
     protected final Node<E> head;
     protected final Node<E> tail;
-    protected final AtomicInteger version;
 
     public LockFreePriorityQueue() {
         this.head = new Node<>(null);
@@ -16,8 +14,6 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
 
         this.head.setNext(tail);
         this.tail.setNext(tail);
-
-        this.version = new AtomicInteger(0);
     }
 
     @Override
@@ -34,7 +30,6 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     public int size() {
         for(;;) {
             int size = 0;
-
 
             for (Node<E> current = head; current != tail; ++size) {
                 current = current.getNext();
@@ -56,18 +51,11 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
         Node<E> node = new Node<>(e);
 
         for(;;) {
-            Node<E> current = head;
-            Node<E> next = head.getNext();
+            Position<E> position = find(e);
 
-            while (next != tail && e.compareTo(next.getItem()) >= 0) {
-                Node<E> afterNext = next.getNext();
-                current = next;
-                next = afterNext;
-            }
+            node.setNext(position.getCurrent());
 
-            node.setNext(next);
-
-            if (current.casNext(next, node))
+            if (position.getPreview().casNext(position.getCurrent(), node))
                 return true;
         }
     }
@@ -76,19 +64,28 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     public E poll() {
         for(;;) {
             Node<E> top = head.getNext();
-            Node<E> afterTop = top.getNext();
+
+            if (top.isDeleted()) {
+                head.casNext(top, top.getNext());
+                continue;
+            }
 
             if (top != tail && !top.setDeleted(true)) {
                 continue;
             }
 
-            if (top.getNext() != afterTop) {
-                top.setDeleted(false);
-                continue;
-            }
+            head.casNext(top, top.getNext());
+            return top.getItem();
+        }
+    }
 
-            if (!head.casNext(top, afterTop)) {
-                top.setDeleted(false);
+    @Override
+    public E peek() {
+        for(;;) {
+            Node<E> top = head.getNext();
+
+            if (top.isDeleted()) {
+                head.casNext(top, top.getNext());
                 continue;
             }
 
@@ -97,13 +94,31 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     }
 
     @Override
-    public E peek() {
-        return head.getNext().getItem();
+    public boolean isEmpty() {
+        for(;;) {
+            Node<E> top = head.getNext();
+
+            if (top.isDeleted()) {
+                head.casNext(top, top.getNext());
+                continue;
+            }
+
+            return top == tail;
+        }
     }
 
-    @Override
-    public boolean isEmpty() {
-        return head.getNext() == tail;
+    protected Position<E> find(E item) {
+        Position<E> position = new Position<>(head, head.getNext());
+
+        while (true) {
+            if (position.getCurrent().isDeleted()) {
+                position.getPreview().casNext(position.getCurrent(), position.getCurrent().getNext());
+            } else if (position.getCurrent() == tail || item.compareTo(position.getCurrent().getItem()) < 0) {
+                return position;
+            }
+
+            position = new Position<>(position.getCurrent(), position.getCurrent().getNext());
+        }
     }
 
     protected final class PriorityQueueIterator implements Iterator<E> {
@@ -121,7 +136,25 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
         }
     }
 
-    protected final static class Node<E> {
+    protected final class Position<E> {
+        protected final Node<E> preview;
+        protected final Node<E> current;
+
+        public Position(Node<E> preview, Node<E> current) {
+            this.preview = preview;
+            this.current = current;
+        }
+
+        public Node<E> getPreview() {
+            return preview;
+        }
+
+        public Node<E> getCurrent() {
+            return current;
+        }
+    }
+
+    protected final class Node<E> {
         protected final E item;
         protected final AtomicMarkableReference<Node<E>> nextRef;
 
