@@ -60,8 +60,10 @@ void* producer_routine(void* arg)
     getline(cin, str);
     stringstream ss(str);
     int read_value;
+    int test_sum = 0;
     while (ss >> read_value)
     {
+        test_sum += read_value;
         pthread_mutex_lock(&value_mutex);
         next_value = true;
         shared_value->update(read_value);
@@ -78,6 +80,7 @@ void* producer_routine(void* arg)
     end_of_producer = true;
     pthread_cond_broadcast(&next_value_cond);
     pthread_mutex_unlock(&value_mutex);
+    std::cout << "Test value = " << test_sum << std::endl;
 }
 
 // notify about start
@@ -142,12 +145,8 @@ void* consumer_interruptor_routine(void* arg)
     }
 }
 
-int run_threads() {
-    cout << "Enter number of consumers" << endl;
-    cin >> N;
-    cout << "Enter max time for consumer sleep" << endl;
-    cin >> MAX_TIME_SLEEP;
-    cin.get(); // ignore \n
+int run_threads()
+{
     pthread_t consumers[N];
     pthread_t producer;
     pthread_t interruptor;
@@ -176,13 +175,24 @@ int run_threads() {
         }
     }
 
-    rc = pthread_join(producer, NULL);
     rc = pthread_join(interruptor, NULL);
+    rc = pthread_join(producer, NULL);
 
     return *((int *)result);
 }
  
-int main() {
-    std::cout << run_threads() << std::endl;
+int main(int argc, char* argv[]) 
+{
+    if (argc < 3)
+    {
+        std::cout << "You should have count of consumers and sleep time as parameters" << std::endl;
+        return 0;
+    }
+    else
+    {
+        N = strtol(argv[1], NULL, 10);
+        MAX_TIME_SLEEP = strtol(argv[2], NULL, 10);
+        std::cout << run_threads() << std::endl;
+    }
     return 0;
 }
