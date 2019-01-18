@@ -8,22 +8,25 @@ import org.openjdk.jcstress.infra.results.I_Result;
 @JCStressTest
 // expected value (0 + 100) * (100 - 0 + 1) = 5050
 @Outcome(id = "5050", expect = Expect.ACCEPTABLE)
-@State
 public class SRSWTest {
-    protected PriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
+    @State
+    public static class PriorityQueueState {
+        public final PriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
+    }
+
     protected int sequenceCount = 100;
     protected int sum = 0;
 
     @Actor
-    public void writer() {
+    public void writer(PriorityQueueState state) {
         for (int i = 0; i < sequenceCount; i++)
-            queue.add(i);
+            state.queue.add(i);
     }
 
     @Actor
-    public void reader() {
+    public void reader(PriorityQueueState state) {
         for (int i = 0; i < sequenceCount; ) {
-            Integer value = queue.poll();
+            Integer value = state.queue.poll();
             if (value != null) {
                 sum += value;
                 i++;
@@ -32,7 +35,7 @@ public class SRSWTest {
     }
 
     @Arbiter
-    public void arbiter(I_Result result) {
+    public void arbiter(PriorityQueueState state, I_Result result) {
         result.r1 = sum;
     }
 }

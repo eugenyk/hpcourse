@@ -7,29 +7,35 @@ import org.openjdk.jcstress.infra.results.III_Result;
 
 @JCStressTest
 @Outcome(id = "1, 2, 3", expect = Expect.ACCEPTABLE)
+@Outcome(id = "1, 2, 0", expect = Expect.ACCEPTABLE)
+@Outcome(id = "1, 3, 0", expect = Expect.ACCEPTABLE)
 @Outcome(id = "2, 3, 0", expect = Expect.ACCEPTABLE)
+@Outcome(id = "1, 0, 0", expect = Expect.ACCEPTABLE)
+@Outcome(id = "2, 0, 0", expect = Expect.ACCEPTABLE)
 @Outcome(id = "3, 0, 0", expect = Expect.ACCEPTABLE)
-@State
 public class CorrectTest {
-    protected PriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
-
-    @Actor
-    public void writer() {
-        queue.add(1);
-        queue.add(2);
-        queue.add(3);
+    @State
+    public static class PriorityQueueState {
+        public final PriorityQueue<Integer> queue = new LockFreePriorityQueue<>();
     }
 
     @Actor
-    public void reader() {
-        queue.poll();
-        queue.poll();
+    public void writer(PriorityQueueState state) {
+        state.queue.add(1);
+        state.queue.add(2);
+        state.queue.add(3);
+    }
+
+    @Actor
+    public void reader(PriorityQueueState state) {
+        state.queue.poll();
+        state.queue.poll();
     }
 
     @Arbiter
-    public void arbiter(III_Result result) {
-        result.r1 = queue.isEmpty() ? 0 : queue.poll();
-        result.r2 = queue.isEmpty() ? 0 : queue.poll();
-        result.r3 = queue.isEmpty() ? 0 : queue.poll();
+    public void arbiter(PriorityQueueState state, III_Result result) {
+        result.r1 = state.queue.isEmpty() ? 0 : state.queue.poll();
+        result.r2 = state.queue.isEmpty() ? 0 : state.queue.poll();
+        result.r3 = state.queue.isEmpty() ? 0 : state.queue.poll();
     }
 }
