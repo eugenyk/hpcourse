@@ -12,7 +12,7 @@ public class Test_1 {
     @Test
     public void singleThreadOps()
     {
-        PriorityQueue<Integer> queue = new PriorityLFQueue<>();
+        LockFreePriorityQueue<Integer> queue = new LockFreePriorityLFQueue<>();
 
         assertEquals(0, queue.size());
         assertTrue(queue.isEmpty());
@@ -39,7 +39,7 @@ public class Test_1 {
     @Test
     public void singleThreadSingleAddPoll()
     {
-        PriorityQueue<Integer> queue = new PriorityLFQueue<>();
+        LockFreePriorityQueue<Integer> queue = new LockFreePriorityLFQueue<>();
         queue.offer(2);
         assertEquals(Integer.valueOf(2), queue.poll());
     }
@@ -47,7 +47,7 @@ public class Test_1 {
     @Test
     public void singleThreadElementTest()
     {
-        PriorityQueue<Integer> queue = new PriorityLFQueue<>();
+        LockFreePriorityQueue<Integer> queue = new LockFreePriorityLFQueue<>();
         queue.addAll(Arrays.asList(1, 2, 3, 1));
         assertEquals(Integer.valueOf(1), queue.peek());
         assertEquals(Integer.valueOf(1), queue.peek());
@@ -59,7 +59,7 @@ public class Test_1 {
     @Test
     public void singleThreadOfferPollTest()
     {
-        PriorityQueue<Integer> queue = new PriorityLFQueue<>();
+        LockFreePriorityQueue<Integer> queue = new LockFreePriorityLFQueue<>();
         queue.offer(1);
         queue.offer(2);
         assertEquals(Integer.valueOf(1), queue.poll());
@@ -69,7 +69,7 @@ public class Test_1 {
     @Test
     public void singleThreadAddPeekTest()
     {
-        PriorityQueue<Integer> queue = new PriorityLFQueue<>();
+        LockFreePriorityQueue<Integer> queue = new LockFreePriorityLFQueue<>();
         queue.offer(1);
         queue.offer(2);
         assertEquals(Integer.valueOf(1), queue.peek());
@@ -79,7 +79,7 @@ public class Test_1 {
     @Test
     public void singleThreadRemoveTest()
     {
-        PriorityQueue<Integer> queue = new PriorityLFQueue<>();
+        LockFreePriorityQueue<Integer> queue = new LockFreePriorityLFQueue<>();
         queue.offer(1);
         assertEquals(Integer.valueOf(1), queue.poll());
     }

@@ -9,7 +9,7 @@ import org.openjdk.jcstress.annotations.*;
 public class StressTest {
     @State
     public static class QueueState {
-        final PriorityLFQueue<Integer> queue = new PriorityLFQueue<>();
+        final LockFreePriorityLFQueue<Integer> queue = new LockFreePriorityLFQueue<>();
     }
 
     @JCStressTest
