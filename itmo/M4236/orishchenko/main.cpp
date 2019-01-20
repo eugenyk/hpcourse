@@ -111,10 +111,11 @@ int run_threads() {
     pthread_create(&producer, nullptr, producer_routine, &value);
     pthread_create(&interrupter, nullptr, consumer_interruptor_routine, consumers);
 
+
+    pthread_join(interrupter, nullptr);
+    pthread_join(producer, nullptr);
     for (int i = 0; i < COUNT; ++i)
         pthread_join(consumers[i], (void **) (&sum));
-    pthread_join(producer, nullptr);
-    pthread_join(interrupter, nullptr);
 
     pthread_mutex_destroy(&mmutex);
     pthread_cond_destroy(&p_cond);
