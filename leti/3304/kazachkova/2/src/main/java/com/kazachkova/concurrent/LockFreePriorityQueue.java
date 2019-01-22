@@ -55,9 +55,11 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
             Node<E> next = head.getNext();
 
             while (next != tail && e.compareTo(next.getItem()) >= 0) {
-                Node<E> afterNext = next.getNext();
+                if (next.isDeleted()) {
+                    current.casNext(next, next.getNext());
+                }
                 current = next;
-                next = afterNext;
+                next = next.getNext();
             }
 
             node.setNext(next);
@@ -71,19 +73,29 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     public E poll() {
         for(;;) {
             Node<E> top = head.getNext();
-            Node<E> afterTop = top.getNext();
+
+            if (top.isDeleted()) {
+                head.casNext(top, top.getNext());
+                continue;
+            }
 
             if (top != tail && !top.setDeleted(true)) {
                 continue;
             }
 
-            if (top.getNext() != afterTop) {
-                top.setDeleted(false);
-                continue;
-            }
+            head.casNext(top, top.getNext());
 
-            if (!head.casNext(top, afterTop)) {
-                top.setDeleted(false);
+            return top.getItem();
+        }
+    }
+
+    @Override
+    public E peek() {
+        for(;;) {
+            Node<E> top = head.getNext();
+
+            if (top.isDeleted()) {
+                head.casNext(top, top.getNext());
                 continue;
             }
 
@@ -92,13 +104,17 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     }
 
     @Override
-    public E peek() {
-        return head.getNext().getItem();
-    }
-
-    @Override
     public boolean isEmpty() {
-        return head.getNext() == tail;
+        for(;;) {
+            Node<E> top = head.getNext();
+
+            if (top.isDeleted()) {
+                head.casNext(top, top.getNext());
+                continue;
+            }
+
+            return top == tail;
+        }
     }
 
     protected final class PriorityQueueIterator implements Iterator<E> {
