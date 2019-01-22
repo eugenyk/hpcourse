@@ -2,13 +2,11 @@ package ru.sofysmo.priorityqueue;
 
 import java.util.AbstractQueue;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class LockFreePriorityQueue<E extends Comparable<E>>
         extends AbstractQueue<E> implements PriorityQueue<E> {
 
-    private final AtomicInteger size = new AtomicInteger(0);
     private final Node<E> tail = new Node<>(null, null);
     private final Node<E> head = new Node<>(null, tail);
     private static final int maxAttempt = 100;
@@ -20,7 +18,15 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
     @Override
     public int size() {
-        return size.get();
+        Node<E> currenct = head;
+        int i = 0;
+        while (currenct.getNext() != tail){
+            if (!currenct.nextIsMarked()){
+                i++;
+            }
+            currenct = currenct.getNext();
+        }
+        return i;
     }
 
     @Override
@@ -32,7 +38,6 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
             Node<E> next = pair.getRight();
             Node<E> newNode = new Node<>(e, next);
             if(previous.compareAndSetNext(next, newNode)) {
-                size.incrementAndGet();
                 return true;
             }
             i++;
@@ -50,7 +55,6 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
             Node<E> nextMin = position.getNext();
             if(position.markDeleted(nextMin, nextMin)) {
                 head.compareAndSetNext(position, nextMin);
-                size.decrementAndGet();
                 return position.getValue();
             }
             i++;
@@ -65,7 +69,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
     @Override
     public boolean isEmpty() {
-        return size.get() == 0;
+        return size() == 0;
     }
 
     private Position<E> findPosition(E e) {
