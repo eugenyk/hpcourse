@@ -164,6 +164,9 @@ int run_threads()
 
     rc = pthread_create(&interruptor, NULL, consumer_interruptor_routine, (void *) &consumers);
     
+   
+    rc = pthread_join(producer, NULL);
+    rc = pthread_join(interruptor, NULL);
     void* result;
     for (size_t i = 0; i < N; i++)
     {
@@ -174,9 +177,6 @@ int run_threads()
             return 1;
         }
     }
-
-    rc = pthread_join(interruptor, NULL);
-    rc = pthread_join(producer, NULL);
 
     return *((int *)result);
 }
