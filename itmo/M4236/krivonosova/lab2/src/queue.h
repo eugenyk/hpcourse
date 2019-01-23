@@ -160,20 +160,32 @@ bool lock_free_priority_queue<T>::empty()
 {
     position pos;
     pos.init(head);
-    while(true) {
+    while (true) {
+      if (pos.cur_node.ptr() == nullptr)
+        return true;
 
-        if (pos.cur_node.ptr() == nullptr)
-            return true;
+      pos.read_next();
 
-        pos.read_next();
+      if (pos.prev_ref->load().all() != pos.cur_node.ptr()) {
+        pos.init(head);
+        continue;
+      }
 
-        if (pos.next_node.bits() == 1) {
-            pos.prev_ref = &(pos.cur_node->next);
-            pos.guards.copy(position::guard_prev_item, position::guard_cur_item);
-            pos.cur_move();
-        } else {
-            return false;
+      if (pos.next_node.bits() == 1) {
+        // pos.cur_node logically deleted. Help the delete for real
+        marked_node_ptr cur(pos.cur_node.ptr());
+        if (pos.prev_ref->compare_exchange_strong(cur, marked_node_ptr(pos.next_node.ptr()))) {
+          retire_node(pos.cur_node.ptr());
         }
+        else {
+          pos.init(head);
+          continue;
+        }
+
+        pos.cur_move();
+      } else {
+        return false;
+      }
     }
 }
 
