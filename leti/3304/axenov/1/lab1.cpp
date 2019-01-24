@@ -9,24 +9,24 @@
 
 using namespace std;
 
-int maxTimeOfSleep;
-int numberOfConsumers;
+int max_sleep_time;
+int count_consumers;
+
+int count_consumers_started = 0;
+int count_consumers_updated = 0;
+int count_producer_update = 0;
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-pthread_cond_t condOfStartC = PTHREAD_COND_INITIALIZER;
-bool isStartOfConsumers = false;
+pthread_cond_t cond_start_consumer = PTHREAD_COND_INITIALIZER;
+bool consumers_start = false;
 
-pthread_cond_t condOfUpdateC = PTHREAD_COND_INITIALIZER;
-bool isUpdateOfConsumers = false;
+pthread_cond_t cond_update_consumer = PTHREAD_COND_INITIALIZER;
+bool consumer_update = false;
 
-pthread_cond_t condOfUpdatePr = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_update_producer = PTHREAD_COND_INITIALIZER;
 
-bool complete = false;
-
-int numberOfStartedConsuners = 0;
-int numberOfUpdatedConsumers = 0;
-int numberOfProducerUpdate = 0;
+bool done = false;
 
 class Value {
 public:
@@ -49,42 +49,42 @@ void* producer_routine(void* arg) {
 
     Value* shared_arg = (Value*) arg;
     pthread_mutex_lock(&lock);
-    while(!isStartOfConsumers) 
+    while(!consumers_start) 
 	{
-		pthread_cond_wait(&condOfStartC, &lock);
+		pthread_cond_wait(&cond_start_consumer, &lock);
 	}
 
     pthread_mutex_unlock(&lock);
 
 	// Read data, loop through each value and update the value, notify consumer, wait for consumer to process
-	string numbers;
-    getline(cin, numbers);
+	string nums;
+    getline(cin, nums);
     stringstream inStream;
-    inStream << numbers;
-
-    while(!complete)
+    inStream << nums;
+	
+	pthread_mutex_lock(&lock);
+    while(!done)
     {
         int number;
         if (inStream >> number)
         {
             shared_arg->update(number);
-            numberOfProducerUpdate++;
-            pthread_cond_broadcast(&condOfUpdatePr);
-            pthread_mutex_lock(&lock);
-			isUpdateOfConsumers = false;
-            while(!isUpdateOfConsumers) 
+            count_producer_update++;
+            pthread_cond_broadcast(&cond_update_producer);
+			consumer_update = false;
+            while(!consumer_update) 
 			{
-				pthread_cond_wait(&condOfUpdateC, &lock);
+				pthread_cond_wait(&cond_update_consumer, &lock);
 			}
-            pthread_mutex_unlock(&lock);
+            ;
         } 
 		else 
 		{
-            complete = true;
+            done = true;
         }
     }
-
-    pthread_cond_broadcast(&condOfUpdatePr);
+    pthread_mutex_unlock(&lock);
+    pthread_cond_broadcast(&cond_update_producer);
 }
 
 void* consumer_routine(void* arg) {
@@ -93,11 +93,11 @@ void* consumer_routine(void* arg) {
 	Value* shared_arg = (Value*) arg;
 	pthread_mutex_lock(&lock);
 
-	numberOfStartedConsuners++;
-	if (numberOfStartedConsuners == numberOfConsumers)
+	count_consumers_started++;
+	if (count_consumers_started == count_consumers)
 	{
-		isStartOfConsumers = true;
-		pthread_cond_broadcast(&condOfStartC);
+		consumers_start = true;
+		pthread_cond_broadcast(&cond_start_consumer);
 	}
 	pthread_mutex_unlock(&lock);
 
@@ -105,37 +105,38 @@ void* consumer_routine(void* arg) {
 	Value* result = new Value();
 	int count_local_update = 0;
 
-	while(!complete)
+	while(!done)
 	{
 		 pthread_mutex_lock(&lock);
 
-		 while(!complete && (count_local_update == numberOfProducerUpdate)) 
+		 while(!done && (count_local_update == count_producer_update)) 
 		 {
-			pthread_cond_wait(&condOfUpdatePr, &lock);
+			pthread_cond_wait(&cond_update_producer, &lock);
 		 }
-		 pthread_mutex_unlock(&lock);
+		 
 
-		 if (complete)
+		 if (done)
 		 {
 			 break;
 		 }
 
-		 result -> update(result -> get() + shared_arg -> get());
-		 pthread_mutex_lock(&lock);
-		 numberOfUpdatedConsumers++;
-		 pthread_mutex_unlock(&lock);
+		 result->update(result->get() + shared_arg->get());
+		 
+		 count_consumers_updated++;
+		 
 		 count_local_update++;
 
-		 if (numberOfUpdatedConsumers == numberOfConsumers)
+		 if (count_consumers_updated == count_consumers)
 		 {
-			 isUpdateOfConsumers = true;
-			 numberOfUpdatedConsumers = 0;
-			 pthread_cond_signal(&condOfUpdateC);
+			 consumer_update = true;
+			 count_consumers_updated = 0;
+			 pthread_cond_signal(&cond_update_consumer);
 		 }
+		 pthread_mutex_unlock(&lock);
 
-		 usleep(rand() % (maxTimeOfSleep * 1000 + 1));
+		 usleep(rand() % (max_sleep_time * 1000 + 1));
 	}
-
+		pthread_mutex_unlock(&lock);
     // return pointer to result (aggregated result for all consumers)
     return (void*) result;
 }
@@ -144,17 +145,17 @@ void* consumer_interruptor_routine(void* arg) {
 	// wait for consumer to start
     pthread_t* threads = (pthread_t*) arg;
     pthread_mutex_lock(&lock);
-    while(!isStartOfConsumers) 
+    while(!consumers_start) 
 	{
-		pthread_cond_wait(&condOfStartC, &lock);
+		pthread_cond_wait(&cond_start_consumer, &lock);
 	}
 
     pthread_mutex_unlock(&lock);
 
 	// interrupt consumer while producer is running
-    while(!complete)
+    while(!done)
     {
-        size_t random_id = rand() % numberOfConsumers;
+        size_t random_id = rand() % count_consumers;
         pthread_cancel(threads[random_id]);
     }
 }
@@ -165,13 +166,13 @@ int run_threads() {
 
 	Value* value = new Value();
     pthread_t producer;
-	pthread_t consumers[numberOfConsumers];
+	pthread_t consumers[count_consumers];
 	pthread_t interruptor;
 	void* res;
 
     pthread_create(&producer, 0, producer_routine, value);
 
-	for (int i = 0; i < numberOfConsumers; i++)
+	for (int i = 0; i < count_consumers; i++)
 	{
         pthread_create(&consumers[i], 0, consumer_routine, value);
 	}
@@ -182,7 +183,7 @@ int run_threads() {
     	pthread_join(interruptor, NULL);
 	pthread_join(consumers[0], &res);
 
-    for (int i = 1; i < numberOfConsumers; i++)
+    for (int i = 1; i < count_consumers; i++)
     {
         pthread_join(consumers[i], NULL);
     }
@@ -197,8 +198,8 @@ int main(int argc, const char *argv[]) {
         return 1;
     }
 
-    numberOfConsumers = atoi(argv[1]);
-    maxTimeOfSleep = atoi(argv[2]);
+    count_consumers = atoi(argv[1]);
+    max_sleep_time = atoi(argv[2]);
 
 	srand(time(NULL));
 
