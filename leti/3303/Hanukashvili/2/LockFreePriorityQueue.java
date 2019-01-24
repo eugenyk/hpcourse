@@ -14,101 +14,101 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 		private AtomicMarkableReference<Node<E>> next;
 
 		Node(E value, Node<E> next) {
-		this.value = value;
-		this.next = new AtomicMarkableReference<>(next, false);
+			this.value = value;
+			this.next = new AtomicMarkableReference<>(next, false);
 		}
 
 		E getValue() {
-		return value;
+			return value;
 		}
 		boolean isMarked() {
-		return next.isMarked();
+			return next.isMarked();
 		}
 
 		boolean compareAndSetNext(Node<E> nextOld, Node<E> nextNew) {
-		return next.compareAndSet(nextOld, nextNew, false, false);
+			return next.compareAndSet(nextOld, nextNew, false, false);
 		}
 
 		Node<E> getNext() {
-		return next.getReference();
+			return next.getReference();
 		}
 
 		Node<E> getNext(boolean flagDeletion[]) {
-		return next.get(flagDeletion);
+			return next.get(flagDeletion);
 		}
 
 		boolean nextIsMarked() {
-		return next.isMarked();
+			return next.isMarked();
 		}
-		}
+	}
 		private final Node<E> tail = new Node<>(null, null);
 		private final Node<E> head = new Node<>(null, tail);
 
 
 		@Override
 		public Iterator<E> iterator() {
-		return null;
+			return null;
 		}
 
 		@Override
 		public int size() {
-		Node<E> currenct = head.getNext();
-		int i = 0;
-		while (currenct != tail){
-		if (!currenct.nextIsMarked()){
-		i++;
-		}
-		currenct = currenct.getNext();
-		}
-		return i;
+			Node<E> currenct = head.getNext();
+			int i = 0;
+			while (currenct != tail){
+				if (!currenct.nextIsMarked()){
+					i++;
+				}
+				currenct = currenct.getNext();
+			}
+			return i;
 		}
 
 		@Override
 		public boolean offer(E e) {
 
-		while (true) {
-		Position<E> pair = findPosition(e);
-		Node<E> previous = pair.getLeft();
-		Node<E> next = pair.getRight();
-		Node<E> newNode = new Node<>(e, next);
-		if(previous.compareAndSetNext(next, newNode)) {
-		return true;
-		}	
-		}
+			while (true) {
+				Position<E> pair = findPosition(e);
+				Node<E> previous = pair.getLeft();
+				Node<E> next = pair.getRight();
+				Node<E> newNode = new Node<>(e, next);
+				if(previous.compareAndSetNext(next, newNode)) {
+					return true;
+				}	
+			}
 		}
 
 		@Override
 		public E poll() {
-		while (true) {
-		Node<E> position = search();
-		if(position == tail) {
-		return null;
-		}
-		Node<E> newNext = position.getNext();
-		if(position.next.compareAndSet(newNext, newNext, false, true)) {
-		head.compareAndSetNext(position, newNext);
-		return position.getValue();
-		}
-		}
+			while (true) {
+				Node<E> position = search();
+				if(position == tail) {
+					return null;
+				}
+				Node<E> newNext = position.getNext();
+				if(position.next.compareAndSet(newNext, newNext, false, true)) {
+					head.compareAndSetNext(position, newNext);
+					return position.getValue();
+				}
+			}
 		}
 
 		@Override
 		public E peek() {
-		Node<E> position = search();
-		if (position == tail){
-		return null;
-		}
-		return position.getValue();
+			Node<E> position = search();
+			if (position == tail){
+				return null;
+			}
+			return position.getValue();
 		}
 
 
 		@Override
 		public boolean isEmpty() {
-		return size() == 0;
+			return size() == 0;
 		}
 
 		   private Position<E> findPosition(E e) {
-		Node<E> rightNode;
+			Node<E> rightNode;
 		       Node<E> leftNodeNext = null;
 		       Node<E> leftNode = null;
 		       do {
