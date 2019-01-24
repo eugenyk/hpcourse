@@ -9,8 +9,9 @@ using namespace std;
 
 int COUNT;
 int SLEEP;
-pthread_mutex_t mmutex;
-pthread_cond_t c_cond, p_cond;
+pthread_mutex_t mmutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t p_cond = PTHREAD_COND_INITIALIZER;
 pthread_barrier_t barrier;
 int result;
 bool is_produced, end_of_data = false;
@@ -45,15 +46,16 @@ void *producer_routine(void *arg) {
     while (!stream.eof()) {
         stream >> val;
         pthread_mutex_lock(&mmutex);
-        value->update(val);
-        is_produced = true;
-        pthread_cond_broadcast(&c_cond);
         while (is_produced)
             pthread_cond_wait(&p_cond, &mmutex);
+        value->update(val);
+        is_produced = true;
+        pthread_cond_signal(&c_cond);
         pthread_mutex_unlock(&mmutex);
     }
     end_of_data = true;
     pthread_cond_broadcast(&c_cond);
+    return nullptr;
 }
 
 void *consumer_routine(void *arg) {
@@ -65,17 +67,13 @@ void *consumer_routine(void *arg) {
     while (!end_of_data) {
         pthread_mutex_lock(&mmutex);
 
-        while (!is_produced && !end_of_data)
+        while (!is_produced)
             pthread_cond_wait(&c_cond, &mmutex);
-
-        if (end_of_data) {
-            pthread_mutex_unlock(&mmutex);
-            break;
-        }
-
         result += value->get();
         is_produced = false; // consumed
-        pthread_cond_signal(&p_cond);
+        if (end_of_data)
+            is_produced = true;
+        pthread_cond_broadcast(&p_cond);
         pthread_mutex_unlock(&mmutex);
         usleep(static_cast<useconds_t>((rand() % SLEEP) * 10000));
     }
@@ -90,6 +88,7 @@ void *consumer_interruptor_routine(void *arg) {
     auto *consumers = static_cast<pthread_t *>(arg);
     while (!end_of_data)
         pthread_cancel(consumers[ rand() % COUNT ]);
+    return nullptr;
 }
 
 int run_threads() {
