@@ -9,21 +9,20 @@ using namespace std;
 
 class Value
 {
-public:
-    Value() : _value(0)
-    { }
- 
+  public:
+    Value() : _value(0) {}
+
     void update(int value)
     {
         _value = value;
     }
- 
+
     int get() const
     {
         return _value;
     }
- 
-private:
+
+  private:
     int _value;
 };
 
@@ -40,20 +39,19 @@ pthread_cond_t next_value_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t got_value_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t start_consumer_cond = PTHREAD_COND_INITIALIZER;
 
-static int MAX_TIME_SLEEP;
-static int N; // number of consumers
+size_t MAX_TIME_SLEEP;
+size_t N; // number of consumers
 
-
-
-void* producer_routine(void* arg) {
+void *producer_routine(void *arg)
+{
     // Wait for consumer to start
-    // Read data, iterate through each value and update the shared_value, 
+    // Read data, iterate through each value and update the shared_value,
     // notify consumer, wait for consumer to process
 
-    Value* shared_value = (Value*)(arg);
+    Value *shared_value = (Value *)(arg);
 
     pthread_mutex_lock(&start_consumer_mutex);
-    while(!start_consumer)
+    while (!start_consumer)
         pthread_cond_wait(&start_consumer_cond, &start_consumer_mutex);
     pthread_mutex_unlock(&start_consumer_mutex);
 
@@ -81,17 +79,16 @@ void* producer_routine(void* arg) {
     pthread_mutex_unlock(&value_mutex);
 }
 
-
-void* consumer_routine(void* arg) {
+void *consumer_routine(void *arg)
+{
     // notify about start
     // for every update issued by producer, read the value and add to sum
     // return pointer to result (aggregated result for all consumers)
 
-
     int rc = pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-    
-    Value* shared_value = (Value*)(arg);
-    
+
+    Value *shared_value = (Value *)(arg);
+
     pthread_mutex_lock(&start_consumer_mutex);
     if (!start_consumer)
     {
@@ -110,7 +107,7 @@ void* consumer_routine(void* arg) {
             else
                 break;
         }
-        
+
         if (next_value)
         {
             sum += shared_value->get();
@@ -127,18 +124,18 @@ void* consumer_routine(void* arg) {
     return &sum;
 }
 
-
-void* consumer_interruptor_routine(void* arg) {
+void *consumer_interruptor_routine(void *arg)
+{
     // wait for consumer to start
     // interrupt consumer while producer is running
 
-    pthread_t* threads = (pthread_t*) arg;
+    pthread_t *threads = (pthread_t *)arg;
 
     pthread_mutex_lock(&start_consumer_mutex);
-    while(!start_consumer)
+    while (!start_consumer)
         pthread_cond_wait(&start_consumer_cond, &start_consumer_mutex);
     pthread_mutex_unlock(&start_consumer_mutex);
-    
+
     while (!end_of_producer)
     {
         size_t random_thread_id = rand() % N;
@@ -146,44 +143,47 @@ void* consumer_interruptor_routine(void* arg) {
     }
 }
 
-int run_threads() {
+int run_threads()
+{
     pthread_t consumers[N];
     pthread_t producer;
     pthread_t interruptor;
     Value shared_value;
 
-
-    if (pthread_create(&producer, NULL, producer_routine, (void *) &shared_value))
+    if (pthread_create(&producer, NULL, producer_routine, (void *)&shared_value))
         cout << "Error: cannot create producer thread" << endl;
 
-    for(size_t i = 0; i < N; i++) 
-    {
-      if (pthread_create(&consumers[i], NULL, consumer_routine, (void *) &shared_value))
-         cout << "Error: cannot create consumer thread" << endl;
-    }
-
-    if (pthread_create(&interruptor, NULL, consumer_interruptor_routine, (void *) &consumers))
-        cout << "Error: cannot create interruptor thread" << endl;
-
-    void* result;
     for (size_t i = 0; i < N; i++)
     {
-        if (pthread_join(consumers[i], &result)) {
+        if (pthread_create(&consumers[i], NULL, consumer_routine, (void *)&shared_value))
+            cout << "Error: cannot create consumer thread" << endl;
+    }
+
+    if (pthread_create(&interruptor, NULL, consumer_interruptor_routine, (void *)&consumers))
+        cout << "Error: cannot create interruptor thread" << endl;
+
+    pthread_join(producer, NULL);
+    pthread_join(interruptor, NULL);
+
+    void *result;
+    for (size_t i = 0; i < N; i++)
+    {
+        if (pthread_join(consumers[i], &result))
+        {
             cout << "Joing thread " << i << " failed!" << endl;
             return 1;
         }
     }
 
-    pthread_join(producer, NULL);
-    pthread_join(interruptor, NULL);
-
     return *((int *)result);
 }
- 
-int main(int argc, const char *argv[]) {
 
-    if (argc != 3) {
-        std::cout << "Wrong arguments! This program requires 2 arguments to run:\n1. Number of consumer threads\n2. Maximum sleep time for a consumer" << std::endl;
+int main(int argc, const char *argv[])
+{
+
+    if (argc != 3)
+    {
+        cout << "Wrong arguments! This program requires 2 arguments to run:\n1. Number of consumer threads\n2. Maximum sleep time for a consumer" << endl;
 
         return 1;
     }
@@ -193,4 +193,3 @@ int main(int argc, const char *argv[]) {
     cout << run_threads() << endl;
     return 0;
 }
-
