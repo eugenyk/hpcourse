@@ -53,8 +53,15 @@ void *producer_routine(void *arg) {
         pthread_cond_signal(&c_cond);
         pthread_mutex_unlock(&mmutex);
     }
+    pthread_mutex_lock(&mmutex);
+    while (is_produced) {
+        pthread_cond_wait(&p_cond, &mmutex);
+    }
+    value->update(0);
+    is_produced = true;
     end_of_data = true;
     pthread_cond_broadcast(&c_cond);
+    pthread_mutex_unlock(&mmutex);
     return nullptr;
 }
 
