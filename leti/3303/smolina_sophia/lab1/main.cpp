@@ -5,7 +5,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <random>
- 
+
  using namespace std;
 
 enum Status {
@@ -65,13 +65,13 @@ public:
         pthread_mutex_unlock(&my_mutex);
     }
     cout << "Producer waited when consumers is started" << endl;
-    
+
     Value* value = static_cast<Value *>(arg);
     int num;
     cout << "Enter number" << endl;
     while (cin >> num) {
         cout << "Producer read number=" + to_string(num) << endl;
-        
+
         pthread_mutex_lock(&my_mutex);
         value->update(num);
         status = PRODUCER_IS_READY;
@@ -88,15 +88,17 @@ public:
     }
     cout << "Producer finished" << endl;
     status = FINISHED;
+    pthread_mutex_lock(&my_mutex);
     pthread_cond_broadcast(&consumer_cond);
-     
+    pthread_mutex_unlock(&my_mutex);
+
     return nullptr;
 }
  void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 
     ConsumerArg* consumerArg = static_cast<ConsumerArg *>(arg);
-    
+
     Value* value = consumerArg->getValue();
     int number = consumerArg->getNumber();
     cout << "Consumer №" + to_string(number) + " started" << endl;
@@ -104,8 +106,8 @@ public:
     if(status == BEFORE_START) {
         pthread_mutex_lock(&my_mutex);
         status = START;
-        pthread_mutex_unlock(&my_mutex);
         pthread_cond_broadcast(&producer_cond);
+        pthread_mutex_unlock(&my_mutex);
     }
 
     int sum = 0;
@@ -121,8 +123,8 @@ public:
             sum += v;
             status = CONSUMER_IS_READY;
             cout << "Consumer №" + to_string(number) + " toted " + to_string(v) + " sum=" + to_string(sum) << endl;
-            pthread_mutex_unlock(&my_mutex);
             pthread_cond_broadcast(&producer_cond);
+            pthread_mutex_unlock(&my_mutex);
             //usleep(static_cast<useconds_t>((distribution(generator) % max_sleep_time) * 1000));
         } else {
             pthread_mutex_unlock(&my_mutex);   
@@ -160,7 +162,7 @@ void* consumer_interruptor_routine(void* arg) {
 }
  int run_threads() {
     Value * value = new Value();
-    
+
     pthread_t producer;
     pthread_create(&producer, nullptr, producer_routine, value);
     cout << "Createed producer" << endl;
@@ -182,7 +184,7 @@ void* consumer_interruptor_routine(void* arg) {
     cout << "Joined producer" << endl;
     pthread_join(interruptor, nullptr);
     cout << "Joined interruptor" << endl;
-    
+
     int res = 0;
     for (int i = 0; i<num_of_consumers; i++) {
         int* v;
