@@ -7,9 +7,10 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 public class LockFreePriorityQueue<E extends Comparable<E>>
         extends AbstractQueue<E> implements PriorityQueue<E> {
 
-    private final Node<E> tail = new Node<>(null, null);
-    private final Node<E> head = new Node<>(null, tail);
+    private final ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> tail = new ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<>(null, null);
+    private final ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> head = new ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<>(null, tail);
     private static final int maxAttempt = 100;
+
 
     @Override
     public Iterator<E> iterator() {
@@ -18,7 +19,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
     @Override
     public int size() {
-        Node<E> currenct = head;
+        ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> currenct = head;
         int i = 0;
         while (currenct.getNext() != tail){
             if (!currenct.nextIsMarked()){
@@ -33,10 +34,10 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
     public boolean offer(E e) {
         int i = 0;
         while (i < maxAttempt) {
-            Position<E> pair = findPosition(e);
-            Node<E> previous = pair.getLeft();
-            Node<E> next = pair.getRight();
-            Node<E> newNode = new Node<>(e, next);
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Position<E> pair = findPosition(e);
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> previous = pair.getLeft();
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> next = pair.getRight();
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> newNode = new ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<>(e, next);
             if(previous.compareAndSetNext(next, newNode)) {
                 return true;
             }
@@ -48,11 +49,11 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
     public E poll() {
         int i = 0;
         while (i < maxAttempt) {
-            Node<E> position = getFirst();
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> position = getFirst();
             if(position == tail) {
                 return null;
             }
-            Node<E> nextMin = position.getNext();
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> nextMin = position.getNext();
             if(position.markDeleted(nextMin, nextMin)) {
                 head.compareAndSetNext(position, nextMin);
                 return position.getValue();
@@ -69,18 +70,18 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
     @Override
     public boolean isEmpty() {
-        return size() == 0;
+        return peek() == null;
     }
 
-    private Position<E> findPosition(E e) {
+    private ru.sofysmo.priorityqueue.LockFreePriorityQueue.Position<E> findPosition(E e) {
         while(true) {
-            Node<E> left = head;
-            Node<E> right;
-            Node<E> current = head.getNext();
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> left = head;
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> right;
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> current = head.getNext();
             boolean[] flagDeletion = {false};
 
-            Node<E> tmpNode = head;
-            Node<E> tmpNodeNext = head.getNext(flagDeletion);
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> tmpNode = head;
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> tmpNodeNext = head.getNext(flagDeletion);
             do {
                 if (!flagDeletion[0]) {
                     left = tmpNode;
@@ -93,18 +94,18 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
             right = tmpNode;
             if(left.compareAndSetNext(current, right)) {
                 if(right == tail || !right.nextIsMarked()) {
-                    return new Position<>(left, right);
+                    return new ru.sofysmo.priorityqueue.LockFreePriorityQueue.Position<>(left, right);
                 }
             }
         }
     }
 
-    private Node<E> getFirst() {
-        Node<E> left = head;
+    private ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> getFirst() {
+        ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> left = head;
         boolean[] flagDeletion = {false};
         while (true) {
-            Node<E> current = left.getNext();
-            Node<E> next = current.getNext(flagDeletion);
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> current = left.getNext();
+            ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> next = current.getNext(flagDeletion);
             if(flagDeletion[0]) {
                 left.compareAndSetNext(current, next);
                 continue;
@@ -115,9 +116,9 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
     private static class Node<E extends Comparable<E>> {
         private final E value;
-        private AtomicMarkableReference<Node<E>> next;
+        private AtomicMarkableReference<ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E>> next;
 
-        Node(E value, Node<E> next) {
+        Node(E value, ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> next) {
             this.value = value;
             this.next = new AtomicMarkableReference<>(next, false);
         }
@@ -126,19 +127,19 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
             return value;
         }
 
-        boolean markDeleted(Node<E> nextOld, Node<E> nextNew) {
+        boolean markDeleted(ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> nextOld, ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> nextNew) {
             return next.compareAndSet(nextOld, nextNew, false, true);
         }
 
-        boolean compareAndSetNext(Node<E> nextOld, Node<E> nextNew) {
+        boolean compareAndSetNext(ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> nextOld, ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> nextNew) {
             return next.compareAndSet(nextOld, nextNew, false, false);
         }
 
-        Node<E> getNext() {
+        ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> getNext() {
             return next.getReference();
         }
 
-        Node<E> getNext(boolean flagDeletion[]) {
+        ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> getNext(boolean flagDeletion[]) {
             return next.get(flagDeletion);
         }
 
@@ -148,19 +149,19 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
     }
 
     private static class Position<E extends Comparable<E>> {
-        private final Node<E> left;
-        private final Node<E> right;
+        private final ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> left;
+        private final ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> right;
 
-        Position(Node<E> leftNode, Node<E> rightNode) {
+        Position(ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> leftNode, ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> rightNode) {
             left = leftNode;
             right = rightNode;
         }
 
-        Node<E> getLeft() {
+        ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> getLeft() {
             return left;
         }
 
-        Node<E> getRight() {
+        ru.sofysmo.priorityqueue.LockFreePriorityQueue.Node<E> getRight() {
             return right;
         }
     }
