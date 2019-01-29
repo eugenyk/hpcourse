@@ -8,8 +8,8 @@ import org.junit.Test;
 import java.util.Queue;
 
 @StressCTest
-public class PriorityQueueTestLinCheck {
-    private Queue<Integer> queue = new PriorityQueue<>();
+public class LockFreePriorityQueueTestLinCheck {
+    private Queue<Integer> queue = new LockFreePriorityQueue<>();
 
     @Operation
     public void offer(Integer x) {
@@ -23,6 +23,6 @@ public class PriorityQueueTestLinCheck {
 
     @Test
     public void runTest() {
-        LinChecker.check(PriorityQueueTestLinCheck.class);
+        LinChecker.check(LockFreePriorityQueueTestLinCheck.class);
     }
 }

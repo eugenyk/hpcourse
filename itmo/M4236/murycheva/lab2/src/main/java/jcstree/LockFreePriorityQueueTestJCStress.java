@@ -2,20 +2,20 @@ package jcstree;
 
 import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.I_Result;
-import priorityQueue.PriorityQueue;
+import priorityQueue.LockFreePriorityQueue;
 
 import java.util.Queue;
 
 import static org.openjdk.jcstress.annotations.Expect.ACCEPTABLE;
 
-public class PriorityQueueTestJCStress {
+public class LockFreePriorityQueueTestJCStress {
 
     @JCStressTest
     @Outcome(id = "150", expect = ACCEPTABLE)
     public static class SizeIsCorrectTest {
         @State
         public static class QueueState {
-            final Queue<Integer> queue = new PriorityQueue<>();
+            final Queue<Integer> queue = new LockFreePriorityQueue<>();
         }
 
         @Actor
@@ -53,7 +53,7 @@ public class PriorityQueueTestJCStress {
     public static class OfferAndPeekTest {
         @State
         public static class QueueState {
-            final Queue<Integer> queue = new PriorityQueue<>();
+            final Queue<Integer> queue = new LockFreePriorityQueue<>();
         }
 
         @Actor

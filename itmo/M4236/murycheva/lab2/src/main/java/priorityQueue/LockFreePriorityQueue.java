@@ -5,14 +5,14 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
-public class PriorityQueue<E extends Comparable<E>> extends AbstractQueue<E> {
+public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueue<E> {
 
     private AtomicInteger size = new AtomicInteger(0);
 
     private Node<E> head;
     private Node<E> tail;
 
-    public PriorityQueue() {
+    public LockFreePriorityQueue() {
         head = new Node<>(null);
         tail = new Node<>(null);
         head.setNext(tail);
