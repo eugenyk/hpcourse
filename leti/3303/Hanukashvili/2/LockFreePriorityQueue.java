@@ -104,7 +104,7 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
 		@Override
 		public boolean isEmpty() {
-			return size() == 0;
+			return search().getValue() == null;
 		}
 
 		   private Position<E> findPosition(E e) {
