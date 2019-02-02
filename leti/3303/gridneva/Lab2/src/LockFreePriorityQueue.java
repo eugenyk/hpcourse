@@ -100,7 +100,8 @@ public class LockFreePriorityQueue<E extends Comparable<E>>
 
 		@Override
 		public boolean isEmpty() {
-			return size() == 0;
+			if (firstNode().getValue() == null) return true;
+			else return false;
 		}
 
 		   
