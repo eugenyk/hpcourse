@@ -5,12 +5,13 @@
 #include <iostream>
 #include <stdlib.h>
 
-int consumersN;
+int consumersN = 0;
 int sleepLimit;
 
 pthread_cond_t t_cond = PTHREAD_COND_INITIALIZER;
 volatile bool t_ready = false;
 
+pthread_barrier_t waitForStart;
 pthread_mutex_t v_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t v_cond = PTHREAD_COND_INITIALIZER;
 volatile bool v_ready = false;
@@ -36,14 +37,8 @@ void* producer_routine(void* arg) {
 	
     std::vector<int> inputs;
 
-    pthread_mutex_lock(&v_mutex);
-    while (!t_ready)
-    {
-        pthread_cond_wait(&t_cond, &v_mutex);
-    }
-    pthread_mutex_unlock(&v_mutex);
-
 	Value *value = reinterpret_cast<Value *>(arg);
+	pthread_barrier_wait(&waitForStart);
 
     std::string buffer;
     std::getline(std::cin, buffer);
@@ -90,6 +85,8 @@ void* consumer_routine(void* arg) {
     Value *value = reinterpret_cast<Value *>(arg);
 
     Value *res = new Value();
+	
+    pthread_barrier_wait(&waitForStart);
 
     while (1)
     {
@@ -134,16 +131,22 @@ void* consumer_routine(void* arg) {
 
 void* consumer_interruptor_routine(void* arg) {
 	pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);   
+	size_t consNum;
+    pthread_barrier_wait(&waitForStart);
+    
     while (!finish)
     {
-        unsigned i = rand() % consumersN;
-        pthread_cancel(consumers[i]);
+        consNum = rand() % consumersN;
+        pthread_cancel(consumers[consNum]);
     }
 
     pthread_exit(NULL);
 }
 
 int run_threads(int consumersNum) {
+    
+    pthread_barrier_init(&waitForStart, nullptr, static_cast<unsigned>(consumersNum + 2));
+
 
     Value *value = new Value();
     Value *result;
