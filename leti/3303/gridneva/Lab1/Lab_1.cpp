@@ -14,9 +14,8 @@
 #include <unistd.h>
 using namespace std;
 
-pthread_mutex_t synch_lock = PTHREAD_MUTEX_INITIALIZER; //mutex for cond1 & cond2
+pthread_mutex_t synch_lock = PTHREAD_MUTEX_INITIALIZER; //mutex for cond1 
 pthread_cond_t cond1 =  PTHREAD_COND_INITIALIZER;  //condition for consumer
-pthread_cond_t cond2 =  PTHREAD_COND_INITIALIZER;  //condition for producer
 pthread_barrier_t barrier_runs;
 bool update_value = false;
 bool finished_producer = false;
@@ -61,6 +60,7 @@ std::vector<int> get_values_list(){
     for (std::string s : nums_str){
       nums.push_back(atoi(s.c_str()));
      }
+    
      return nums;
 }
 
@@ -74,15 +74,16 @@ void* producer_routine(void* arg) {
 	while (!(numlist.empty()))
 	{
 		pthread_mutex_lock(&synch_lock);
-		while(update_value == true)		// wait until calculate sum
-		{
-			pthread_cond_wait(&cond2, &synch_lock); // Wait for consumer to process
-		}
 		(*v).update(numlist.back());
 		numlist.pop_back();
 		update_value = true;
-		pthread_mutex_unlock(&synch_lock);
+		while(update_value == true)		// wait until calculate sum
+		{
+			pthread_cond_wait(&cond1, &synch_lock); // Wait for consumer to process
+		}
+		
 		pthread_cond_signal( &cond1);
+		pthread_mutex_unlock(&synch_lock);
 
 	}
 	pthread_mutex_lock(&synch_lock);
@@ -101,22 +102,25 @@ void* consumer_routine(void* arg) {
 	pthread_barrier_wait(&barrier_runs);
 	while(true)
 	{
+			
 			pthread_mutex_lock(&synch_lock);
-			if (!update_value && finished_producer){
+			if (update_value)
+			{
+				sum+=(*v).get();
+				update_value = false;
+				pthread_cond_broadcast(&cond1);
+				pthread_mutex_unlock(&synch_lock);
+			}
+			else pthread_mutex_unlock(&synch_lock);	
+		
+			usleep((rand() % sleep_time +1 )*1000);
+
+			pthread_mutex_lock(&synch_lock);
+			if (finished_producer){
 				pthread_mutex_unlock(&synch_lock);
 				break;
 			}
-
-			while(update_value == false)		// wait until update data
-			{
-				pthread_cond_wait(&cond1, &synch_lock);
-			}
-			sum+=(*v).get();					// for every update issued by producer, read the value and add to sum
-			end = finished_producer;
-			update_value = false;
-			pthread_mutex_unlock(&synch_lock);
-			pthread_cond_signal( &cond2);
-			usleep((rand() % sleep_time +1 )*1000);
+			else pthread_mutex_unlock(&synch_lock);
 		}
 
 	void* ptr = &sum;
@@ -159,20 +163,20 @@ int run_threads() {
 	}
 	pthread_create(&interruptor, NULL, consumer_interruptor_routine, consumers);
 
+	pthread_join(producer, NULL);
+	pthread_join(interruptor, NULL);
+
 
 	for (int i = 0; i < threads_num; ++i)
 	{
 	      pthread_join(consumers[i], &result);
-	      int* res =  static_cast<int*>(result);
 	}
-	pthread_join(producer, NULL);
-	pthread_join(interruptor, NULL);
+	
 	int* res =  static_cast<int*>(result);
         std::free(consumers);
 
 	pthread_mutex_destroy(&synch_lock);
 	pthread_cond_destroy(&cond1);
-	pthread_cond_destroy(&cond2);
 	pthread_barrier_destroy(&barrier_runs);
   // return aggregated sum of values
 
