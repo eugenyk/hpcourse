@@ -76,7 +76,7 @@ namespace Tutorial {
     public const int SenderFieldNumber = 1;
     private string sender_ = "";
     /// <summary>
-    ////&lt; Г€Г¤ГҐГ­ГІГЁГґГЁГЄГ ГІГ®Г° Г®ГІГЇГ°Г ГўГЁГІГҐГ«Гї
+    ////&lt; Идентификатор отправителя
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Sender {
@@ -90,7 +90,7 @@ namespace Tutorial {
     public const int TextFieldNumber = 2;
     private string text_ = "";
     /// <summary>
-    ////&lt; Г‘Г®Г¤ГҐГ°Г¦Г Г­ГЁГҐ Г±Г®Г®ГЎГ№ГҐГ­ГЁГї
+    ////&lt; Содержание сообщения
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Text {
@@ -104,7 +104,7 @@ namespace Tutorial {
     public const int DataFieldNumber = 3;
     private string data_ = "";
     /// <summary>
-    ////&lt; Internal field. ГЊГ®Г¦Г­Г® ГЁГ±ГЇГ®Г«ГјГ§Г®ГўГ ГІГј Г¤Г«Гї Г°ГҐГ Г«ГЁГ§Г Г¶ГЁГЁ ГЄГ ГЄГЁГµ-Г«ГЁГЎГ®
+    ////&lt; Internal field. Можно использовать для реализации каких-либо
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Data {
