@@ -108,11 +108,16 @@ void *producer_routine(void *arg)
 }
  void *consumer_interruptor_routine(void *arg)
 {
-    pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);
-    while (!end)
+    bool fin = false;
+    pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);    
+
+    while (fin == false)
     {
         unsigned i = rand() % n_threads;
         pthread_cancel(consumers[i]);
+        pthread_mutex_lock(&vmutex);
+		    fin = end;
+		    pthread_mutex_unlock(&vmutex);
     }
     pthread_exit(nullptr);
 }
