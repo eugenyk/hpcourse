@@ -1,0 +1,9 @@
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\bin\Debug\ClientConfigurator.exe.config
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\bin\Debug\ClientConfigurator.exe
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\bin\Debug\ClientConfigurator.pdb
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\obj\Debug\ClientConfigurator.MainForm.resources
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\obj\Debug\ClientConfigurator.Properties.Resources.resources
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\obj\Debug\ClientConfigurator.csproj.GenerateResource.Cache
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\obj\Debug\ClientConfigurator.exe
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\obj\Debug\ClientConfigurator.pdb
+E:\Универ\3 курс\РВС\Messenger\ClientConfigurator\obj\Debug\ClientConfigurator.csprojResolveAssemblyReference.cache

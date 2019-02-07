@@ -1,0 +1,15 @@
+E:\Универ\3 курс\РВС\Messenger\Server\obj\Debug\Server.csprojResolveAssemblyReference.cache
+E:\Универ\3 курс\РВС\Messenger\Server\obj\Debug\Server.Properties.Resources.resources
+E:\Универ\3 курс\РВС\Messenger\Server\obj\Debug\Server.csproj.GenerateResource.Cache
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\Server.exe.config
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\Server.exe
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\Server.pdb
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\EntityFramework.dll
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\EntityFramework.SqlServer.dll
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\Messenger.dll
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\Messenger.pdb
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\EntityFramework.xml
+E:\Универ\3 курс\РВС\Messenger\Server\bin\Debug\EntityFramework.SqlServer.xml
+E:\Универ\3 курс\РВС\Messenger\Server\obj\Debug\Server.exe
+E:\Универ\3 курс\РВС\Messenger\Server\obj\Debug\Server.pdb
+E:\Универ\3 курс\РВС\Messenger\Server\obj\Debug\Server.MainForm.resources

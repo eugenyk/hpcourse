@@ -1,0 +1,109 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using System.Data.Entity;
+
+namespace Server.DataModel
+{
+    public class ServerDataContext : DbContext
+    {
+        public ServerDataContext() : base("DBConnection")
+        {
+        }
+
+        public DbSet<User> Users { get; set; }
+        //public DbSet<UserData> UsersData { get; set; }
+
+        private void SaveChangesSync()
+        {
+            lock (this)
+            {
+                this.SaveChanges();
+            }
+        }
+
+        public void AddUser(string login, string password)
+        {
+            lock(Users)
+            {
+                User tmp_user = new User();
+
+                tmp_user.UserName = login;
+                tmp_user.Password = password;
+                tmp_user.IsOnline = false;
+
+                Users.Add(tmp_user);
+               // UsersData.Add(new UserData());
+            }
+            SaveChangesSync();
+        }
+
+       /* public void DeleteUser(string login)
+        {
+            lock (Users)
+            {
+                Users.Remove(GetUserByName(login));
+            }
+            SaveChangesSync();
+        }
+
+        public bool IsUserExist(string user_name)
+        {
+            if (GetUserByName(user_name) != null)
+                return true;
+            else
+                return false;
+        }
+
+        public User GetUserByName(string user_name)
+        {
+            User result = null;
+            lock(Users)
+            {
+                foreach (User tmp_user in Users)
+                {
+                    if (tmp_user.UserName == user_name)
+                    {
+                        result = tmp_user;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        public void SetStatus(string user_name, bool online)
+        {
+            User tmp_user = GetUserByName(user_name);
+            tmp_user.IsOnline = online;
+
+            SaveChangesSync();
+        }
+
+        public UserData GetUserDataByName(string user_name)
+        {
+            User tmp_user = GetUserByName(user_name);
+            lock(UsersData)
+            {
+                if (tmp_user == null)
+                    return null;
+                else
+                    return UsersData.ElementAt(tmp_user.Id);
+            }
+        }
+
+        public void AddMessageToDB(string user_name, UserMessage mess)
+        {
+            UserData tmp_ud = GetUserDataByName(user_name);
+            lock(Users)
+            {
+                tmp_ud.Messages.Add(mess);
+            }
+
+            SaveChangesSync();
+        }*/
+    }
+}

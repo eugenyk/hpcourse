@@ -1,0 +1,10 @@
+E:\Универ\3 курс\РВС\Messenger\Messenger\bin\Debug\Messenger.dll
+E:\Универ\3 курс\РВС\Messenger\Messenger\bin\Debug\Messenger.pdb
+E:\Универ\3 курс\РВС\Messenger\Messenger\obj\Debug\Messenger.dll
+E:\Универ\3 курс\РВС\Messenger\Messenger\obj\Debug\Messenger.pdb
+E:\Универ\3 курс\РВС\Messenger\Messenger\obj\Debug\Messenger.csprojResolveAssemblyReference.cache
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Messenger\bin\Debug\Messenger.dll
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Messenger\bin\Debug\Messenger.pdb
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Messenger\obj\Debug\Messenger.csprojResolveAssemblyReference.cache
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Messenger\obj\Debug\Messenger.dll
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Messenger\obj\Debug\Messenger.pdb

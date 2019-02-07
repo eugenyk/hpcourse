@@ -1,0 +1,31 @@
+E:\Универ\3 курс\РВС\Messenger\Client\bin\Debug\Client.exe.config
+E:\Универ\3 курс\РВС\Messenger\Client\bin\Debug\Client.exe
+E:\Универ\3 курс\РВС\Messenger\Client\bin\Debug\Client.pdb
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.csprojResolveAssemblyReference.cache
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.LoginForm.resources
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.MainForm.resources
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.Properties.Resources.resources
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.csproj.GenerateResource.Cache
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.exe
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.pdb
+E:\Универ\3 курс\РВС\Messenger\Client\bin\Debug\Messenger.dll
+E:\Универ\3 курс\РВС\Messenger\Client\bin\Debug\Messenger.pdb
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.WaitingForm.resources
+E:\Универ\3 курс\РВС\Messenger\Client\obj\Debug\Client.UsersListForm.resources
+E:\Универ\3 курс\РВС\Lab1+2\Messenger\Client\bin\Debug\Client.exe.config
+E:\Универ\3 курс\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.exe
+E:\Универ\3 курс\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.pdb
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\bin\Debug\Client.exe.config
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.exe
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.pdb
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\bin\Debug\Client.exe
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\bin\Debug\Client.pdb
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\bin\Debug\Messenger.dll
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\bin\Debug\Messenger.pdb
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.csprojResolveAssemblyReference.cache
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.LoginForm.resources
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.MainForm.resources
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.Properties.Resources.resources
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.UsersListForm.resources
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.WaitingForm.resources
+D:\Temp\РВС\РВС\Lab1+2\Messenger\Client\obj\Debug\Client.csproj.GenerateResource.Cache
