@@ -31,20 +31,17 @@ private:
 
 int MaxSleepTime;
 
-bool IsConsumerStart = false;
-bool IsSharedDataChanged = false;
 bool IsInputEnded = false;
 
-pthread_mutex_t Mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t DataChangedCondition = PTHREAD_COND_INITIALIZER;
+pthread_barrier_t barrierStart;
+pthread_barrier_t barrierReady;
+pthread_barrier_t barrierUpdate;
 
 int ConsumersCount;
 
 void* producer_routine(void* sharedValuePtr) 
 {
-	pthread_mutex_lock(&Mutex);
-	while (!IsConsumerStart);
-	pthread_mutex_unlock(&Mutex);
+	pthread_barrier_wait(&barrierStart);
 	
 	string input;
 	getline(cin, input);
@@ -57,51 +54,41 @@ void* producer_routine(void* sharedValuePtr)
 		if (!(ss >> number))
 		{
 			IsInputEnded = true;
+			pthread_barrier_wait(&barrierReady);
 			break;
 		}
-		pthread_mutex_lock(&Mutex);
 		((Value *)sharedValuePtr)->update(number);
-		while (IsSharedDataChanged)
-		{
-			pthread_cond_wait(&DataChangedCondition, &Mutex);
-		}
-		IsSharedDataChanged = true;
-		pthread_cond_broadcast(&DataChangedCondition);
-		pthread_mutex_unlock(&Mutex);
+
+		pthread_barrier_wait(&barrierReady);
+		pthread_barrier_wait(&barrierUpdate);
 	}
-	pthread_mutex_lock(&Mutex);
-	pthread_cond_broadcast(&DataChangedCondition);
-	pthread_mutex_unlock(&Mutex);
 	return NULL;
 }
 
 void* consumer_routine(void* sharedValuePtr) 
 {
-	IsConsumerStart = true;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
+	pthread_barrier_wait(&barrierStart);
+
 	static Value *sum = new Value();
 	
 	while (true)
 	{
-		pthread_mutex_lock(&Mutex);
-			while (!IsSharedDataChanged && !IsInputEnded)
-					pthread_cond_wait(&DataChangedCondition, &Mutex);
-		if (!IsSharedDataChanged)
-		{
-			pthread_mutex_unlock(&Mutex);
-			break;
-		}
+		pthread_barrier_wait(&barrierReady);
+		if (IsInputEnded) break;
 		sum->update(sum->get() + ((Value *)sharedValuePtr)->get());
-		IsSharedDataChanged = false;
-		pthread_cond_broadcast(&DataChangedCondition);
-		pthread_mutex_unlock(&Mutex);
+
 		usleep(rand() % (MaxSleepTime * 1000 + 1));
+		pthread_barrier_wait(&barrierUpdate);
 	}
 	return (void *)sum;
 }
 
-void* consumer_interruptor_routine(void* consumersIDPtr) {
-	while (!IsConsumerStart);
+void* consumer_interruptor_routine(void* consumersIDPtr) 
+{
+	pthread_barrier_wait(&barrierStart);
+
 	while (true)
 	{
 		vector<pthread_t> consumersID = *((vector<pthread_t> *)consumersIDPtr);
@@ -115,6 +102,10 @@ void* consumer_interruptor_routine(void* consumersIDPtr) {
 
 int run_threads() 
 {
+	pthread_barrier_init(&barrierStart, NULL, ConsumersCount);
+	pthread_barrier_init(&barrierReady, NULL, ConsumersCount);
+	pthread_barrier_init(&barrierUpdate, NULL, ConsumersCount);
+
 	Value sharedValue;
 	pthread_t producerID;
 	pthread_create(&producerID, NULL, producer_routine, &sharedValue);
@@ -139,6 +130,10 @@ int run_threads()
 		pthread_join(consumersID.at(i), NULL);
 	}
 		
+	pthread_barrier_destroy(&barrierStart);
+	pthread_barrier_destroy(&barrierReady);
+	pthread_barrier_destroy(&barrierUpdate);
+
 	return *((int *)result);
 }
 
