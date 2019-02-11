@@ -52,9 +52,16 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
 
     @Override
     public boolean isEmpty() {
-        Pair<Node<E>, Node<E>> pair = search(null);
-        if (pair.getLeft() == head && pair.getRight() == tail) return true;
-        else return false;
+        for(;;) {
+            Node<E> top = head.getNext();
+
+            if (top.isMarked()) {
+                head.casNext(top, top.getNext());
+                continue;
+            }
+
+            return top == tail;
+        }
     }
 
     public int size() {
