@@ -54,10 +54,12 @@ public class LockFreePriorityQueue<E extends Comparable<E>> extends AbstractQueu
     public boolean isEmpty() {
         while (true) {
             Node<E> top = head.getNext();
+            
             if (top.isMarked()) {
                 head.casNext(top, top.getNext());
                 continue;
             }
+            
             return top == tail;
         }
     }
