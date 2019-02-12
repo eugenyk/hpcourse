@@ -102,9 +102,9 @@ void* consumer_interruptor_routine(void* consumersIDPtr)
 
 int run_threads() 
 {
-	pthread_barrier_init(&barrierStart, NULL, ConsumersCount);
-	pthread_barrier_init(&barrierReady, NULL, ConsumersCount);
-	pthread_barrier_init(&barrierUpdate, NULL, ConsumersCount);
+	pthread_barrier_init(&barrierStart, NULL, ConsumersCount + 2);
+	pthread_barrier_init(&barrierReady, NULL, ConsumersCount + 1);
+	pthread_barrier_init(&barrierUpdate, NULL, ConsumersCount + 1);
 
 	Value sharedValue;
 	pthread_t producerID;
