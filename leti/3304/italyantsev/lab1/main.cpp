@@ -112,12 +112,12 @@ void *producer_routine(void *arg)
     pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);    
 
     while (fin == false)
-    {
+    {	
+	pthread_mutex_lock(&vmutex);
         unsigned i = rand() % n_threads;
         pthread_cancel(consumers[i]);
-        pthread_mutex_lock(&vmutex);
-		    fin = end;
-		    pthread_mutex_unlock(&vmutex);
+	fin = end;
+	pthread_mutex_unlock(&vmutex);
     }
     pthread_exit(nullptr);
 }
