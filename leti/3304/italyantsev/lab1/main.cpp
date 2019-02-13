@@ -89,7 +89,7 @@ void *producer_routine(void *arg)
             pthread_cond_wait(&vcond, &vmutex);
         } while (!v_ready);
         t_ready = false;
-         if (!end)
+        if (!end)
         {
             ret_val->update(value_instance->get() + ret_val->get());
         }
@@ -108,19 +108,22 @@ void *producer_routine(void *arg)
 }
  void *consumer_interruptor_routine(void *arg)
 {
-    bool fin = false;
     pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);    
 
-    while (fin == false)
-    {	
-	pthread_mutex_lock(&vmutex);
-        unsigned i = rand() % n_threads;
-        pthread_cancel(consumers[i]);
-	fin = end;
-	pthread_mutex_unlock(&vmutex);
+    pthread_mutex_lock(&vmutex);
+    while (!t_ready)
+    {
+        pthread_cond_wait(&vcond, &vmutex);
+    }
+    pthread_mutex_unlock(&vmutex);
+
+    while (!end)
+    {
+        pthread_cancel(consumers[rand() % n_threads]);
     }
     pthread_exit(nullptr);
 }
+
  int run_threads(unsigned threads_cnt, unsigned msec)
 {
     Value *value_instance = new Value();
