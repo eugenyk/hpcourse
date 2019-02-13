@@ -139,6 +139,10 @@ void *producer_routine(void *arg)
     pthread_join(producer, nullptr);
     pthread_join(interruptor, nullptr);
     delete[] consumers;
+    pthread_mutex_destroy(&vmutex);
+	  pthread_cond_destroy(&tcond);
+    pthread_cond_destroy(&vcond);
+	  pthread_barrier_destroy(&mybarrier);
     return ret_val->get();
 }
 
