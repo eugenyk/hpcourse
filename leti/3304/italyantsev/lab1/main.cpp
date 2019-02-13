@@ -20,23 +20,19 @@ class Value
    private:
     int _value;
 };
+pthread_barrier_t mybarrier;
 pthread_cond_t tcond = PTHREAD_COND_INITIALIZER;
 volatile bool t_ready = false;
 pthread_mutex_t vmutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t vcond = PTHREAD_COND_INITIALIZER;
 volatile bool v_ready = false;
 volatile bool end = false;
-unsigned n_threads;
+unsigned n_threads = 0;
 unsigned m_sec;
 void *producer_routine(void *arg)
 {
-    pthread_mutex_lock(&vmutex);
-    while (!t_ready)
-    {
-       pthread_cond_wait(&tcond, &vmutex);
-    }
-    pthread_mutex_unlock(&vmutex);
     Value *value_instance = reinterpret_cast<Value *>(arg);
+    pthread_barrier_wait(&mybarrier);
     std::vector<int> input_values;
     std::string buf;
     std::getline(std::cin, buf);
@@ -46,7 +42,7 @@ void *producer_routine(void *arg)
     {
         input_values.push_back(input);
     }
-     for (int val: input_values)
+    for (int val: input_values)
     {
         pthread_mutex_lock(&vmutex);
         value_instance->update(val);
@@ -73,6 +69,7 @@ void *producer_routine(void *arg)
     static int count = 0;
     Value *value_instance = reinterpret_cast<Value *>(arg);
     Value *ret_val = new Value();
+    pthread_barrier_wait(&mybarrier);
     while (1)
     {
         pthread_mutex_lock(&vmutex);
@@ -89,6 +86,7 @@ void *producer_routine(void *arg)
             pthread_cond_wait(&vcond, &vmutex);
         } while (!v_ready);
         t_ready = false;
+
         if (!end)
         {
             ret_val->update(value_instance->get() + ret_val->get());
@@ -109,23 +107,18 @@ void *producer_routine(void *arg)
  void *consumer_interruptor_routine(void *arg)
 {
     pthread_t *consumers = reinterpret_cast<pthread_t *>(arg);    
-
-    pthread_mutex_lock(&vmutex);
-    while (!t_ready)
-    {
-        pthread_cond_wait(&vcond, &vmutex);
-    }
-    pthread_mutex_unlock(&vmutex);
+    pthread_barrier_wait(&mybarrier);    
 
     while (!end)
     {
         pthread_cancel(consumers[rand() % n_threads]);
     }
+    
     pthread_exit(nullptr);
 }
-
  int run_threads(unsigned threads_cnt, unsigned msec)
 {
+    pthread_barrier_init(&mybarrier, nullptr, static_cast<unsigned>(n_threads + 2));
     Value *value_instance = new Value();
     Value *ret_val;
     n_threads = threads_cnt;
