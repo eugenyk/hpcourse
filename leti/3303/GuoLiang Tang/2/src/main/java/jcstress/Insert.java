@@ -19,20 +19,20 @@ public class Insert
     @Actor
     public void actor1() 
 	{
-        queue.insert(1);
+        queue.add(1);
     }
 
     @Actor
     public void actor2() 
 	{
-        queue.insert(2);
+        queue.offer(2);
     }
 
     @Arbiter
     public void arbiter(I_Result r) 
 	{
-		queue.extractMinimum();
-		queue.extractMinimum();
+		queue.remove();
+		queue.poll();
         if(queue.isEmpty())
 			r.r1 = 1;
 		else
