@@ -116,7 +116,7 @@ int run_threads() {
     pthread_t consumers[N];
     check_error(pthread_create(&producer, nullptr, producer_routine, nullptr), "pthread_create");
     for (int i = 0; i < N; i++) {
-        check_error(pthread_create(&consumers[N], nullptr, consumer_routine, &value),
+        check_error(pthread_create(&consumers[i], nullptr, consumer_routine, &value),
                 "pthread_create producer #" + std::to_string(i));
     }
     // check_error(pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers), "pthread_creeate interruptor");
@@ -125,7 +125,7 @@ int run_threads() {
     int result = 0;
     for (int i = 0; i < N; i++) {
         void *ret;
-        check_error(pthread_join(consumers[N], &ret), "pthread_join consumer #" + std::to_string(i));
+        check_error(pthread_join(consumers[i], &ret), "pthread_join consumer #" + std::to_string(i));
         result += *((int *) ret);
     }
     check_error(pthread_join(producer, nullptr), "pthread_join producer");
