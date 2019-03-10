@@ -6,6 +6,7 @@
 #include <sstream>
 #include <unistd.h>
 #include <algorithm>
+#include <cstring>
 
 unsigned int sleep_time;
 unsigned int N;
@@ -64,7 +65,7 @@ void* producer_routine(void* arg) {
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
     pthread_barrier_wait(&barrier);
-    auto *value_shared = (int *) arg;
+    auto value_shared = (int *) arg;
     pthread_mutex_lock(&value_mutex);
     STATUS local_status = status;
     pthread_mutex_unlock(&value_mutex);
@@ -82,18 +83,26 @@ void* consumer_routine(void* arg) {
         pthread_mutex_unlock(&value_mutex);
         sleep(sleep_time);
     }
+    // pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
     return &partial_sum;
 }
 
 // wait for consumers to start
 // interrupt random consumer while producer is running
 void* consumer_interruptor_routine(void* arg) {
-    auto *threads_ptr = (pthread_t *) arg;
+    auto threads_ptr = (pthread_t *) arg;
     auto threads = std::vector<pthread_t>(threads_ptr, threads_ptr + N);
     pthread_barrier_wait(&barrier);
     while(status != NO_DATA) { // lock?
         std::shuffle(threads.begin(), threads.end(), std::mt19937(std::random_device()()));
         pthread_cancel(threads[0]);
+    }
+}
+
+void check_error(int ret, const std::string &action) {
+    if (ret != 0) {
+        std::cerr << "error: " << strerror(ret) << ". Action: " << action;
+        exit(1);
     }
 }
 
@@ -105,20 +114,22 @@ int run_threads() {
 
     pthread_t producer, interruptor;
     pthread_t consumers[N];
-    pthread_create(&producer, nullptr, producer_routine, nullptr);
+    check_error(pthread_create(&producer, nullptr, producer_routine, nullptr), "pthread_create");
     for (int i = 0; i < N; i++) {
-        pthread_create(&consumers[N], nullptr, consumer_routine, &value);
+        check_error(pthread_create(&consumers[N], nullptr, consumer_routine, &value),
+                "pthread_create producer #" + std::to_string(i));
     }
-    // pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers);
-    // pthread_join(interruptor, nullptr);
+    // check_error(pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers), "pthread_creeate interruptor");
+
+    // check_error(pthread_join(interruptor, nullptr), "pthread_join interruptor");
     int result = 0;
     for (int i = 0; i < N; i++) {
         void *ret;
-        pthread_join(consumers[N], &ret);
+        check_error(pthread_join(consumers[N], &ret), "pthread_join consumer #" + std::to_string(i));
         result += *((int *) ret);
-        // delete (int *) ret;
     }
-    pthread_join(producer, nullptr);
+    check_error(pthread_join(producer, nullptr), "pthread_join producer");
+
     return result;
 }
 
