@@ -69,7 +69,7 @@ void* consumer_routine(void* arg) {
     pthread_mutex_lock(&value_mutex);
     STATUS local_status = status;
     pthread_mutex_unlock(&value_mutex);
-    while (local_status != NO_DATA) { // lock? atomic but reorder could happen?
+    while (local_status != NO_DATA) {
         pthread_mutex_lock(&value_mutex);
         while (status == EMPTY) {
             pthread_cond_wait(&value_updated, &value_mutex);
@@ -83,7 +83,7 @@ void* consumer_routine(void* arg) {
         pthread_mutex_unlock(&value_mutex);
         sleep(sleep_time);
     }
-    // pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
+    // pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr); I think it is not needed
     return &partial_sum;
 }
 
@@ -109,7 +109,7 @@ void check_error(int ret, const std::string &action) {
 // start N threads and wait until they're done
 // return aggregated sum of values
 int run_threads() {
-    unsigned int num_barriers = N + 1;
+    unsigned int num_barriers = N + 2;
     pthread_barrier_init(&barrier, nullptr, num_barriers);
 
     pthread_t producer, interruptor;
@@ -119,9 +119,9 @@ int run_threads() {
         check_error(pthread_create(&consumers[i], nullptr, consumer_routine, &value),
                 "pthread_create producer #" + std::to_string(i));
     }
-    // check_error(pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers), "pthread_creeate interruptor");
+    check_error(pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers), "pthread_creeate interruptor");
 
-    // check_error(pthread_join(interruptor, nullptr), "pthread_join interruptor");
+    check_error(pthread_join(interruptor, nullptr), "pthread_join interruptor");
     int result = 0;
     for (int i = 0; i < N; i++) {
         void *ret;
