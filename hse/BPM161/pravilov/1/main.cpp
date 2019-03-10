@@ -87,15 +87,26 @@ void* consumer_routine(void* arg) {
     return &partial_sum;
 }
 
+size_t int_rand(const size_t &min, const size_t &max) {
+    static thread_local std::mt19937 generator;
+    std::uniform_int_distribution<size_t> distribution(min,max);
+    return distribution(generator);
+}
+
 // wait for consumers to start
 // interrupt random consumer while producer is running
 void* consumer_interruptor_routine(void* arg) {
     auto threads_ptr = (pthread_t *) arg;
     auto threads = std::vector<pthread_t>(threads_ptr, threads_ptr + N);
     pthread_barrier_wait(&barrier);
-    while(status != NO_DATA) { // lock?
-        std::shuffle(threads.begin(), threads.end(), std::mt19937(std::random_device()()));
-        pthread_cancel(threads[0]);
+    while(true) {
+        pthread_mutex_lock(&value_mutex);
+        if (status == NO_DATA) {
+            pthread_mutex_unlock(&value_mutex);
+            return nullptr;
+        }
+        pthread_mutex_unlock(&value_mutex);
+        pthread_cancel(threads[int_rand(0, threads.size() - 1)]);
     }
 }
 
