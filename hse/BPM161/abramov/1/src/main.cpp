@@ -19,7 +19,7 @@ struct shared_value {
 
 static unsigned int CONSUMER_SLEEP_TIME;
 static pthread_barrier_t consumers_start_barrier;
-static bool producer_done = false;
+static volatile bool producer_done = false;
 
 void *producer_routine(void *arg) {
   shared_value *value = static_cast<shared_value *>(arg);
@@ -46,10 +46,9 @@ void *producer_routine(void *arg) {
     value->value = number;
     value->status = AVAILABLE_FOR_READ;
 
-    pthread_mutex_unlock(&value->value_mutex);
-
     // Notify consumer.
     pthread_cond_signal(&value->can_consume);
+    pthread_mutex_unlock(&value->value_mutex);
   }
 
   pthread_mutex_lock(&value->value_mutex);
@@ -62,8 +61,8 @@ void *producer_routine(void *arg) {
   // Notify that we are done.
   producer_done = true;
 
-  pthread_mutex_unlock(&value->value_mutex);
   pthread_cond_broadcast(&value->can_consume);
+  pthread_mutex_unlock(&value->value_mutex);
 
   return nullptr;
 }
@@ -101,8 +100,8 @@ void *consumer_routine(void *arg) {
     TLS_aggregated_value += value->value;
     value->status = AVAILABLE_FOR_WRITE;
 
-    pthread_mutex_unlock(&value->value_mutex);
     pthread_cond_signal(&value->can_produce);
+    pthread_mutex_unlock(&value->value_mutex);
 
     random_sleep();
   }
