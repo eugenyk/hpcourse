@@ -2,7 +2,6 @@
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
-#include <atomic>
 
 enum State {
     UPDATED, TAKEN, FINISHED
@@ -13,8 +12,8 @@ struct ProducerArguments {
     pthread_cond_t *update_condition;
     pthread_cond_t *take_condition;
     pthread_mutex_t *state_mutex;
-    volatile std::atomic<State> *current_state;
-    int *shared_value;
+    volatile State *current_state;
+    volatile int *shared_value;
 };
 
 struct ConsumerArguments {
@@ -22,15 +21,15 @@ struct ConsumerArguments {
     pthread_cond_t *update_condition;
     pthread_cond_t *take_condition;
     pthread_mutex_t *state_mutex;
-    volatile std::atomic<State> *current_state;
-    int *shared_value;
+    volatile State *current_state;
+    volatile int *shared_value;
     const int max_sleep_time;
     static thread_local int partial_result;
 };
 
 struct ConsumerInterruptorArguments {
     pthread_barrier_t *init_barrier;
-    volatile std::atomic<State> *current_state;
+    volatile State *current_state;
     const pthread_t *consumers;
     const unsigned int consumers_number;
 };
@@ -102,8 +101,8 @@ int run_threads(unsigned int consumers_number, int max_sleep_time) {
     pthread_cond_init(&take_condition, nullptr);
     pthread_mutex_t state_mutex;
     pthread_mutex_init(&state_mutex, nullptr);
-    volatile std::atomic<State> current_state(TAKEN);
-    int shared_value = 0;
+    volatile State current_state(TAKEN);
+    volatile int shared_value = 0;
     pthread_t producer;
     pthread_t consumer_interruptor;
     pthread_t consumers[consumers_number];
