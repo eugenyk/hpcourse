@@ -75,10 +75,7 @@ void* consumer_routine(void* arg) {
         while (is_running && *shared_variable_pointer == 0) {
             pthread_cond_wait(&primitives.value_produced_condition, &primitives.shared_variable_mutex);
         }
-        if (!is_running) {
-            pthread_mutex_unlock(&primitives.shared_variable_mutex);
-            break;
-        }
+        
         partial_sum += *shared_variable_pointer;
         *shared_variable_pointer = 0;
 
