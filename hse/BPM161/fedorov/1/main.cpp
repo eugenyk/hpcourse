@@ -31,7 +31,7 @@ struct shared_primitives {
     }
 };
 
-struct mutex_holder { // RAI
+struct mutex_holder { // RAII
     explicit mutex_holder(pthread_mutex_t* mutex): mutex(mutex) {
         pthread_mutex_lock(mutex);
     }
@@ -43,7 +43,7 @@ private:
     pthread_mutex_t *mutex;
 };
 
-struct rw_lock_holder { // RAI
+struct rw_lock_holder { // RAII
     explicit rw_lock_holder(pthread_rwlock_t* lock, bool for_read = false): lock(lock) {
         if (for_read)
             pthread_rwlock_rdlock(lock);
