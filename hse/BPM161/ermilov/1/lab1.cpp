@@ -119,6 +119,12 @@ int run_threads() {
         overall_sum += *thread_result;
         delete thread_result;
     }
+
+    pthread_mutex_destroy(&producer_cond_mutex);
+    pthread_mutex_destroy(&consumer_cond_mutex);
+    pthread_cond_destroy(&producer_cond);
+    pthread_cond_destroy(&consumer_cond);
+    pthread_barrier_destroy(&threads_ready);
     
     return overall_sum;
 }
