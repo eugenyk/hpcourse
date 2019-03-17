@@ -7,8 +7,9 @@
 #include <unistd.h>
 #include <algorithm>
 #include <cstring>
+#include <time.h>
 
-unsigned int sleep_time;
+unsigned int max_sleep_time;
 unsigned int N;
 enum STATUS {
     EMPTY, FILLED, NO_DATA
@@ -20,6 +21,13 @@ pthread_cond_t value_updated = PTHREAD_COND_INITIALIZER;
 pthread_cond_t value_taken = PTHREAD_COND_INITIALIZER;
 pthread_barrier_t barrier;
 thread_local int partial_sum;
+
+template <class T>
+T thread_safe_rand(const T &min, const T &max) {
+    static thread_local std::mt19937 generator;
+    std::uniform_int_distribution<T> distribution(min,max);
+    return distribution(generator);
+}
 
 std::vector<int> read_integers() {
     std::string input;
@@ -81,16 +89,15 @@ void* consumer_routine(void* arg) {
         }
         local_status = status;
         pthread_mutex_unlock(&value_mutex);
-        sleep(sleep_time);
+        struct timespec sleep_time{};
+        sleep_time.tv_sec = 0;
+        sleep_time.tv_nsec = thread_safe_rand<unsigned int>(0, max_sleep_time);
+        if (nanosleep(&sleep_time, NULL) < 0) {
+            std::cerr << "Thread cannot sleep";
+        }
     }
     // pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr); I think it is not needed
     return &partial_sum;
-}
-
-size_t int_rand(const size_t &min, const size_t &max) {
-    static thread_local std::mt19937 generator;
-    std::uniform_int_distribution<size_t> distribution(min,max);
-    return distribution(generator);
 }
 
 // wait for consumers to start
@@ -106,7 +113,7 @@ void* consumer_interruptor_routine(void* arg) {
             return nullptr;
         }
         pthread_mutex_unlock(&value_mutex);
-        pthread_cancel(threads[int_rand(0, threads.size() - 1)]);
+        pthread_cancel(threads[thread_safe_rand<size_t>(0, threads.size() - 1)]);
     }
 }
 
@@ -150,7 +157,7 @@ void parse_arguments_and_set_global_variables(int argc, char **argv) {
         exit(1);
     }
     N = (unsigned int) std::strtol(argv[1], nullptr, 10);
-    sleep_time = (unsigned int) std::strtol(argv[2], nullptr, 10);
+    max_sleep_time = (unsigned int) std::strtol(argv[2], nullptr, 10) * 1000000; // convert milliseconds to nanoseconds
 }
 
 int main(int argc, char **argv) {
