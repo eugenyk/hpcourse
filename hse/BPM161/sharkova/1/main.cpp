@@ -1,4 +1,5 @@
 #include <pthread.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -6,20 +7,22 @@
 #include <random>
 #include <thread>
 
-__thread int partial_sum = 0;
-bool is_running = true;
-
-unsigned int number_of_consumers;
-int consumer_sleep_upper_limit = 0;
-pthread_barrier_t consumers_barrier;
-std::vector<pthread_t> consumers;
-
 struct thread_primitives {
     pthread_mutex_t shared_variable_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_t producer_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t value_produced_condition = PTHREAD_COND_INITIALIZER;
     pthread_cond_t value_consumed_condition = PTHREAD_COND_INITIALIZER;
 };
+
+__thread int partial_sum = 0;
+
+bool is_running = true;
+
+unsigned int number_of_consumers;
+int consumer_sleep_upper_limit = 0;
+
+pthread_barrier_t consumers_barrier;
+std::vector<pthread_t> consumers;
 
 thread_primitives primitives;
 
@@ -72,6 +75,7 @@ void* consumer_routine(void* arg) {
     int* shared_variable_pointer = static_cast<int*>(arg);
     while (is_running) {
         pthread_mutex_lock(&primitives.shared_variable_mutex);
+        
         while (is_running && *shared_variable_pointer == 0) {
             pthread_cond_wait(&primitives.value_produced_condition, &primitives.shared_variable_mutex);
         }
@@ -82,6 +86,7 @@ void* consumer_routine(void* arg) {
         pthread_mutex_lock(&primitives.producer_mutex);
         pthread_cond_signal(&primitives.value_consumed_condition);
         pthread_mutex_unlock(&primitives.producer_mutex);
+
         pthread_mutex_unlock(&primitives.shared_variable_mutex);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(get_random_integer(0, consumer_sleep_upper_limit)));
