@@ -122,6 +122,7 @@ void init() {
 }
 
 void destroy() {
+    pthread_barrier_destroy(&barrier);
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&cond_added);
     pthread_cond_destroy(&cond_upd);
