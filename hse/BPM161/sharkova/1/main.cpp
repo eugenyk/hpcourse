@@ -7,7 +7,7 @@
 #include <thread>
 
 __thread int partial_sum = 0;
-volatile bool is_running = true;
+bool is_running = true;
 
 unsigned int number_of_consumers;
 int consumer_sleep_upper_limit = 0;
