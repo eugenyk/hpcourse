@@ -82,7 +82,9 @@ void* consumer_routine(void* arg) {
         partial_sum += *shared_variable_pointer;
         *shared_variable_pointer = 0;
 
+        pthread_mutex_lock(&primitives.producer_mutex);
         pthread_cond_signal(&primitives.value_consumed_condition);
+        pthread_mutex_unlock(&primitives.producer_mutex);
         pthread_mutex_unlock(&primitives.shared_variable_mutex);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(get_random_integer(0, consumer_sleep_upper_limit)));
