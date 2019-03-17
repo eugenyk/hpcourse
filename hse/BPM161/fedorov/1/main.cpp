@@ -6,7 +6,7 @@
 #include <chrono>
 #include <thread>
 
-using count_t = unsigned int;
+using count_t = int;
 
 enum class state_t {
     RUNNING,
@@ -112,7 +112,6 @@ void* consumer_routine(void* arg) {
     shared_primitives &primitives = *static_cast<shared_primitives*>(arg);
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
     pthread_barrier_wait(&initialization_barrier);
-    bool finished = false;
 
     while (true) {
         {
@@ -121,17 +120,12 @@ void* consumer_routine(void* arg) {
             while (!primitives.value.has_value()) {
                 {
                     rw_lock_holder state_lock_holder(&primitives.state_lock, true);
-                    if (primitives.algorithm_state == state_t::FINISHED) {
-                        finished = true;
-                        break;
-                    }
+                    if (primitives.algorithm_state == state_t::FINISHED)
+                        return &partial_sum;
                 }
 
                 pthread_cond_wait(&primitives.value_available, &primitives.value_mutex);
             }
-
-            if (finished)
-                break;
 
             partial_sum += primitives.value.value();
             primitives.value.reset();
@@ -141,8 +135,6 @@ void* consumer_routine(void* arg) {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(random_millis()));
     }
-
-    return &partial_sum;
 }
 
 void* consumer_interruptor_routine(void* arg) {
@@ -156,12 +148,10 @@ void* consumer_interruptor_routine(void* arg) {
         {
             rw_lock_holder state_lock_holder(&data.primitives.state_lock, true);
             if (data.primitives.algorithm_state == state_t::FINISHED)
-                break;
+                return nullptr;
         }
         pthread_cancel(data.consumers[rand() % consumers_number]);
     }
-
-    return nullptr;
 }
 
 int run_threads(count_t consumers_number) {
