@@ -1,10 +1,10 @@
 #include <stdlib.h>
-#include <unistd.h>
 #include <pthread.h>
 #include <random>
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <time.h>
 using namespace std;
 
 pthread_barrier_t barrier;
@@ -86,7 +86,9 @@ void* consumer_routine(void* arg) {
         
         pthread_mutex_unlock(&mutex);
 
-        usleep(random_sleep_time());
+        struct timespec tw = {random_sleep_time()};
+        struct timespec tr;
+        nanosleep(&tw, &tr);
     }
 
     return &part_res;
