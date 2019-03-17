@@ -7,7 +7,7 @@
 #include <thread>
 
 __thread int partial_sum = 0;
-bool is_running = true;
+volatile bool is_running = true;
 
 unsigned int number_of_consumers;
 int consumer_sleep_upper_limit = 0;
@@ -47,9 +47,11 @@ void* producer_routine(void* arg) {
         pthread_cond_signal(&primitives.value_produced_condition);
         pthread_mutex_unlock(&primitives.shared_variable_mutex);
 
+        pthread_mutex_lock(&primitives.producer_mutex);    
         while (*shared_variable_pointer != 0) {
             pthread_cond_wait(&primitives.value_consumed_condition, &primitives.producer_mutex);
         }
+        pthread_mutex_unlock(&primitives.producer_mutex);
     }
 
     pthread_mutex_lock(&primitives.shared_variable_mutex);
