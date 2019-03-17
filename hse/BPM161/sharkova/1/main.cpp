@@ -86,7 +86,7 @@ void* consumer_routine(void* arg) {
         std::this_thread::sleep_for(std::chrono::milliseconds(get_random_integer(0, consumer_sleep_upper_limit)));
     }
 
-    return new int(partial_sum);
+    return &partial_sum;
 }
 
 void* consumer_interruptor_routine(void* arg) {
