@@ -65,7 +65,7 @@ struct interruptor_data {
 
 static time_t consumer_sleep_time;
 static pthread_barrier_t initialization_barrier;
-static __thread int partial_sum = 0;
+static thread_local int partial_sum = 0;
 
 void* producer_routine(void* arg) {
     shared_primitives &primitives = *static_cast<shared_primitives*>(arg);
@@ -105,7 +105,9 @@ void* producer_routine(void* arg) {
 }
 
 time_t random_millis() {
-    return rand() % (consumer_sleep_time + 1);
+    static thread_local std::mt19937 random_engine;
+    static thread_local std::uniform_int_distribution<time_t> distribution(0, consumer_sleep_time);
+    return distribution(random_engine);
 }
 
 void* consumer_routine(void* arg) {
