@@ -6,95 +6,84 @@
 #include <sstream>
 #include <memory>
 
-//#define DEBUG
-
 #ifdef DEBUG
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define eprintf(...)
 #endif
 
-struct ArgForConsumer {
-    ArgForConsumer() {
-        pthread_cond_init(&process_cond, nullptr);
-        pthread_cond_init(&update_cond, nullptr);
-        pthread_mutex_init(&update_mutex, nullptr);
-        pthread_mutex_init(&start_mutex, nullptr);
-        pthread_mutex_init(&start_mutex, nullptr);
-        pthread_cond_init(&start_cond, nullptr);
-        pthread_key_create(&key, NULL);
-    }
+enum state {
+    producer_is_working,
+    consumer_is_working,
+    finished
+};
 
-    pthread_cond_t process_cond;
+struct thread_sync {
+    thread_sync() {
+        pthread_cond_init(&update_cond, nullptr);
+        pthread_cond_init(&process_cond, nullptr);
+        pthread_mutex_init(&update_mutex, nullptr);
+    }
 
     pthread_cond_t update_cond;
     pthread_mutex_t update_mutex;
-
-    pthread_cond_t start_cond;
-    pthread_mutex_t start_mutex;
-
-    pthread_key_t key;
-
-    int current_value;
-    bool producer_is_working = true;
-    bool is_finished = false;
-    int number_of_started_consumers = 0;
+    pthread_cond_t process_cond;
+    state current_state = producer_is_working;
 };
 
+struct producer_arg {
+    std::string line_with_numbers;
+    int* current_value;
 
-struct ArgForProducer {
-    ArgForConsumer *arg_for_consumer;
-    std::vector<int> numbers;
-    ArgForProducer(const std::vector<int>& values) : numbers(values) {
-        arg_for_consumer = new ArgForConsumer();
-    }
+    producer_arg(std::string line) : current_value(new int(0)), line_with_numbers(line) {}
 
-    ~ArgForProducer() {
-        delete(arg_for_consumer);
+    ~producer_arg() {
+        delete(current_value);
     }
 };
 
-
+thread_sync syncronization;
 pthread_t producer;
 pthread_t interrupter;
 size_t millisec;
+thread_local int partial_sum;
 std::vector<pthread_t> threads;
+pthread_barrier_t barrier;
 
 void *producer_routine(void *arg) {
     eprintf("Producer: started\n");
-    ArgForConsumer *arg_for_consumer = ((ArgForProducer *) arg)->arg_for_consumer;
-    std::vector<int> numbers = ((ArgForProducer *) arg)->numbers;
-    pthread_mutex_lock(&arg_for_consumer->start_mutex);
-    while (!arg_for_consumer->number_of_started_consumers) {
-        pthread_cond_wait(&arg_for_consumer->start_cond, &arg_for_consumer->start_mutex);
-    }
-    pthread_mutex_unlock(&arg_for_consumer->start_mutex);
-
-    eprintf("Producer: started iterating\n");
+    pthread_barrier_wait(&barrier);
+    int* current_value = ((producer_arg*) arg)->current_value;
+    std::string line_with_numbers = ((producer_arg*) arg)->line_with_numbers;
+    std::stringstream ss;
+    ss.str(line_with_numbers);
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
-    for (int number : numbers) {
-        pthread_mutex_lock(&arg_for_consumer->update_mutex);
-        arg_for_consumer->current_value = number;
-        arg_for_consumer->producer_is_working = false;
+    eprintf("Producer: started iterating\n");
+    while (! ss.eof()) {
+        int i;
+        ss >> i;
+        pthread_mutex_lock(&syncronization.update_mutex);
+        *current_value = i;
+        syncronization.current_state = consumer_is_working;
         eprintf("Producer: set value to %d\n", number);
-        pthread_cond_signal(&arg_for_consumer->update_cond);
-        while (!arg_for_consumer->producer_is_working) {
-            pthread_cond_wait(&arg_for_consumer->process_cond, &arg_for_consumer->update_mutex);
+        pthread_cond_signal(&syncronization.update_cond);
+        while (syncronization.current_state == consumer_is_working) {
+            pthread_cond_wait(&syncronization.process_cond, &syncronization.update_mutex);
         }
-        pthread_mutex_unlock(&arg_for_consumer->update_mutex);
+        pthread_mutex_unlock(&syncronization.update_mutex);
     }
-    pthread_mutex_lock(&arg_for_consumer->update_mutex);
-    arg_for_consumer->is_finished = true;
-    arg_for_consumer->producer_is_working = false;
-    pthread_cond_broadcast(&arg_for_consumer->update_cond);
-    pthread_mutex_unlock(&arg_for_consumer->update_mutex);
-    eprintf("Producer: finished %d\n", arg_for_consumer->is_finished);
+    pthread_mutex_lock(&syncronization.update_mutex);
+    syncronization.current_state = finished;
+    pthread_cond_broadcast(&syncronization.update_cond);
+    pthread_mutex_unlock(&syncronization.update_mutex);
+    eprintf("Producer: finished\n");
     return nullptr;
 }
 
 
-void *consumer_routine(void *argument) {
+void *consumer_routine(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+#ifdef DEBUG
     int id = -1;
     for (int i = 0; i < threads.size(); i++) {
         if (pthread_equal(threads[i], pthread_self())) {
@@ -102,62 +91,48 @@ void *consumer_routine(void *argument) {
             break;
         }
     }
+#endif
     eprintf("Consumer %d: started\n", id);
-    auto arg = (ArgForConsumer *) argument;
-    pthread_mutex_lock(&arg->start_mutex);
-    arg->number_of_started_consumers++;
-    pthread_cond_broadcast(&arg->start_cond);
-    pthread_mutex_unlock(&arg->start_mutex);
+    int* val = (int *) arg;
+    pthread_barrier_wait(&barrier);
     eprintf("Consumer %d: ready to loop \n", id);
-    int* tl = new int(0);
-    pthread_setspecific(arg->key, tl);
     while (true) {
-        pthread_mutex_lock(&arg->update_mutex);
-        while (arg->producer_is_working) {
-            pthread_cond_wait(&arg->update_cond, &arg->update_mutex);
+        pthread_mutex_lock(&syncronization.update_mutex);
+        while (syncronization.current_state == producer_is_working) {
+            pthread_cond_wait(&syncronization.update_cond, &syncronization.update_mutex);
         }
-        if (arg->is_finished) {
-            pthread_mutex_unlock(&arg->update_mutex);
+        if (syncronization.current_state == finished) {
+            pthread_mutex_unlock(&syncronization.update_mutex);
             break;
         }
-        int* cur_sum = (int *)pthread_getspecific(arg->key);
-        eprintf("Consumer %d: current sum = %d\n", id, *cur_sum);
-        *tl = arg->current_value + *cur_sum;
-        eprintf("Consumer %d: new sum %d\n", id, *tl);
-        pthread_setspecific(arg->key, tl);
-        arg->producer_is_working = true;
-        pthread_cond_signal(&arg->process_cond);
-        pthread_mutex_unlock(&arg->update_mutex);
+        partial_sum += *val;
+        eprintf("Consumer %d: current sum = %d\n", id, partial_sum);
+        syncronization.current_state = producer_is_working;
+        pthread_cond_signal(&syncronization.process_cond);
+        pthread_mutex_unlock(&syncronization.update_mutex);
         size_t time_to_sleep = rand() % millisec;
         if (time_to_sleep != 0) {
             usleep(time_to_sleep);
         }
     }
-    int* res = (int *)pthread_getspecific(arg->key);
-    eprintf("Consumer %d: final result=%d\n", id, *res);
-    return res;
+    eprintf("Consumer %d: final result=%d\n", id, partial_sum);
+    return &partial_sum;
 }
 
 
 void *consumer_interruptor_routine(void *arg) {
     eprintf("Interruptor: started\n");
-    auto argument = ((ArgForConsumer*) arg);
-    pthread_mutex_lock(&argument->start_mutex);
-    while(argument->number_of_started_consumers < threads.size()) {
-        pthread_cond_wait(&argument->start_cond, &argument->start_mutex);
-    }
-    pthread_mutex_unlock(&argument->start_mutex);
+    pthread_barrier_wait(&barrier);
     eprintf("Interruptor: started looping\n");
     while(true) {
-        int thread_id = rand() % threads.size();
-        pthread_mutex_lock(&argument->update_mutex);
-        bool is_finished = argument->is_finished;
-        if (! is_finished) {
-            pthread_cancel(threads[thread_id]);
-        }
-        pthread_mutex_unlock(&argument->update_mutex);
+        size_t thread_id = rand() % threads.size();
+        pthread_mutex_lock(&syncronization.update_mutex);
+        bool is_finished = (syncronization.current_state == is_finished);
+        pthread_mutex_unlock(&syncronization.update_mutex);
         if (is_finished) {
             break;
+        } else {
+            pthread_cancel(threads[thread_id]);
         }
     }
     eprintf("Interruptor: finished\n");
@@ -169,34 +144,21 @@ int run_threads() {
     eprintf("Starting run_threads()\n");
     std::string line_with_numbers;
     std::getline(std::cin, line_with_numbers);
-    eprintf("Got line %s\n", line_with_numbers.c_str());
-    std::stringstream ss;
-    ss.str(line_with_numbers);
-    std::vector<int> numbers;
-    while(! ss.eof()) {
-        int i;
-        ss >> i;
-        numbers.push_back(i);
-    }
-    ArgForProducer* arg_for_producer = new ArgForProducer(std::move(numbers));
-    pthread_create(&producer, nullptr, producer_routine, arg_for_producer);
+    auto arg = std::make_unique<producer_arg>(std::move(line_with_numbers));
+    pthread_create(&producer, nullptr, producer_routine, arg.get());
     for (int i = 0; i < threads.size(); i++) {
-        pthread_create(&threads[i], nullptr, consumer_routine, arg_for_producer->arg_for_consumer);
+        pthread_create(&threads[i], nullptr, consumer_routine, arg->current_value);
     }
-    pthread_create(&interrupter, nullptr, consumer_interruptor_routine, arg_for_producer->arg_for_consumer);
+    pthread_create(&interrupter, nullptr, consumer_interruptor_routine, nullptr);
     // return aggregated sum of values
     int sum = 0;
     for (int i = 0; i < threads.size(); i++) {
         int* res = nullptr;
         pthread_join(threads[i], (void**) &res);
         sum += *res;
-        delete(res);
     }
     pthread_join(producer, nullptr);
     pthread_join(interrupter, nullptr);
-
-    delete(arg_for_producer);
-
     return sum;
 }
 
@@ -206,10 +168,11 @@ int main(int argc, char **argv) {
         std::cout << "Usage: first argument -- number of consumers, upper bound of time to sleep\n";
         return 0;
     }
-    unsigned long n = std::stoul(argv[1]);
+    unsigned long number_of_consumers = std::stoul(argv[1]);
     millisec = std::stoul(argv[2]);
-    threads.resize(n);
-    srand(time(NULL));
+    threads.resize(number_of_consumers);
+    pthread_barrier_init(&barrier, nullptr, static_cast<unsigned int>(number_of_consumers + 2));
+    srand(static_cast<unsigned int>(time(NULL)));
     std::cout << run_threads() << std::endl;
     return 0;
 }
