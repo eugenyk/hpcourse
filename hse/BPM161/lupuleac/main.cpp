@@ -127,7 +127,7 @@ void *consumer_interruptor_routine(void *arg) {
     while(true) {
         size_t thread_id = rand() % threads.size();
         pthread_mutex_lock(&syncronization.update_mutex);
-        bool is_finished = (syncronization.current_state == is_finished);
+        bool is_finished = (syncronization.current_state == finished);
         pthread_mutex_unlock(&syncronization.update_mutex);
         if (is_finished) {
             break;
