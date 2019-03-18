@@ -14,15 +14,16 @@ int sleep_limit;
 bool consumers_are_ready = false;
 int ready_consumers = 0;
 bool finished_job = false;
+int waiting_comsumers = 0;
 pthread_t* consumer_treads;
 
 pthread_mutex_t consumers_are_ready_lock;
-pthread_mutex_t new_value_available_lock;
-pthread_mutex_t addition_is_completed_lock;
+pthread_mutex_t consumer_event_lock;
 
 pthread_cond_t consumers_are_ready_cond;
-pthread_cond_t new_value_available_cond;
+pthread_cond_t consumer_incoming_event_cond;
 pthread_cond_t addition_is_completed_cond;
+pthread_cond_t new_consumer_available_cond;
 
 bool logging_on = false;
 void log(const std::string &str) {
@@ -30,7 +31,7 @@ void log(const std::string &str) {
         std::cout << str << std::endl;
 }
 
-int intRand(const int & min, const int & max) {
+int int_rand(const int &min, const int &max) {
     static thread_local std::mt19937 generator;
     std::uniform_int_distribution<int> distribution(min,max);
     return distribution(generator);
@@ -56,63 +57,76 @@ void* producer_routine(void* arg) {
     std::vector<int> numbers(std::istream_iterator<int>(iss), std::istream_iterator<int>{});
     for (int number : numbers) {
         log("sending value: " + std::to_string(number));
-        pthread_mutex_lock(&addition_is_completed_lock);
+        pthread_mutex_lock(&consumer_event_lock);
         *(static_cast<int*>(arg)) = number;
-        pthread_cond_signal(&new_value_available_cond);
-        pthread_cond_wait(&addition_is_completed_cond, &addition_is_completed_lock);
+        while (waiting_comsumers == 0) {
+            pthread_cond_wait(&new_consumer_available_cond, &consumer_event_lock);
+        }
+        pthread_cond_signal(&consumer_incoming_event_cond);
+        pthread_cond_wait(&addition_is_completed_cond, &consumer_event_lock);
         log("value " + std::to_string(number) + " was handled");
-        pthread_mutex_unlock(&addition_is_completed_lock);
+        pthread_mutex_unlock(&consumer_event_lock);
     }
-    pthread_mutex_lock(&addition_is_completed_lock);
+    pthread_mutex_lock(&consumer_event_lock);
     finished_job = true;
-    log("Producer: broadcasting");
-    pthread_cond_broadcast(&new_value_available_cond);
-    pthread_mutex_unlock(&addition_is_completed_lock);
+    log("Producer: broadcasting to " + std::to_string(waiting_comsumers));
+    pthread_cond_broadcast(&consumer_incoming_event_cond);
+    pthread_mutex_unlock(&consumer_event_lock);
 }
 
 void* consumer_routine(void* arg) {
     int id;
-
     log("Starting consumer");
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+
     // notify about start
+
     pthread_mutex_lock(&consumers_are_ready_lock);
     id = ready_consumers++;
     if (ready_consumers == N) {
+        consumers_are_ready = true;
         pthread_cond_broadcast(&consumers_are_ready_cond);
     }
-    consumers_are_ready = true;
     pthread_mutex_unlock(&consumers_are_ready_lock);
+
     log("initialised consumer: " + std::to_string(id));
 
     // for every update issued by producer, read the value and add to sum
     // return pointer to result (for particular consumer)
-    while(!finished_job) {
-        pthread_mutex_lock(&new_value_available_lock);
+    while (!finished_job) {
+        pthread_mutex_lock(&consumer_event_lock);
         if (finished_job) {
+            pthread_mutex_unlock(&consumer_event_lock);
             break;
         }
 
+        waiting_comsumers += 1;
+        if (waiting_comsumers == 1) {
+            pthread_cond_signal(&new_consumer_available_cond);
+        }
         log("waiting consumer: " + std::to_string(id));
-        pthread_cond_wait(&new_value_available_cond, &new_value_available_lock);
+        pthread_cond_wait(&consumer_incoming_event_cond, &consumer_event_lock);
+        waiting_comsumers -= 1;
         if (finished_job) {
+            pthread_mutex_unlock(&consumer_event_lock);
             break;
         }
         int value = *static_cast<int*>(arg);
         log("consumer " + std::to_string(id) + " received value " + std::to_string(value));
         pthread_cond_signal(&addition_is_completed_cond);
-        pthread_mutex_unlock(&new_value_available_lock);
+        pthread_mutex_unlock(&consumer_event_lock);
+
         sum += value;
-        unsigned int time_to_sleep = static_cast<unsigned int>(intRand(0, sleep_limit));
+        unsigned int time_to_sleep = static_cast<unsigned int>(int_rand(0, sleep_limit));
         log("consumer " + std::to_string(id) + " sleeping for " + std::to_string(time_to_sleep));
         sleep(time_to_sleep);
         log("consumer " + std::to_string(id) + " awakened");
     }
 
-    log("exiting consumer " + std::to_string(id));
     auto * sum_var = new int;
     *sum_var = sum;
-    return sum_var;
+    log("exiting consumer " + std::to_string(id));
+    pthread_exit(sum_var);
 }
 
 void* consumer_interruptor_routine(void*) {
@@ -121,7 +135,7 @@ void* consumer_interruptor_routine(void*) {
     wait_for_consumers();
     log("interruptor: consumers are ready");
     while (!finished_job) {
-        int consumer_to_interrupt = intRand(0, N - 1);
+        int consumer_to_interrupt = int_rand(0, N - 1);
         //log("interrupting consumer " + std::to_string(consumer_to_interrupt));
         pthread_cancel(consumer_treads[consumer_to_interrupt]);
     }
@@ -130,22 +144,22 @@ void* consumer_interruptor_routine(void*) {
 }
 
 void init_thread_variables() {
-    pthread_cond_init(&new_value_available_cond, nullptr);
+    pthread_cond_init(&consumer_incoming_event_cond, nullptr);
+    pthread_cond_init(&new_consumer_available_cond, nullptr);
     pthread_cond_init(&addition_is_completed_cond, nullptr);
     pthread_cond_init(&consumers_are_ready_cond, nullptr);
 
-    pthread_mutex_init(&new_value_available_lock, nullptr);
-    pthread_mutex_init(&addition_is_completed_lock, nullptr);
+    pthread_mutex_init(&consumer_event_lock, nullptr);
     pthread_mutex_init(&consumers_are_ready_lock, nullptr);
 }
 
 void destroy_thread_variables() {
-    pthread_cond_destroy(&new_value_available_cond);
+    pthread_cond_destroy(&consumer_incoming_event_cond);
+    pthread_cond_destroy(&new_consumer_available_cond);
     pthread_cond_destroy(&addition_is_completed_cond);
     pthread_cond_destroy(&consumers_are_ready_cond);
 
-    pthread_mutex_destroy(&new_value_available_lock);
-    pthread_mutex_destroy(&addition_is_completed_lock);
+    pthread_mutex_destroy(&consumer_event_lock);
     pthread_mutex_destroy(&consumers_are_ready_lock);
 }
 
@@ -153,9 +167,9 @@ int run_threads() {
     log("initializing");
 
     int value_storage;
+    init_thread_variables();
 
     log("creating consumers");
-    init_thread_variables();
     consumer_treads = new pthread_t[N];
     for (int i = 0; i < N; i++) {
         pthread_create(&consumer_treads[i], nullptr, consumer_routine, &value_storage);
@@ -176,8 +190,8 @@ int run_threads() {
     int *consumer_sum;
 
     log("waiting for consumers");
+
     for (int i = 0; i < N; i++) {
-        pthread_cond_broadcast(&new_value_available_cond);
         pthread_join(consumer_treads[i], reinterpret_cast<void **>(&consumer_sum));
         sum += *consumer_sum;
         delete consumer_sum;
