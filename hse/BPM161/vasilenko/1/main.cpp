@@ -16,7 +16,6 @@ pthread_cond_t producer_condition;
 pthread_cond_t consumer_condition;
 pthread_barrier_t barrier;
 
-int queued_number;
 bool number_set = false;
 bool running = true;
 
@@ -30,17 +29,25 @@ void* producer_routine(void* arg) {
     int number;
     while (sin >> number) {
         pthread_mutex_lock(&write_mutex);
+
+        int *queued_number = reinterpret_cast<int*>(arg);
+        *queued_number = number;
+        number_set = true;
+        pthread_mutex_lock(&read_mutex);
+        pthread_cond_signal(&consumer_condition);
+        pthread_mutex_unlock(&read_mutex);
+
         while (number_set) {
             pthread_cond_wait(&producer_condition, &write_mutex);
         }
-        queued_number = number;
-        pthread_cond_signal(&consumer_condition);
         pthread_mutex_unlock(&write_mutex);
     }
 
     pthread_mutex_lock(&write_mutex);
+    pthread_mutex_lock(&read_mutex);
     running = false;
     pthread_cond_broadcast(&consumer_condition);
+    pthread_mutex_unlock(&read_mutex);
     pthread_mutex_unlock(&write_mutex);
 
     return nullptr;
@@ -61,6 +68,7 @@ void* consumer_routine(void* arg) {
         }
         if (running) {
             pthread_mutex_lock(&write_mutex);
+            int queued_number = *reinterpret_cast<int*>(arg);
             sum += queued_number;
             number_set = false;
             pthread_cond_signal(&producer_condition);
@@ -71,7 +79,8 @@ void* consumer_routine(void* arg) {
         std::this_thread::sleep_for(std::chrono::milliseconds(gen_wait_time()));
     }
 
-    return reinterpret_cast<void *>(sum);
+    auto res = new int(sum);
+    return res;
 }
 
 void* consumer_interruptor_routine(void* arg) {
@@ -83,30 +92,33 @@ void* consumer_interruptor_routine(void* arg) {
 }
 
 int run_threads() {
+    int queued_number;
     pthread_barrier_init(&barrier, nullptr, static_cast<unsigned int>(consumer_count) + 3);
 
     pthread_t producer;
-    pthread_create(&producer, nullptr, &producer_routine, nullptr);
+    pthread_create(&producer, nullptr, &producer_routine, &queued_number);
 
     consumers.resize(consumer_count);
-    for (pthread_t consumer : consumers) {
-        pthread_create(&consumer, nullptr, &consumer_routine, nullptr);
+
+    for (pthread_t& consumer : consumers) {
+        pthread_create(&consumer, nullptr, &consumer_routine, &queued_number);
     }
 
-    pthread_t interruptor;
-    pthread_create(&interruptor, nullptr, &consumer_interruptor_routine, nullptr);
+    pthread_t interrupter;
+    pthread_create(&interrupter, nullptr, &consumer_interruptor_routine, nullptr);
 
     pthread_barrier_wait(&barrier);
     pthread_barrier_destroy(&barrier);
 
     pthread_join(producer, nullptr);
-    pthread_join(interruptor, nullptr);
+    pthread_join(interrupter, nullptr);
 
     int total = 0;
-    for (pthread_t consumer : consumers) {
-        int consumer_return_value;
+    for (pthread_t& consumer : consumers) {
+        int *consumer_return_value;
         pthread_join(consumer, reinterpret_cast<void **>(&consumer_return_value));
-        total += consumer_return_value;
+        total += *consumer_return_value;
+        delete consumer_return_value;
     }
 
     pthread_mutex_destroy(&read_mutex);
