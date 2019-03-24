@@ -22,7 +22,7 @@ thread_local int consumer_sum = 0;
 void *producer_routine(void *arg) {
     auto *value = (value_storage *) arg;
     pthread_mutex_lock(&started_consumers_number_access);
-    while (started_consumers_number==0) {
+    while (started_consumers_number == 0) {
         pthread_cond_wait(&consumer_started, &started_consumers_number_access);
     }
     pthread_mutex_unlock(&started_consumers_number_access);
@@ -41,34 +41,35 @@ void *producer_routine(void *arg) {
 }
 
 void msleep(int ms) {
-    struct timespec ts_sleep =
-        {
-            ms/1000,
-            (ms%1000)*1000000L
-        };
+    struct timespec ts_sleep = {
+        ms / 1000,
+        (ms % 1000) * 1000000L
+    };
     nanosleep(&ts_sleep, nullptr);
 }
 
 void *consumer_routine(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
     auto *parameters = (consumer_parameters *) arg;
-    class random random(0, parameters->max_sleep_time);
+    class random sleep_random(0, parameters->max_sleep_time);
 
     pthread_mutex_lock(&started_consumers_number_access);
     started_consumers_number++;
     pthread_cond_signal(&consumer_started);
-    if (parameters->consumers_number==started_consumers_number) {
+    if (parameters->consumers_number == started_consumers_number) {
         pthread_cond_signal(&all_consumers_started);
     }
     pthread_mutex_unlock(&started_consumers_number_access);
 
     try {
-        while (!is_producer_finished || parameters->value.has_value()) {
-            consumer_sum += parameters->value.get();
-            msleep(random.next_int());
+        while (parameters->value.has_value() || !parameters->value.is_closed()) {
+            int v = parameters->value.get();
+            //std::cout << v << ' ';
+            consumer_sum += v;
+            msleep(sleep_random.next_int());
         }
     }
-    catch (no_value_exception& exception) {}
+    catch (no_value_exception &exception) {}
 
     return (void *) &consumer_sum;
 }
@@ -79,7 +80,7 @@ void *consumer_interruptor_routine(void *arg) {
     class random random(0, consumers_number - 1);
 
     pthread_mutex_lock(&started_consumers_number_access);
-    while (consumers_number!=started_consumers_number) {
+    while (consumers_number != started_consumers_number) {
         pthread_cond_wait(&all_consumers_started, &started_consumers_number_access);
     }
     pthread_mutex_unlock(&started_consumers_number_access);
@@ -123,7 +124,7 @@ void print_usage() {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc!=3) {
+    if (argc != 3) {
         print_usage();
         return 1;
     }

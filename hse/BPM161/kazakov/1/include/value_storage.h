@@ -11,14 +11,14 @@ class value_storage {
         pthread_cond_t value_updated = PTHREAD_COND_INITIALIZER;
         pthread_cond_t value_queried = PTHREAD_COND_INITIALIZER;
         volatile bool has_value_ = false;
-        volatile bool is_closed = false;
-
-        void check_can_continue();
+        volatile bool is_closed_ = false;
 
     public:
         void update(int value);
 
         int get();
+
+        bool is_closed();
 
         bool has_value();
 
