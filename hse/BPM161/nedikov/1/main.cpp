@@ -1,12 +1,15 @@
 #include <iostream>
 #include <pthread.h>
 #include <sstream>
-#include <pthread_time.h>
 #include <random>
+
+#ifndef UNIX
+  #include <pthread_time.h>
+#endif
 
 struct thread_data_t {
   thread_data_t(int millis, int n, pthread_t *consumers)
-  : consumers(consumers), n(n) {
+      : consumers(consumers), n(n) {
     sleep_time.tv_sec = 0;
     sleep_time.tv_nsec = millis * 1000;
 
@@ -37,6 +40,7 @@ struct thread_data_t {
   timespec sleep_time{};
 
   bool working = true;
+  bool has_value = false;
   int value = 0;
 };
 
@@ -60,18 +64,29 @@ void *producer_routine(void *arg) {
   int k;
   while (sin >> k) {
     pthread_mutex_lock(&data->mutex);
-    data->value = k;
-    pthread_mutex_unlock(&data->mutex);
-    pthread_cond_signal(&data->cond);
+    while (data->has_value) {
+      // std::cerr << "wait cons_cond" << std::endl;
+      pthread_cond_wait(&data->cons_cond, &data->mutex);
+    }
 
-    pthread_cond_wait(&data->cons_cond, &data->cons_mutex);
-    pthread_mutex_unlock(&data->cons_mutex);
+    data->value = k;
+    data->has_value = true;
+    // std::cerr << "cond signal" << std::endl;
+    pthread_cond_signal(&data->cond);
+    pthread_mutex_unlock(&data->mutex);
   }
+
+  pthread_mutex_lock(&data->mutex);
+  while (data->has_value) {
+    // std::cerr << "wait final cons_cond" << std::endl;
+    pthread_cond_wait(&data->cons_cond, &data->mutex);
+  }
+  pthread_mutex_unlock(&data->mutex);
 
   data->value = 0;
   data->working = false;
+  // std::cerr << "broadcast" << std::endl;
   pthread_cond_broadcast(&data->cond);
-//  std::cerr << "end of producer" << std::endl;
 }
 
 void *consumer_routine(void *arg) {
@@ -81,16 +96,20 @@ void *consumer_routine(void *arg) {
   pthread_barrier_wait(&data->barrier);
 
   while (data->working) {
-    pthread_cond_wait(&data->cond, &data->mutex);
-    int k = data->value;
-    pthread_mutex_unlock(&data->mutex);
-    pthread_cond_signal(&data->cons_cond);
-    if (data->working) {
+    pthread_mutex_lock(&data->mutex);
+      while (data->working && !data->has_value) {
+        // std::cerr << "wait cond" << std::endl;
+        pthread_cond_wait(&data->cond, &data->mutex);
+      }
+      int k = data->value;
+      data->has_value = false;
+      // std::cerr << "cons_cond signal" << std::endl;
+      pthread_cond_signal(&data->cons_cond);
+      // std::cerr << "consumed " << k << std::endl;
       *sum += k;
-    }
+    pthread_mutex_unlock(&data->mutex);
     nanosleep(&data->sleep_time, &data->sleep_time);
   }
-//  std::cerr << *sum << std::endl;
   return sum;
 }
 
