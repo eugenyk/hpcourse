@@ -10,8 +10,7 @@ size_t consumer_count;
 
 std::vector<pthread_t> consumers;
 
-pthread_mutex_t read_mutex;
-pthread_mutex_t write_mutex;
+pthread_mutex_t number_mutex;
 pthread_cond_t producer_condition;
 pthread_cond_t consumer_condition;
 pthread_barrier_t barrier;
@@ -28,27 +27,23 @@ void* producer_routine(void* arg) {
 
     int number;
     while (sin >> number) {
-        pthread_mutex_lock(&write_mutex);
+        pthread_mutex_lock(&number_mutex);
 
         int *queued_number = reinterpret_cast<int*>(arg);
         *queued_number = number;
         number_set = true;
-        pthread_mutex_lock(&read_mutex);
         pthread_cond_signal(&consumer_condition);
-        pthread_mutex_unlock(&read_mutex);
 
         while (number_set) {
-            pthread_cond_wait(&producer_condition, &write_mutex);
+            pthread_cond_wait(&producer_condition, &number_mutex);
         }
-        pthread_mutex_unlock(&write_mutex);
+        pthread_mutex_unlock(&number_mutex);
     }
 
-    pthread_mutex_lock(&write_mutex);
-    pthread_mutex_lock(&read_mutex);
+    pthread_mutex_lock(&number_mutex);
     running = false;
     pthread_cond_broadcast(&consumer_condition);
-    pthread_mutex_unlock(&read_mutex);
-    pthread_mutex_unlock(&write_mutex);
+    pthread_mutex_unlock(&number_mutex);
 
     return nullptr;
 }
@@ -61,23 +56,21 @@ void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
     pthread_barrier_wait(&barrier);
 
+    pthread_mutex_lock(&number_mutex);
     while (running) {
-        pthread_mutex_lock(&read_mutex);
         while (running && !number_set) {
-            pthread_cond_wait(&consumer_condition, &read_mutex);
+            pthread_cond_wait(&consumer_condition, &number_mutex);
         }
         if (running) {
-            pthread_mutex_lock(&write_mutex);
             int queued_number = *reinterpret_cast<int*>(arg);
             sum += queued_number;
             number_set = false;
             pthread_cond_signal(&producer_condition);
-            pthread_mutex_unlock(&write_mutex);
         }
-        pthread_mutex_unlock(&read_mutex);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(gen_wait_time()));
     }
+    pthread_mutex_unlock(&number_mutex);
 
     auto res = new int(sum);
     return res;
@@ -85,9 +78,15 @@ void* consumer_routine(void* arg) {
 
 void* consumer_interruptor_routine(void* arg) {
     pthread_barrier_wait(&barrier);
+
+    pthread_mutex_lock(&number_mutex);
     while (running) {
+        pthread_mutex_unlock(&number_mutex);
         pthread_cancel(consumers[rand() % consumer_count]);
+        pthread_mutex_lock(&number_mutex);
     }
+    pthread_mutex_unlock(&number_mutex);
+
     return nullptr;
 }
 
@@ -121,8 +120,7 @@ int run_threads() {
         delete consumer_return_value;
     }
 
-    pthread_mutex_destroy(&read_mutex);
-    pthread_mutex_destroy(&write_mutex);
+    pthread_mutex_destroy(&number_mutex);
     pthread_cond_destroy(&producer_condition);
     pthread_cond_destroy(&consumer_condition);
 
