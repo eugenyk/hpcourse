@@ -71,12 +71,16 @@ void* consumer_routine(void* arg) {
     while (!finished) {
         int value = 0;
         pthread_mutex_lock(&shared_value->value_mutex);
-        while (shared_value->value == 0) {
+        while (shared_value->value == 0 && !finished) {
             pthread_cond_wait(&shared_value->value_cond, &shared_value->value_mutex);
         }
         value = shared_value->value;
         shared_value->value = 0;
         pthread_mutex_unlock(&shared_value->value_mutex);
+
+        if (finished) {
+            break;
+        }
 
         accumulated += value;
 
