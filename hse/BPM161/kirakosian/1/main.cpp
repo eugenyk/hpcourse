@@ -7,6 +7,11 @@ struct SharedData {
     bool finished;
 };
 
+struct InterruptorData {
+    pthread_t* threads;
+    int size;
+};
+
 pthread_barrier_t start_consumers_barrier;
 
 pthread_mutex_t shared_data_mutex;
@@ -51,9 +56,12 @@ void* producer_routine(void* input_stream_ptr) {
     shared_data.finished = true;
     pthread_cond_broadcast(&value_produced);
     pthread_mutex_unlock(&shared_data_mutex);
+
+    return nullptr;
 }
 
 void* consumer_routine(void* arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
     pthread_barrier_wait(&start_consumers_barrier);
 
     while (true) {
@@ -76,11 +84,15 @@ void* consumer_routine(void* arg) {
 }
 
 void* consumer_interruptor_routine(void* arg) {
+    InterruptorData interruptor_data = *(InterruptorData*) arg;
+
     pthread_barrier_wait(&start_consumers_barrier);
 
-    // wait for consumers to start
-
-    // interrupt random consumer while producer is running
+    while (!shared_data.finished) {
+        int thread_index = rand() % interruptor_data.size;
+        pthread_cancel(interruptor_data.threads[thread_index]);
+    }
+    return nullptr;
 }
 
 int run_threads(std::istream& input_stream, int threads_number, int sleep_limit) {
@@ -93,7 +105,8 @@ int run_threads(std::istream& input_stream, int threads_number, int sleep_limit)
     pthread_t consumer_interruptor;
     pthread_t consumers[threads_number];
     pthread_create(&producer, nullptr, producer_routine, &input_stream);
-    pthread_create(&consumer_interruptor, nullptr, consumer_interruptor_routine, nullptr);
+    InterruptorData interruptor_data = { consumers, threads_number };
+    pthread_create(&consumer_interruptor, nullptr, consumer_interruptor_routine, &interruptor_data);
     for (int i = 0; i < threads_number; i++) {
         pthread_create(&consumers[i], nullptr, consumer_routine, nullptr);
     }
