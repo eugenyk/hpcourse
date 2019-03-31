@@ -12,7 +12,6 @@ bool finished = false;
 unsigned int sleep_time;
 
 pthread_mutex_t shared_variable_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t producer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_cond_t consumer_notification = PTHREAD_COND_INITIALIZER;
 pthread_cond_t producer_notification = PTHREAD_COND_INITIALIZER;
@@ -31,13 +30,12 @@ void* producer_routine(void* arg) {
     while (sin >> *number) {
         pthread_mutex_lock(&shared_variable_mutex);
         pthread_cond_signal(&consumer_notification);
-        pthread_mutex_unlock(&shared_variable_mutex);
 
-        pthread_mutex_lock(&producer_mutex);
         while (*number != 0) {
-            pthread_cond_wait(&producer_notification, &producer_mutex);
+            pthread_cond_wait(&producer_notification, &shared_variable_mutex);
         }
-        pthread_mutex_unlock(&producer_mutex);
+
+        pthread_mutex_unlock(&shared_variable_mutex);
     }
 
     pthread_mutex_lock(&shared_variable_mutex);
@@ -68,9 +66,7 @@ void* consumer_routine(void* arg) {
         counter += *number;
         *number = 0;
 
-        pthread_mutex_lock(&producer_mutex);
         pthread_cond_signal(&producer_notification);
-        pthread_mutex_unlock(&producer_mutex);
         pthread_mutex_unlock(&shared_variable_mutex);
 
         timespec sleepValue = {0};
@@ -83,10 +79,15 @@ void* consumer_routine(void* arg) {
 
 void* consumer_interrupter_routine(void* arg) {
     pthread_barrier_wait(&all_threads_started);
-    while (!finished) {
+    while (true) {
+        pthread_mutex_lock(&shared_variable_mutex);
+        if (finished) {
+            pthread_mutex_unlock(&shared_variable_mutex);
+            return nullptr;
+        }
         pthread_cancel(consumers[rand() % consumers.size()]);
+        pthread_mutex_unlock(&shared_variable_mutex);
     }
-    return nullptr;
 }
 
 int run_threads(unsigned int N) {
@@ -104,6 +105,9 @@ int run_threads(unsigned int N) {
 
     pthread_t interrupter;
     pthread_create(&interrupter, nullptr, consumer_interrupter_routine, nullptr);
+
+    pthread_join(producer, nullptr);
+    pthread_join(interrupter, nullptr);
 
     int result = 0;
     int* return_value;
