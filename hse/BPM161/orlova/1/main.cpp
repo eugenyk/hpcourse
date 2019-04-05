@@ -9,7 +9,9 @@ pthread_cond_t condition_value_change_finish;
 pthread_mutex_t condition_value_change_mutext;
 pthread_barrier_t threads_start_barrier;
 int value;
+bool has_value = false;
 bool is_finish_reading = false;
+int sleep_time;
 
 vector<pthread_t> threads;
 
@@ -20,10 +22,10 @@ void* producer_routine(void* arg) {
     stringstream stream;
     stream << str;
     int i;
+    pthread_mutex_lock(&condition_value_change_mutext);
     while (stream >> i) {
-        pthread_mutex_unlock(&condition_value_change_mutext);
-        pthread_mutex_lock(&condition_value_change_mutext);
         *((int*)arg) = i;
+        has_value = true;
         pthread_cond_signal(&condition_value_change);
         pthread_cond_wait(&condition_value_change_finish, &condition_value_change_mutext);
     }
@@ -37,17 +39,26 @@ thread_local int part_sum = 0;
 void* consumer_routine(void* arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     pthread_barrier_wait(&threads_start_barrier);
-    pthread_mutex_lock(&condition_value_change_mutext);
     while (true) {
-        pthread_cond_wait(&condition_value_change, &condition_value_change_mutext);
+        pthread_mutex_lock(&condition_value_change_mutext);
+        if (is_finish_reading) {
+            pthread_mutex_unlock(&condition_value_change_mutext);
+            pthread_exit((void*)part_sum);
+        }
+        if (!has_value) {
+            pthread_cond_wait(&condition_value_change, &condition_value_change_mutext);
+        }
         if (is_finish_reading) {
             pthread_mutex_unlock(&condition_value_change_mutext);
             pthread_exit((void*)part_sum);
         } else {
+            has_value = false;
             part_sum += *((int*)arg);
             *((int*)arg) = 0;
         }
+        pthread_mutex_unlock(&condition_value_change_mutext);
         pthread_cond_signal(&condition_value_change_finish);
+        sleep(rand() % sleep_time);
     }
 }
 
@@ -100,6 +111,7 @@ int run_threads(int consumers_number) {
 
 int main(int argc, char **argv) {
     int N = stoi(argv[1]);
+    sleep_time = stoi(argv[2]);
     cout << run_threads(N) << endl;
     return 0;
 }
