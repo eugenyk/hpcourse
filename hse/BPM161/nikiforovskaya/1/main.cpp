@@ -78,10 +78,6 @@ void* consumer_routine(void* arg) {
         shared_value->value = 0;
         pthread_mutex_unlock(&shared_value->value_mutex);
 
-        if (finished) {
-            break;
-        }
-
         accumulated += value;
 
         pthread_mutex_lock(&shared_value->done_mutex);
