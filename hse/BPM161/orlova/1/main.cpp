@@ -58,7 +58,9 @@ void* consumer_routine(void* arg) {
         }
         pthread_mutex_unlock(&condition_value_change_mutext);
         pthread_cond_signal(&condition_value_change_finish);
-        sleep(rand() % sleep_time);
+        if (sleep_time) {
+            sleep(rand() % sleep_time);
+        }
     }
 }
 
