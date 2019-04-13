@@ -128,6 +128,7 @@ int run_threads() {
     pthread_create(&producer, nullptr, producer_routine, nullptr);
     pthread_create(&interruptor, nullptr, consumer_interruptor_routine, &consumers);
 
+    pthread_join(interruptor, nullptr);
     int totalSum = 0;
 
     for (auto &consumer: consumers) {
