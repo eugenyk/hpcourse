@@ -4,14 +4,12 @@
 #include <random>
 
 #ifndef UNIX
-  #include <pthread_time.h>
+#include <thread>
 #endif
 
 struct thread_data_t {
   thread_data_t(int millis, int n, pthread_t *consumers)
-      : consumers(consumers), n(n) {
-    sleep_time.tv_sec = 0;
-    sleep_time.tv_nsec = millis * 1000;
+      : consumers(consumers), n(n), millis(millis) {
 
     pthread_barrier_init(&barrier, nullptr, (unsigned) n + 2);
     pthread_mutex_init(&mutex, nullptr);
@@ -37,11 +35,10 @@ struct thread_data_t {
   pthread_mutex_t cons_mutex;
   pthread_cond_t cons_cond;
 
-  timespec sleep_time{};
-
   bool working = true;
   bool has_value = false;
   int value = 0;
+  int millis;
 };
 
 struct interrupter_data_t {
@@ -81,10 +78,10 @@ void *producer_routine(void *arg) {
     // std::cerr << "wait final cons_cond" << std::endl;
     pthread_cond_wait(&data->cons_cond, &data->mutex);
   }
-  pthread_mutex_unlock(&data->mutex);
 
   data->value = 0;
   data->working = false;
+  pthread_mutex_unlock(&data->mutex);
   // std::cerr << "broadcast" << std::endl;
   pthread_cond_broadcast(&data->cond);
 }
@@ -97,18 +94,19 @@ void *consumer_routine(void *arg) {
 
   while (data->working) {
     pthread_mutex_lock(&data->mutex);
-      while (data->working && !data->has_value) {
-        // std::cerr << "wait cond" << std::endl;
-        pthread_cond_wait(&data->cond, &data->mutex);
-      }
-      int k = data->value;
-      data->has_value = false;
-      // std::cerr << "cons_cond signal" << std::endl;
-      pthread_cond_signal(&data->cons_cond);
-      // std::cerr << "consumed " << k << std::endl;
-      *sum += k;
+    while (data->working && !data->has_value) {
+      // std::cerr << "wait cond" << std::endl;
+      pthread_cond_wait(&data->cond, &data->mutex);
+    }
+    int k = data->value;
+    data->has_value = false;
+    // std::cerr << "cons_cond signal" << std::endl;
+    pthread_cond_signal(&data->cons_cond);
+    // std::cerr << "consumed " << k << std::endl;
+    *sum += k;
     pthread_mutex_unlock(&data->mutex);
-    nanosleep(&data->sleep_time, &data->sleep_time);
+   
+    std::this_thread::sleep_for(std::chrono::milliseconds(data->millis));
   }
   return sum;
 }
