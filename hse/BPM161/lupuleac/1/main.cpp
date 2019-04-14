@@ -110,7 +110,7 @@ void *consumer_routine(void *arg) {
         syncronization.current_state = producer_is_working;
         pthread_cond_signal(&syncronization.process_cond);
         pthread_mutex_unlock(&syncronization.update_mutex);
-        size_t time_to_sleep = rand() % millisec;
+        size_t time_to_sleep = millisec ? rand() % millisec : 0;
         if (time_to_sleep != 0) {
             usleep(time_to_sleep);
         }
