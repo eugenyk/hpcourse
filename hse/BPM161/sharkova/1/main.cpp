@@ -128,6 +128,8 @@ int run_threads() {
         pthread_join(consumer, (void **) &return_value);
         total_sum += *return_value;
     }
+    pthread_join(interrupter, nullptr);
+    pthread_join(producer, nullptr);
 
     return total_sum;
 }
