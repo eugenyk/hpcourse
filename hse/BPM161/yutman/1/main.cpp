@@ -62,15 +62,6 @@ void* producer_routine(void* arg) {
   is_over = true;
 
   pthread_cond_broadcast(&(hld->cond_read));
-
-  int sum = 0;
-  for (int i = 0; i < consumer_threads_number; i++) {
-    void **a = new void*[1];
-    pthread_join(consumer_threads[i], a);
-    //std::cerr << ((int*)*a)[0] << "\n";
-    sum += ((int*)*a)[0];
-  }
-  std::cout << "Final result: " << sum << "\n";
 }
  
 void* consumer_routine(void* arg) {
@@ -132,7 +123,15 @@ int run_threads() {
   pthread_join(producer_thread, NULL);
   pthread_barrier_destroy(&barrier);
 
-  return 0;
+  int sum = 0;
+  for (int i = 0; i < consumer_threads_number; i++) {
+    void **a = new void*[1];
+    pthread_join(consumer_threads[i], a);
+    //std::cerr << ((int*)*a)[0] << "\n";
+    sum += ((int*)*a)[0];
+  }
+
+  return sum;
 }
  
 int main(int argc, char **argv) {
