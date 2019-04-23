@@ -1,4 +1,4 @@
-__kernel void matrix_mult(__global int * a, __global int * b, __global int * c, int n, int m)
+__kernel void matrix_mult(__global float * a, __global float * b, __global float * c, int n, int m)
 {
    int row = get_global_id(0);
    int col = get_global_id(1);
@@ -6,7 +6,7 @@ __kernel void matrix_mult(__global int * a, __global int * b, __global int * c, 
    if (row >= n || col >= n)
       return;
 
-   int res = 0;
+   float res = 0;
    for (int k = 0; k < m; ++k)
    {
       for (int l = 0; l < m; ++l)
