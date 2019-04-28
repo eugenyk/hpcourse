@@ -8,7 +8,6 @@
 #include <iostream>
 #include <iterator>
 #include <iomanip>
-#include <algorithm>
 
 int main() {
     std::vector<cl::Platform> platforms;
@@ -57,7 +56,7 @@ int main() {
             for (int j = 0; j < N; j++) {
                 double num;
                 input >> num;
-                a[i * N + j] = 1;
+                a[i * N + j] = num;
             }
         }
         std::vector<double> b(M * M);
@@ -65,7 +64,7 @@ int main() {
             for (int j = 0; j < M; j++) {
                 double num;
                 input >> num;
-                b[i * M + j] = 1;
+                b[i * M + j] = num;
             }
         }
         std::vector<double> c(N * N, 0);
