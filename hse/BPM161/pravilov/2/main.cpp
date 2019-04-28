@@ -8,8 +8,7 @@
 #include <iostream>
 #include <iterator>
 #include <iomanip>
-
-const size_t N_max = 1024;
+#include <algorithm>
 
 int main() {
     std::vector<cl::Platform> platforms;
@@ -53,12 +52,12 @@ int main() {
         std::ifstream input("input.txt");
         size_t N, M;
         input >> N >> M;
-        std::vector<double> a(N * N);
+	std::vector<double> a(N * N);
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 double num;
                 input >> num;
-                a[i * N + j] = num;
+                a[i * N + j] = 1;
             }
         }
         std::vector<double> b(M * M);
@@ -66,7 +65,7 @@ int main() {
             for (int j = 0; j < M; j++) {
                 double num;
                 input >> num;
-                b[i * M + j] = num;
+                b[i * M + j] = 1;
             }
         }
         std::vector<double> c(N * N, 0);
@@ -87,7 +86,8 @@ int main() {
         kernel_gmem.setArg(2, dev_c);
         kernel_gmem.setArg(3, static_cast<int>(N));
         kernel_gmem.setArg(4, static_cast<int>(M));
-        queue.enqueueNDRangeKernel(kernel_gmem, cl::NullRange, cl::NDRange(N_max * N_max), cl::NDRange(block_size));
+	int min_number_of_threads_to_fit_block_size = ((N * N + block_size - 1) / block_size) * block_size;
+        queue.enqueueNDRangeKernel(kernel_gmem, cl::NullRange, cl::NDRange(min_number_of_threads_to_fit_block_size), cl::NDRange(block_size));
 
         queue.enqueueReadBuffer(dev_c, CL_TRUE, 0, sizeof(double) * N * N, &c[0]);
 
