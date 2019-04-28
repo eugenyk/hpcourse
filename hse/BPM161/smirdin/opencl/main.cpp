@@ -15,8 +15,7 @@
 #include <iostream>
 #include <iterator>
 #include <iomanip>
-
-const int MAX_N = 1024;
+#include <cmath>
 
 
 float* read_vector_data(int size) {
@@ -29,10 +28,10 @@ float* read_vector_data(int size) {
     return a;
 }
 
-void write_output(float* a, int size) {
+void write_output(float* a, int size, int extended_size) {
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
-            std::cout << a[MAX_N * i + j] << " ";
+            std::cout << a[extended_size * i + j] << " ";
         }
         std::cout << "\n";
     }
@@ -75,14 +74,16 @@ int main() {
         int N, M;
         std::cin >> N >> M;
 
-        const size_t size_a = MAX_N * MAX_N;
+        int extended_N = ceil(1. * N / block_size) * block_size;
+
+        const size_t size_a = extended_N * extended_N;
         const size_t size_b = M * M;
 
         float* real_a = read_vector_data(N * N);
         auto* a = new float[size_a];
-        for (int i = 0; i < MAX_N; i++) {
-            for (int j = 0; j < MAX_N; j++) {
-                a[i * MAX_N + j] = (i >= N || j >= N) ? 0 : real_a[i * N + j];
+        for (int i = 0; i < extended_N; i++) {
+            for (int j = 0; j < extended_N; j++) {
+                a[i * extended_N + j] = (i >= N || j >= N) ? 0 : real_a[i * N + j];
             }
         }
 
@@ -100,14 +101,15 @@ int main() {
 
         // load named kernel from opencl source
         cl::Kernel kernel(program, "matrix_mult");
-        cl::KernelFunctor matrix_mult(kernel, queue, cl::NullRange, cl::NDRange(MAX_N, MAX_N),
+        cl::KernelFunctor matrix_mult(kernel, queue, cl::NullRange,
+                                      cl::NDRange(extended_N, extended_N),
                                       cl::NDRange(block_size, block_size));
 
-        matrix_mult(dev_a, dev_b, dev_c, (int) MAX_N, (int) M);
+        matrix_mult(dev_a, dev_b, dev_c, (int) extended_N, (int) M);
 
         queue.enqueueReadBuffer(dev_c, CL_TRUE, 0, sizeof(float) * size_a, c);
 
-        write_output(c, N);
+        write_output(c, N, extended_N);
 
         delete[] a;
         delete[] real_a;
