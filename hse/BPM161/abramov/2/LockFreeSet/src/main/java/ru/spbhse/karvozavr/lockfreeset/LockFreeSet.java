@@ -1,56 +1,123 @@
 package ru.spbhse.karvozavr.lockfreeset;
 
+import java.util.concurrent.atomic.AtomicMarkableReference;
+
 /**
- * Lock-Free множество.
- * @param <T> Тип ключей
+ * Lock-free set implementation using linked list.
+ *
+ * @param <T> Key type
  */
-public interface LockFreeSet<T extends Comparable<T>> {
-    /**
-     * Добавить ключ к множеству
-     *
-     * Алгоритм должен быть как минимум lock-free
-     *
-     * @param value значение ключа
-     * @return false если value уже существует в множестве, true если элемент был добавлен
-     */
-    boolean add(T value);
-
+public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterface<T> {
 
     /**
-     * Удалить ключ из множества
-     *
-     * Алгоритм должен быть как минимум lock-free
-     *
-     * @param value значение ключа
-     * @return false если ключ не был найден, true если ключ успешно удален
+     * List node.
      */
-    boolean remove(T value);
+    private class Node {
 
+        final T value;
+
+        AtomicMarkableReference<Node> next = new AtomicMarkableReference<>(null, false);
+
+        Node(T value) {
+            this.value = value;
+        }
+    }
 
     /**
-     * Проверка наличия ключа в множестве
+     * Markable reference to the head of the list.
      *
-     * Алгоритм должен быть как минимум wait-free
-     *
-     * @param value значение ключа
-     * @return true если элемент содержится в множестве, иначе - false
+     * Head is fictive Node with null value.
      */
-    boolean contains(T value);
+    private final AtomicMarkableReference<Node> head = new AtomicMarkableReference<>(new Node(null), false);
 
+    @Override
+    public boolean add(T value) {
+        if (value == null) {
+            throw new NullPointerException("Error: null values are not allowed in set!");
+        }
 
-    /**
-     * Проверка множества на пустоту
-     *
-     * Алгоритм должен быть как минимум wait-free
-     *
-     * @return true если множество пусто, иначе - false
-     */
-    boolean isEmpty();
+        Node node = new Node(value);
 
-    /**
-     * Возвращает lock-free итератор для множества
-     *
-     * @return новый экземпляр итератор для множества
-     */
-    java.util.Iterator<T> iterator();
+        while (true) {
+            Pair<Node> prevAndCurrent = find(value);
+            Node prev = prevAndCurrent.first;
+            Node current = prevAndCurrent.second;
+
+            if (current != null) {
+                return false;
+            } else {
+                if (prev.next.compareAndSet(null, node, false, false)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean remove(T value) {
+        if (value == null) {
+            return false;
+        }
+
+        while (true) {
+            Pair<Node> prevAndCurrent = find(value);
+            Node prev = prevAndCurrent.first;
+            Node current = prevAndCurrent.second;
+
+            if (current != null) {
+                if (current.next.attemptMark(current.next.getReference(), true)) {
+                    physicallyRemove(prev, current);
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+
+    @Override
+    public boolean contains(T value) {
+        if (value == null) {
+            return false;
+        }
+
+        Node node = find(value).second;
+
+        return node != null;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return head.getReference().next.getReference() == null;
+    }
+
+    @Override
+    public java.util.Iterator<T> iterator() {
+        return null;
+    }
+
+    private Pair<Node> find(T value) {
+        Node prev, node;
+        for (prev = head.getReference(), node = prev.next.getReference();
+             node != null; prev = node, node = node.next.getReference()) {
+            if (!isRemoved(node) && value.equals(node.value)) {
+                return new Pair<>(prev, node);
+            }
+        }
+
+        return new Pair<>(prev, null);
+    }
+
+    private boolean isRemoved(Node node) {
+        return node.next.isMarked();
+    }
+
+    private void physicallyRemove(Node prev, Node node) {
+        Node next = node;
+        do {
+            next = next.next.getReference();
+        } while (next != null && isRemoved(next));
+
+        prev.next.compareAndSet(node, next, false, false);
+    }
 }

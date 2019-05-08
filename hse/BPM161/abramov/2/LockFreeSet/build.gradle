@@ -1,16 +1,37 @@
-plugins {
-    id 'java'
-}
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'jcstress'
 
 group 'ru.spbhse.karvozavr'
 version '1.0-SNAPSHOT'
 
 sourceCompatibility = 1.8
 
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+
+ext {
+    jcstressVersion = '0.4'
+}
+
 repositories {
-    mavenCentral()
+    jcenter()
 }
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+}
+
+jcstress {
+    jcstressDependency "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+
 }
