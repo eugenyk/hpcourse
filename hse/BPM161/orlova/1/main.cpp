@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <unistd.h>
 
 using namespace std;
 pthread_cond_t condition_value_change;
@@ -12,8 +13,7 @@ int value;
 bool has_value = false;
 bool is_finish_reading = false;
 int sleep_time;
-
-vector<pthread_t> threads;
+int N = 0;
 
 void* producer_routine(void* arg) {
     string str;
@@ -66,8 +66,9 @@ void* consumer_routine(void* arg) {
 
 void* consumer_interruptor_routine(void* arg) {
     pthread_barrier_wait(&threads_start_barrier);
+    pthread_t* threads = (pthread_t*)arg;
     while (true) {
-        int index = rand() % (*(int*)arg);
+        int index = rand() % N;
         pthread_cancel(threads[index]);
         if (is_finish_reading) {
             pthread_exit(NULL);
@@ -76,10 +77,8 @@ void* consumer_interruptor_routine(void* arg) {
 }
 
 int run_threads(int consumers_number) {
-    vector<int> res;
-
-    threads.resize(consumers_number);
-    res.resize(consumers_number);
+    pthread_t threads[consumers_number];
+    int res[consumers_number];
 
     pthread_mutex_init(&condition_value_change_mutext, NULL);
     pthread_cond_init(&condition_value_change, NULL);
@@ -90,7 +89,7 @@ int run_threads(int consumers_number) {
     pthread_t interruptor;
 
     pthread_create( &producer, NULL, producer_routine, &value);
-    pthread_create( &interruptor, NULL, consumer_interruptor_routine, &consumers_number);
+    pthread_create( &interruptor, NULL, consumer_interruptor_routine, &threads);
     for (int i = 0; i < consumers_number; i++) {
         pthread_create(&(threads[i]), NULL, consumer_routine, &value);
     }
@@ -99,20 +98,23 @@ int run_threads(int consumers_number) {
         pthread_join(threads[i], (void**)&(res[i]));
     }
 
+    pthread_join(producer, NULL);
+    pthread_join(interruptor, NULL);
     pthread_mutex_destroy(&condition_value_change_mutext);
     pthread_cond_destroy(&condition_value_change);
     pthread_cond_destroy(&condition_value_change_finish);
     pthread_barrier_destroy(&threads_start_barrier);
 
     int sum = 0;
-    for (auto el: res) {
-        sum += el;
+    for (int i = 0 ; i < consumers_number; i++) {
+        sum += res[i];
     }
+
     return sum;
 }
 
 int main(int argc, char **argv) {
-    int N = stoi(argv[1]);
+    N = stoi(argv[1]);
     sleep_time = stoi(argv[2]);
     cout << run_threads(N) << endl;
     return 0;
