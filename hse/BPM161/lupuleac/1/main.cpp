@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sstream>
 #include <memory>
+#include <assert.h>
 
 #ifdef DEBUG
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
@@ -28,7 +29,7 @@ struct thread_sync {
     pthread_cond_t update_cond;
     pthread_mutex_t update_mutex;
     pthread_cond_t process_cond;
-    state current_state = producer_is_working;
+    volatile state current_state = producer_is_working;
 };
 
 struct producer_arg {
@@ -49,6 +50,7 @@ size_t millisec;
 thread_local int partial_sum;
 std::vector<pthread_t> threads;
 pthread_barrier_t barrier;
+std::vector<int> numbers;
 
 void *producer_routine(void *arg) {
     eprintf("Producer: started\n");
@@ -62,6 +64,7 @@ void *producer_routine(void *arg) {
     while (! ss.eof()) {
         int i;
         ss >> i;
+        numbers.push_back(i);
         pthread_mutex_lock(&syncronization.update_mutex);
         *current_value = i;
         syncronization.current_state = consumer_is_working;
@@ -152,13 +155,13 @@ int run_threads() {
     pthread_create(&interrupter, nullptr, consumer_interruptor_routine, nullptr);
     // return aggregated sum of values
     int sum = 0;
+    pthread_join(interrupter, nullptr);
     for (int i = 0; i < threads.size(); i++) {
         int* res = nullptr;
         pthread_join(threads[i], (void**) &res);
         sum += *res;
     }
     pthread_join(producer, nullptr);
-    pthread_join(interrupter, nullptr);
     return sum;
 }
 
@@ -173,6 +176,12 @@ int main(int argc, char **argv) {
     threads.resize(number_of_consumers);
     pthread_barrier_init(&barrier, nullptr, static_cast<unsigned int>(number_of_consumers + 2));
     srand(static_cast<unsigned int>(time(NULL)));
-    std::cout << run_threads() << std::endl;
+    auto res = run_threads();
+    int expected = 0;
+    for (int i : numbers) {
+        expected += i;
+    }
+    assert(expected == res);
+    std::cout << res << std::endl;
     return 0;
 }
