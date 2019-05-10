@@ -2,10 +2,10 @@
 #include <pthread.h>
 #include <vector>
 #include <cstring>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <zconf.h>
-#include "barrier.h"
+#include <pthread.h>
 
 pthread_barrier_t barrier;
 __thread int consumer_sum;
@@ -39,7 +39,7 @@ public:
     }
 
     void wait_reading_access() {
-        while (last_action != UPDATED_VALUE) {
+        while (last_action != UPDATED_VALUE && status != FINISH) {
             pthread_cond_wait(&write_condition, &mutex);
         }
     }
@@ -81,6 +81,9 @@ void *producer_routine(void *arg) {
         pthread_cond_signal(&data->write_condition);
         pthread_mutex_unlock(&data->mutex);
     }
+
+    pthread_mutex_lock(&data->mutex);
+    data->wait_writing_access();
     data->finish();
     pthread_cond_broadcast(&data->write_condition);
     pthread_mutex_unlock(&data->mutex);
@@ -95,9 +98,13 @@ void *consumer_routine(void *arg) {
     pthread_barrier_wait(&barrier);
     consumer_sum = 0;
     auto *data = (data_t *) arg;
-    while (!data->is_finish()) {
+    while (true) {
         pthread_mutex_lock(&data->mutex);
         data->wait_reading_access();
+        if (data->is_finish()) {
+            pthread_mutex_unlock(&data->mutex);
+            return &consumer_sum;
+        }
         consumer_sum += data->get_value();
         pthread_cond_signal(&data->read_condition);
         pthread_mutex_unlock(&data->mutex);
@@ -106,7 +113,6 @@ void *consumer_routine(void *arg) {
             usleep(sec);
         }
     }
-    return &consumer_sum;
 }
 
 void *consumer_interruptor_routine(void *arg) {
