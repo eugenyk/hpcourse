@@ -1,23 +1,35 @@
 package ru.hse.spb.hpcourse.set
 
-class LockFreeTreeSet<T : Comparable<T>> : LockFreeSet<T> {
-    override fun isEmpty(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+import java.util.concurrent.atomic.AtomicReference
+
+class LockFreeTreeSet<K : Comparable<K>> : LockFreeSet<K> {
+    private val tree: AtomicReference<AVLTree<K>> = AtomicReference(AVLNil<K>())
+
+    override fun isEmpty(): Boolean = tree.get().isEmpty
+
+    override fun contains(value: K): Boolean = tree.get().contains(value)
+
+    override fun add(value: K): Boolean = atomicUpdate { tree ->
+            if (tree.contains(value))
+                return@atomicUpdate AVLTreeUpdateResult(tree, false)
+            return@atomicUpdate AVLTreeUpdateResult(tree.add(value), true)
+        }
+
+    override fun remove(value: K): Boolean = atomicUpdate { tree ->
+        if (!tree.contains(value))
+            return@atomicUpdate AVLTreeUpdateResult(tree, false)
+        return@atomicUpdate AVLTreeUpdateResult(tree.remove(value), true)
     }
 
-    override fun contains(value: T): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override fun iterator(): Iterator<K> = AVLIterator(tree.get())
 
-    override fun add(value: T): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun remove(value: T): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun iterator(): Iterator<T> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun atomicUpdate(updateTree: (AVLTree<K>) -> AVLTreeUpdateResult<K>): Boolean {
+        while (true) {
+            val oldTree = tree.get()
+            val result = updateTree(oldTree)
+            val newTree = result.tree
+            if (!result.returnFlag || tree.compareAndSet(oldTree, newTree))
+                return result.returnFlag
+        }
     }
 }

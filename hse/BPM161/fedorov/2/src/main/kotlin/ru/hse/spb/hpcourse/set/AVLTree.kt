@@ -14,6 +14,8 @@ sealed class AVLTree<K : Comparable<K>> {
     abstract fun rebalance(): AVLTree<K>
 }
 
+data class AVLTreeUpdateResult<K : Comparable<K>>(val tree: AVLTree<K>, val returnFlag: Boolean)
+
 class AVLNode<K : Comparable<K>>(val left: AVLTree<K>, val nodeKey: K, val right: AVLTree<K>) : AVLTree<K>() {
     override val height: Int = Math.max(left.height, right.height) + 1
     override val balance: Int = left.height - right.height
