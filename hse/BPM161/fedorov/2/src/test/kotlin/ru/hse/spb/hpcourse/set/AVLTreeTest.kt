@@ -4,13 +4,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AVLTreeTest {
-    private fun generateTree(n: Int): AVLTree<Int> {
-        var tree: AVLTree<Int> = AVLNil()
+    companion object {
+        fun generateTree(n: Int): AVLTree<Int> {
+            var tree: AVLTree<Int> = AVLNil()
 
-        for (i in 1..n)
-            tree = tree.add(i)
+            for (i in 1..n)
+                tree = tree.add(i)
 
-        return tree
+            return tree
+        }
     }
 
     @Test
