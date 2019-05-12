@@ -17,7 +17,7 @@ class LockFreeTreeSet<T : Comparable<T>> : LockFreeSet<T> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun iterator(): MutableIterator<T> {
+    override fun iterator(): Iterator<T> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }
