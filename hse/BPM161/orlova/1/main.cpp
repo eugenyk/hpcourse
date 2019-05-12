@@ -54,9 +54,11 @@ void* consumer_routine(void* arg) {
             *((int*)arg) = 0;
         }
         pthread_cond_signal(&condition_value_change_finish);
+        pthread_mutex_unlock(&condition_value_change_mutext);
         if (sleep_time) {
             sleep(rand() % sleep_time);
         }
+        pthread_mutex_lock(&condition_value_change_mutext);
     }
     pthread_mutex_unlock(&condition_value_change_mutext);
     int* safe_value = new int(part_sum);
