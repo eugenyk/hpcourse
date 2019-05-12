@@ -11,7 +11,7 @@ sealed class AVLTree<K : Comparable<K>> {
 
     abstract fun max(): K
 
-    abstract protected fun rebalance(): AVLTree<K>
+    abstract fun rebalance(): AVLTree<K>
 }
 
 class AVLNode<K : Comparable<K>>(val left: AVLTree<K>, val nodeKey: K, val right: AVLTree<K>) : AVLTree<K>() {
@@ -38,7 +38,7 @@ class AVLNode<K : Comparable<K>>(val left: AVLTree<K>, val nodeKey: K, val right
             comparisonResult == 0 -> this
             comparisonResult > 0 -> AVLNode(left, nodeKey, right.add(key))
             else -> throw IllegalStateException()
-        }
+        }.rebalance()
     }
 
     override fun remove(key: K): AVLTree<K> {
@@ -55,13 +55,13 @@ class AVLNode<K : Comparable<K>>(val left: AVLTree<K>, val nodeKey: K, val right
             }
             comparisonResult > 0 -> AVLNode(left, nodeKey, right.remove(key))
             else -> throw IllegalStateException()
-        }
+        }.rebalance()
     }
 
     override fun max(): K {
         if (right is AVLNil)
-            return right.max()
-        return nodeKey
+            return nodeKey
+        return right.max()
     }
 
     override fun rebalance(): AVLTree<K> = when(balance) {
@@ -106,7 +106,7 @@ class AVLNil<K : Comparable<K>> : AVLTree<K>() {
     override fun add(key: K): AVLTree<K> = AVLNode(AVLNil(), key, AVLNil())
     override fun remove(key: K): AVLTree<K> = this
 
-    override fun max(): K = throw IllegalStateException("Max is undefined")
+    override fun max(): K = throw NoSuchElementException("Max is undefined when tree is empty")
 
     override fun rebalance(): AVLTree<K> = this
 }
