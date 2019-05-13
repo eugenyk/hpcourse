@@ -4,7 +4,7 @@ package ru.hse.spb.hpcourse.set;
  * Lock-Free множество.
  * @param <T> Тип ключей
  */
-public interface LockFreeSet<T extends Comparable<T>> {
+public interface LockFreeSetInterface<T extends Comparable<T>> {
     /**
      * Добавить ключ к множеству
      *

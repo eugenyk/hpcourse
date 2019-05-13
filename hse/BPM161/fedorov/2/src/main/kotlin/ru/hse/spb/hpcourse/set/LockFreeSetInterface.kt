@@ -2,7 +2,7 @@ package ru.hse.spb.hpcourse.set
 
 import java.util.concurrent.atomic.AtomicReference
 
-class LockFreeTreeSet<K : Comparable<K>> : LockFreeSet<K> {
+class LockFreeSet<K : Comparable<K>> : LockFreeSetInterface<K> {
     private val tree: AtomicReference<AVLTree<K>> = AtomicReference(AVLNil<K>())
 
     override fun isEmpty(): Boolean = tree.get().isEmpty
