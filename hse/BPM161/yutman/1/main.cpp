@@ -28,6 +28,7 @@ struct holder {
   }
 };
 
+int stopped_threads = 0;
 int consumer_threads_number;
 int consumer_sleep_limit;
 pthread_barrier_t barrier;
@@ -60,8 +61,9 @@ void* producer_routine(void* arg) {
   }
 
   is_over = true;
-
-  pthread_cond_broadcast(&(hld->cond_read));
+  while (stopped_threads < consumer_threads_number) {
+    pthread_cond_signal(&(hld->cond_read));
+  }
 }
  
 void* consumer_routine(void* arg) {
@@ -81,11 +83,13 @@ void* consumer_routine(void* arg) {
       hld->updated = false;
     }
 
-    pthread_mutex_unlock(&(hld->mutex));
-
     if (is_over) {
+      stopped_threads++;
+      pthread_mutex_unlock(&(hld->mutex));
       break;
     }
+
+    pthread_mutex_unlock(&(hld->mutex));
     pthread_cond_signal(&(hld->cond_write));
 
     usleep(rnd() % (consumer_sleep_limit + 1));
