@@ -7,7 +7,7 @@ import static org.junit.Assert.*;
 public class LockFreeSetTest {
 
     @Test
-    public void add() {
+    public void testAdd() {
         LockFreeSet<Integer> set = new LockFreeSet<>();
 
         for (int i = 0; i < 10; ++i) {
@@ -23,7 +23,7 @@ public class LockFreeSetTest {
         }
 
         for (int i = 0; i < 10; ++i) {
-            assert !set.contains(i);
+            assertFalse(set.contains(i));
         }
     }
 }

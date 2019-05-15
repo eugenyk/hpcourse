@@ -1,5 +1,6 @@
 package ru.spbhse.karvozavr.lockfreeset;
 
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 /**
@@ -25,7 +26,6 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
     /**
      * Markable reference to the head of the list.
-     *
      * Head is fictive Node with null value.
      */
     private final AtomicMarkableReference<Node> head = new AtomicMarkableReference<>(new Node(null), false);
@@ -93,7 +93,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
     @Override
     public java.util.Iterator<T> iterator() {
-        return null;
+        return getSnapshot().iterator();
     }
 
     private Pair<Node> find(T value) {
@@ -119,5 +119,33 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
         } while (next != null && isRemoved(next));
 
         prev.next.compareAndSet(node, next, false, false);
+    }
+
+    private java.util.List<T> getSnapshot() {
+        java.util.List<T> elements;
+
+        attempt:
+        while (true) {
+            elements = new ArrayList<>();
+
+            Node node;
+            for (node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
+                if (!isRemoved(node)) {
+                    elements.add(node.value);
+                }
+            }
+
+            java.util.Iterator<T> iter = elements.iterator();
+
+            for (node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
+                if (isRemoved(node) || !iter.hasNext() || iter.next() != node.value) {
+                    continue attempt;
+                }
+            }
+
+            break attempt;
+        }
+
+        return elements;
     }
 }
