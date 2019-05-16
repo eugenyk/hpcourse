@@ -7,7 +7,7 @@ import static org.junit.Assert.*;
 public class LockFreeSetTest {
 
     @Test
-    public void testAdd() {
+    public void testAddRemove() {
         LockFreeSet<Integer> set = new LockFreeSet<>();
 
         for (int i = 0; i < 10; ++i) {
