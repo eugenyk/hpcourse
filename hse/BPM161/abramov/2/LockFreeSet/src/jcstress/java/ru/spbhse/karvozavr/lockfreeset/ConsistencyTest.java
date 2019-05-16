@@ -2,7 +2,6 @@ package ru.spbhse.karvozavr.lockfreeset;
 
 import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.LL_Result;
-import org.openjdk.jcstress.infra.results.L_Result;
 
 @JCStressTest
 @Description("Test consistency of operations.")
