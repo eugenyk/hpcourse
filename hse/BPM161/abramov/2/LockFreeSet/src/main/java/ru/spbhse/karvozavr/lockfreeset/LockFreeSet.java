@@ -65,7 +65,8 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
             Node current = prevAndCurrent.second;
 
             if (current != null) {
-                if (current.next.attemptMark(current.next.getReference(), true)) {
+                Node ref = current.next.getReference();
+                if (current.next.compareAndSet(ref, ref, false, true)) {
                     physicallyRemove(prev, current);
                     return true;
                 }
@@ -88,7 +89,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
     @Override
     public boolean isEmpty() {
-        return head.getReference().next.getReference() == null;
+        return !iterator().hasNext();
     }
 
     @Override
@@ -138,8 +139,10 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
             java.util.Iterator<T> iter = elements.iterator();
 
             for (node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
-                if (isRemoved(node) || !iter.hasNext() || iter.next() != node.value) {
-                    continue attempt;
+                if (!isRemoved(node)) {
+                    if (!iter.hasNext() || iter.next() != node.value){
+                        continue attempt;
+                    }
                 }
             }
 
