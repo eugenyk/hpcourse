@@ -24,15 +24,7 @@ class LincheckLockFreeSetTest {
     fun isEmpty() = set.isEmpty
 
     @Operation
-    fun iterator(): List<Int> {
-        val iterator = set.iterator()
-        val values = mutableListOf<Int>()
-
-        while (iterator.hasNext())
-            values.add(iterator.next())
-
-        return values
-    }
+    fun iterator(): List<Int> = set.iterator().asSequence().toList()
 
     @Test
     fun test() {
