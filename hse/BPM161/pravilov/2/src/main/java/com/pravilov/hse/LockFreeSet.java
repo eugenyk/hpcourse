@@ -114,8 +114,10 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
     private List<Node> getListOfNodes() {
         List<Node> nodes = new ArrayList<>();
         Node curr = head.next.getReference();
-        while (curr.valueType != ValueType.MAX) {
-            nodes.add(curr);
+        while (curr != tail) {
+            if (!curr.next.isMarked()) {
+                nodes.add(curr);
+            }
             curr = curr.next.getReference();
         }
         return nodes;
