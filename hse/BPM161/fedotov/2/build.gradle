@@ -1,0 +1,60 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.31'
+}
+
+apply plugin: 'jcstress'
+
+
+group 'ru.hse.iisuslik'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    jcenter()
+
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
+}
+
+ext {
+    jcstressVersion = '0.5'
+    lincheckVersion = '2.0'
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+    testCompile "com.devexperts.lincheck:lincheck:${lincheckVersion}"
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+jcstress {
+    jcstressDependency "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+}
+
+test {
+    testLogging {
+        showStandardStreams = true
+    }
+}
