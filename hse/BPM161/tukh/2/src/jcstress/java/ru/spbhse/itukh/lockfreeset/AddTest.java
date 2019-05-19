@@ -6,9 +6,9 @@ import org.openjdk.jcstress.infra.results.L_Result;
 @JCStressTest
 @Description("Simple add test with two actors")
 @Outcome(id = "both", expect = Expect.ACCEPTABLE, desc = "All right")
-@Outcome(id = "first", expect = Expect.ACCEPTABLE, desc = "All right")
-@Outcome(id = "second", expect = Expect.ACCEPTABLE, desc = "All right")
-@Outcome(id = "none", expect = Expect.ACCEPTABLE, desc = "All right")
+@Outcome(id = "first", expect = Expect.FORBIDDEN, desc = "Not all right")
+@Outcome(id = "second", expect = Expect.FORBIDDEN, desc = "Not all right")
+@Outcome(id = "none", expect = Expect.FORBIDDEN, desc = "Completely right")
 @State
 public class AddTest {
     private LockFreeSet<Integer> set = new LockFreeSet<>();

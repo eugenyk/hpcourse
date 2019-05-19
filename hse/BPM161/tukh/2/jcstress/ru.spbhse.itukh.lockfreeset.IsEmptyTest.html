@@ -1,0 +1,134 @@
+
+<html>
+<head>
+<title>Java Concurrency Stress test report</title>
+ <style type="text/css">
+   * { font-family: Arial; }
+   table { font-size: 9pt; }
+   a { color: #000000; }
+   .progress { padding: 0px; }
+   .header { text-align: left; }
+   .section1 { font-size: 12pt; background-color: #BDB76B; color: #000000; font-weight: bold;}
+   .section2 { font-size: 12pt; background-color: #F0E68C; color: #000000; font-weight: bold;}
+   .cell1 { background-color: #FAFAD2; }
+   .cell2 { background-color: #EEE8AA; }
+   .passedProgress { background-color: #00AA00; color: #FFFFFF; text-align: center; font-weight: bold; }
+   .failedProgress { background-color: #FF0000; color: #FFFFFF; text-align: center; font-weight: bold; }
+   .passed { color: #00AA00; text-align: center; font-weight: bold; }
+   .failed { color: #FF0000; text-align: center; font-weight: bold; }
+   .interesting { color: #0000FF; text-align: center; font-weight: bold; }
+   .spec { color: #AAAA00; text-align: center; font-weight: bold; }
+   .endResult { font-size: 48pt; text-align: center; font-weight: bold; }
+ </style>
+</head>
+<body>
+<h1>ru.spbhse.itukh.lockfreeset.IsEmptyTest</h1>
+<h3>Description and references</h3>
+<p>Simple add test with two actors</p>
+<h3>Environment</h3>
+<table>
+<tr>
+<td nowrap>java.specification.name</td>
+<td nowrap>Java Platform API Specification</td>
+</tr>
+<tr>
+<td nowrap>java.specification.vendor</td>
+<td nowrap>Oracle Corporation</td>
+</tr>
+<tr>
+<td nowrap>java.specification.version</td>
+<td nowrap>1.8</td>
+</tr>
+<tr>
+<td nowrap>java.vendor</td>
+<td nowrap>Oracle Corporation</td>
+</tr>
+<tr>
+<td nowrap>java.version</td>
+<td nowrap>1.8.0_03-Ubuntu</td>
+</tr>
+<tr>
+<td nowrap>java.vm.name</td>
+<td nowrap>OpenJDK 64-Bit Server VM</td>
+</tr>
+<tr>
+<td nowrap>java.vm.vendor</td>
+<td nowrap>Oracle Corporation</td>
+</tr>
+<tr>
+<td nowrap>java.vm.version</td>
+<td nowrap>25.03-b03</td>
+</tr>
+<tr>
+<td nowrap>os.arch</td>
+<td nowrap>amd64</td>
+</tr>
+<tr>
+<td nowrap>os.name</td>
+<td nowrap>Linux</td>
+</tr>
+<tr>
+<td nowrap>os.version</td>
+<td nowrap>4.15.0-45-generic</td>
+</tr>
+</table>
+<h3>Test configurations</h3>
+<table>
+<tr>
+<td nowrap><b>TC 1</b></td>
+<td nowrap>JVM options: [-XX:+UnlockDiagnosticVMOptions, -XX:+WhiteBoxAPI, -XX:-RestrictContended, -Dfile.encoding=UTF-8, -Duser.country=US, -Duser.language=en, -Duser.variant]
+Iterations: 5
+Time: 1000</td>
+</tr>
+<tr>
+<td nowrap><b>TC 2</b></td>
+<td nowrap>JVM options: [-XX:+UnlockDiagnosticVMOptions, -XX:+WhiteBoxAPI, -XX:-RestrictContended, -Dfile.encoding=UTF-8, -Duser.country=US, -Duser.language=en, -Duser.variant, -XX:-TieredCompilation]
+Iterations: 5
+Time: 1000</td>
+</tr>
+<tr>
+<td nowrap><b>TC 3</b></td>
+<td nowrap>JVM options: [-XX:+UnlockDiagnosticVMOptions, -XX:+WhiteBoxAPI, -XX:-RestrictContended, -Dfile.encoding=UTF-8, -Duser.country=US, -Duser.language=en, -Duser.variant, -XX:TieredStopAtLevel=1]
+Iterations: 5
+Time: 1000</td>
+</tr>
+<tr>
+<td nowrap><b>TC 4</b></td>
+<td nowrap>JVM options: [-XX:+UnlockDiagnosticVMOptions, -XX:+WhiteBoxAPI, -XX:-RestrictContended, -Dfile.encoding=UTF-8, -Duser.country=US, -Duser.language=en, -Duser.variant, -Xint]
+Iterations: 5
+Time: 1000</td>
+</tr>
+</table>
+<h3>Observed states</h3>
+<table width=100% cellpadding=5>
+<tr>
+<th>Observed state</th>
+<th nowrap>TC 1</th>
+<th nowrap>TC 2</th>
+<th nowrap>TC 3</th>
+<th nowrap>TC 4</th>
+<th>Expectation</th>
+<th>Interpretation</th>
+</tr>
+<tr>
+<td align='center'>true</td>
+<td align='right' width='7.5%' bgColor=#00ff00>11671058</td>
+<td align='right' width='7.5%' bgColor=#00ff00>12334428</td>
+<td align='right' width='7.5%' bgColor=#00ff00>8960898</td>
+<td align='right' width='7.5%' bgColor=#00ff00>406038</td>
+<td>ACCEPTABLE</td>
+<td>All right</td>
+</tr>
+<tr>
+<td></td>
+<td align='center' bgColor='green '>OK</td>
+<td align='center' bgColor='green '>OK</td>
+<td align='center' bgColor='green '>OK</td>
+<td align='center' bgColor='green '>OK</td>
+<td></td>
+<td></td>
+</tr>
+</table>
+<h3>Auxiliary data</h3>
+</body>
+</html>
