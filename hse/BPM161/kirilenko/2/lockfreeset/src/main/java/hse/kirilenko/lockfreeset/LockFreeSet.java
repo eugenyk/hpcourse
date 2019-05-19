@@ -98,6 +98,11 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
     private PrevCurNodePair findPrevCur(@NotNull T value) {
         Node prev, node;
         for (prev = head.getReference(), node = prev.next.getReference(); node != null; prev = node, node = node.next.getReference()) {
+            if (node.next.isMarked()) {
+                boolean mark = prev.next.isMarked();
+                prev.next.compareAndSet(node, node.next.getReference(), mark, mark);
+            }
+            
             if (!node.next.isMarked() && value.equals(node.value)) {
                 return new PrevCurNodePair(prev, node);
             }
