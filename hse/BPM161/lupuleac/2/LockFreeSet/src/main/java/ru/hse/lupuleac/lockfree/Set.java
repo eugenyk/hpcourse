@@ -1,6 +1,4 @@
-package ru.spbau.lockfree;
-
-import org.jetbrains.annotations.NotNull;
+package ru.hse.lupuleac.lockfree;
 
 public interface Set<T extends Comparable<T>> {
     /**
@@ -11,7 +9,7 @@ public interface Set<T extends Comparable<T>> {
      * @param value значение ключа
      * @return false если value уже существует в множестве, true если элемент был добавлен
      */
-    boolean add(@NotNull T value);
+    boolean add(T value);
 
 
     /**
@@ -22,7 +20,7 @@ public interface Set<T extends Comparable<T>> {
      * @param value значение ключа
      * @return false если ключ не был найден, true если ключ успешно удален
      */
-    boolean remove(@NotNull T value);
+    boolean remove(T value);
 
 
     /**
@@ -33,7 +31,7 @@ public interface Set<T extends Comparable<T>> {
      * @param value значение ключа
      * @return true если элемент содержится в множестве, иначе - false
      */
-    boolean contains(@NotNull T value);
+    boolean contains(T value);
 
 
     /**
@@ -52,3 +50,4 @@ public interface Set<T extends Comparable<T>> {
      */
     java.util.Iterator<T> iterator();
 }
+

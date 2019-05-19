@@ -1,0 +1,22 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+apply plugin: 'jcstress'
+apply plugin: 'java'
+
+repositories {
+    jcenter()
+}
+
+/*dependencies {
+    compile 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    compile 'com.devexperts.lincheck:lincheck:2.0'
+    compile group: 'org.jetbrains', name: 'annotations', version: '16.0.1'
+}*/

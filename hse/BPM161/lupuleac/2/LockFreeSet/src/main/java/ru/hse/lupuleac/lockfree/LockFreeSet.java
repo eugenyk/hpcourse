@@ -1,7 +1,5 @@
-package ru.spbau.lockfree;
+package ru.hse.lupuleac.lockfree;
 
-
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -21,7 +19,7 @@ public class LockFreeSet<T extends Comparable<T>> implements
     }
 
     @Override
-    public boolean add(@NotNull T value) {
+    public boolean add(T value) {
         while (true) {
             FindResult findResult = find(value);
 
@@ -42,7 +40,7 @@ public class LockFreeSet<T extends Comparable<T>> implements
     }
 
     @Override
-    public boolean remove(@NotNull T value) {
+    public boolean remove(T value) {
         while (true) {
             FindResult findResult = find(value);
             if (findResult.cur.marked) {
@@ -67,8 +65,8 @@ public class LockFreeSet<T extends Comparable<T>> implements
         }
     }
 
-    @NotNull
-    private FindResult find(@NotNull T key) {
+
+    private FindResult find(T key) {
         Node cur = head;
         NextAndMark next = cur.nextAndMark.get();
         while (next.next != null && next.next.value.compareTo(key) < 0) {
@@ -79,7 +77,7 @@ public class LockFreeSet<T extends Comparable<T>> implements
     }
 
     @Override
-    public boolean contains(@NotNull T value) {
+    public boolean contains(T value) {
         Node cur = head;
         while (cur != null && (cur.value == null || cur.value.compareTo
                 (value) <
@@ -121,6 +119,7 @@ public class LockFreeSet<T extends Comparable<T>> implements
         while (true) {
             List<AtomicReference<NextAndMark>> secondSnapshot = getNodes();
             if (secondSnapshot.size() != snapshot.size()) {
+                snapshot = secondSnapshot;
                 continue;
             }
             boolean changed = false;
@@ -134,8 +133,8 @@ public class LockFreeSet<T extends Comparable<T>> implements
                 return secondSnapshot.stream().filter(t -> t.get().next != null)
                         .map(t -> t.get().next.value)
                         .collect(
-                        Collectors.toList()
-                );
+                                Collectors.toList()
+                        );
             }
             snapshot = secondSnapshot;
         }
