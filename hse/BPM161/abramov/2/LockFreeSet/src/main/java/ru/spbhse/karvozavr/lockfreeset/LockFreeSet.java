@@ -1,7 +1,9 @@
 package ru.spbhse.karvozavr.lockfreeset;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicStampedReference;
 
 /**
  * Lock-free set implementation using linked list.
@@ -17,7 +19,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
         final T value;
 
-        AtomicMarkableReference<Node> next = new AtomicMarkableReference<>(null, false);
+        AtomicStampedReference<Node> next = new AtomicStampedReference<>(null, 0);
 
         Node(T value) {
             this.value = value;
@@ -25,10 +27,10 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
     }
 
     /**
-     * Markable reference to the head of the list.
+     * Stamped reference to the head of the list.
      * Head is fictive Node with null value.
      */
-    private final AtomicMarkableReference<Node> head = new AtomicMarkableReference<>(new Node(null), false);
+    private final AtomicStampedReference<Node> head = new AtomicStampedReference<>(new Node(null), 0);
 
     @Override
     public boolean add(T value) {
@@ -46,7 +48,8 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
             if (current != null) {
                 return false;
             } else {
-                if (prev.next.compareAndSet(null, node, false, false)) {
+                var stamp = prev.next.getStamp();
+                if (stamp != -1 && prev.next.compareAndSet(null, node, stamp, stamp + 1)) {
                     return true;
                 }
             }
@@ -66,7 +69,8 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
             if (current != null) {
                 Node ref = current.next.getReference();
-                if (current.next.compareAndSet(ref, ref, false, true)) {
+                var stamp = current.next.getStamp();
+                if (stamp != -1 && current.next.compareAndSet(ref, ref, stamp, -1)) {
                     physicallyRemove(prev, current);
                     return true;
                 }
@@ -93,7 +97,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
     }
 
     @Override
-    public java.util.Iterator<T> iterator() {
+    public Iterator<T> iterator() {
         return getSnapshot().iterator();
     }
 
@@ -110,7 +114,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
     }
 
     private boolean isRemoved(Node node) {
-        return node.next.isMarked();
+        return node.next.getStamp() == -1;
     }
 
     private void physicallyRemove(Node prev, Node node) {
@@ -119,28 +123,40 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
             next = next.next.getReference();
         } while (next != null && isRemoved(next));
 
-        prev.next.compareAndSet(node, next, false, false);
+        var stamp = prev.next.getStamp();
+        if (stamp != -1) {
+            prev.next.compareAndSet(node, next, stamp, stamp + 1);
+        }
     }
 
-    private java.util.List<T> getSnapshot() {
-        java.util.List<T> elements;
+    private List<T> getSnapshot() {
+        List<T> elements;
+        List<Integer> versions;
 
         attempt:
         while (true) {
             elements = new ArrayList<>();
+            versions = new ArrayList<>();
 
-            Node node;
-            for (node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
+            Node node = head.getReference();
+            versions.add(node.next.getStamp());
+            for (node = node.next.getReference(); node != null; node = node.next.getReference()) {
                 if (!isRemoved(node)) {
                     elements.add(node.value);
+                    versions.add(node.next.getStamp());
                 }
             }
 
-            java.util.Iterator<T> iter = elements.iterator();
+            var elemIter = elements.iterator();
+            var versionIter = versions.iterator();
 
+            node = head.getReference();
+            if (node.next.getStamp() != versionIter.next()) {
+                continue attempt;
+            }
             for (node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
                 if (!isRemoved(node)) {
-                    if (!iter.hasNext() || iter.next() != node.value){
+                    if (!elemIter.hasNext() || elemIter.next() != node.value || versionIter.next() != node.next.getStamp()) {
                         continue attempt;
                     }
                 }

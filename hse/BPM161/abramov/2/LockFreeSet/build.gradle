@@ -15,7 +15,7 @@ apply plugin: 'jcstress'
 group 'ru.spbhse.karvozavr'
 version '1.0-SNAPSHOT'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.11
 
 ext {
     jcstressVersion = '0.4'
