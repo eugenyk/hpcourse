@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
   private SetNode<T> head = new SetNode<>();
+  private AtomicInteger listSize = new AtomicInteger(0);
 
   @Override
   public boolean add(T value) {
@@ -20,6 +22,7 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
         return false;
       }
     }
+    listSize.incrementAndGet();
     return true;
   }
 
@@ -41,8 +44,9 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
   @Override
   public boolean contains(T value) {
     if (value == null) return false;
+    int n = listSize.get();
     var node = head.next.get();
-    while (node != null) {
+    for (int i = 0; node != null && i < n; i++) {
       if (node.has(value)) {
         return true;
       }
@@ -56,7 +60,9 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
     var nodeNext = node.next.get();
     if (nodeNext == null) return null;
     if (!nodeNext.deleted.get()) return nodeNext;
-    node.next.compareAndSet(nodeNext, nodeNext.next.get());
+    if (node.next.compareAndSet(nodeNext, nodeNext.next.get())) {
+      listSize.decrementAndGet();
+    }
     return node.next.get();
   }
 
