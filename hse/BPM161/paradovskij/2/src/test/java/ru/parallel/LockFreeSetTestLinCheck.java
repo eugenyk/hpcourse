@@ -45,7 +45,7 @@ public class LockFreeSetTestLinCheck {
 
     @Test
     public void runLinCheck() {
-        Options opts = new StressOptions().logLevel(LoggingLevel.DEBUG).threads(2);
+        Options opts = new StressOptions().logLevel(LoggingLevel.DEBUG).threads(3);
         LinChecker.check(LockFreeSetTestLinCheck.class, opts);
     }
 }

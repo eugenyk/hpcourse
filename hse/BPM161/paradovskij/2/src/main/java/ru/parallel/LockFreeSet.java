@@ -53,17 +53,6 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
         }
     }
 
-    private void delete(Node<T> prev, Node<T> cur, Node<T> next) {
-        while (next != null && next.getNodeVersion() == 0) {
-            next = next.getNextNode();
-        }
-
-        int nodeVersion = prev.getNodeVersion();
-        if (nodeVersion != 0) {
-            prev.getLink().compareAndSet(cur, next, nodeVersion, nodeVersion + 1);
-        }
-    }
-
     public boolean contains(T value) {
         if (value == null) {
             return false;
