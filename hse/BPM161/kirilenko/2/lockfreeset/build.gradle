@@ -1,0 +1,45 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+plugins {
+    id 'java'
+}
+
+apply plugin: 'jcstress'
+
+group 'hse.kirilenko.lockfreeset'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+ext {
+    jcstressVersion = '0.5'
+    lincheckVersion = '2.0'
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'org.jetbrains', name: 'annotations', version: '13.0'
+    testCompile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+    testCompile "com.devexperts.lincheck:lincheck:${lincheckVersion}"
+}
+
+jcstress {
+    jcstressDependency "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+}
