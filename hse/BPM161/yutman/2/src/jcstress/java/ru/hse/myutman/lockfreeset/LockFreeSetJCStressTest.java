@@ -127,10 +127,10 @@ public class LockFreeSetJCStressTest {
             Iterator<Integer> iterator = set.iterator();
             Set<Integer> normalSet = new HashSet<>();
             iterator.forEachRemaining(normalSet::add);
-            result.r1 = set.contains(1);
-            result.r2 = set.contains(2);
-            result.r3 = set.contains(3);
-            result.r4 = set.contains(4);
+            result.r1 = normalSet.contains(1);
+            result.r2 = normalSet.contains(2);
+            result.r3 = normalSet.contains(3);
+            result.r4 = normalSet.contains(4);
         }
     }
 }
