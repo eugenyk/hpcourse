@@ -1,0 +1,38 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'jcstress'
+
+version '1.0-SNAPSHOT'
+
+ext {
+    jcstressVersion = '0.4'
+}
+
+repositories {
+    jcenter()
+
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+    testCompile group: 'com.devexperts.lincheck', name: 'lincheck', version: '2.0'
+
+}
+
+jcstress {
+    jcstressDependency "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
+}
