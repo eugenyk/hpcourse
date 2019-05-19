@@ -1,0 +1,7 @@
+# gradle
+.gradle/
+build/
+out/
+# IntelliJ IDEA
+/.idea/workspace.xml
+/.idea/tasks.xml
