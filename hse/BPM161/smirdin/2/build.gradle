@@ -1,0 +1,50 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.21'
+}
+
+apply plugin: 'jcstress'
+
+group 'lab2'
+version '1.0-SNAPSHOT'
+
+
+sourceCompatibility = 1.11
+repositories {
+    mavenCentral()
+    jcenter()
+
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
+}
+
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compile "org.jetbrains.kotlin:kotlin-reflect:1.1.0"
+    testCompile 'junit:junit:4.12'
+    testCompile 'com.devexperts.lincheck:lincheck:2.0'
+    testCompile group: 'org.assertj', name: 'assertj-core', version: '1.0.0'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+jcstress {
+    jcstressDependency 'org.openjdk.jcstress:jcstress-core:0.5'
+    forks=1
+}
