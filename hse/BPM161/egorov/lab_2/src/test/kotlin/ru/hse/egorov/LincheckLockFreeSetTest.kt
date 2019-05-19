@@ -2,21 +2,24 @@ package ru.hse.egorov
 
 import com.devexperts.dxlab.lincheck.LinChecker
 import com.devexperts.dxlab.lincheck.annotations.Operation
+import com.devexperts.dxlab.lincheck.annotations.Param
+import com.devexperts.dxlab.lincheck.paramgen.IntGen
 import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest
 import org.junit.Test
 
+@Param(name = "key", gen = IntGen::class)
 @StressCTest
 class LincheckLockFreeSetTest {
     private val set = LockFreeSet<Int>()
 
     @Operation
-    fun add(key: Int) = set.add(key)
+    fun add(@Param(name = "key") key: Int) = set.add(key)
 
     @Operation
-    fun remove( key: Int) = set.remove(key)
+    fun remove(@Param(name = "key") key: Int) = set.remove(key)
 
     @Operation
-    fun contains(key: Int) = set.contains(key)
+    fun contains(@Param(name = "key") key: Int) = set.contains(key)
 
     @Operation
     fun isEmpty() = set.isEmpty
