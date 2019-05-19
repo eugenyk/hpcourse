@@ -225,9 +225,9 @@ public class JcstressTest {
 
     @JCStressTest
     @Description("Test add two different elements")
-    @Outcome(id = "1, 1, 0", expect = ACCEPTABLE, desc = "is empty, " +
+    @Outcome(id = "1, 1", expect = ACCEPTABLE, desc = "is empty, " +
             "add, remove")
-    @Outcome(id = "0, 0, 0", expect = ACCEPTABLE, desc = "is empty, " +
+    @Outcome(id = "0, 0", expect = ACCEPTABLE, desc = "is empty, " +
             "add, remove")
     @Outcome(expect = FORBIDDEN, desc = "Case violating atomicity.")
     public static class Scan {

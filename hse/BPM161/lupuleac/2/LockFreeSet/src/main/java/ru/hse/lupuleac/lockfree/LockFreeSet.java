@@ -26,13 +26,14 @@ public class LockFreeSet<T extends Comparable<T>> implements
             if (findResult.cur.marked) {
                 continue;
             }
-            if (findResult.cur.next != null && findResult.cur.next.value
+            if (findResult.cur.next != null && findResult.cur.next
+                    .valueStorage.value
                     .compareTo(value) == 0) {
                 return false;
             }
             Node node = new Node(value);
             node.nextAndMark.set(findResult.cur);
-            NextAndMark newNext = new NextAndMark(node, false);
+            NodeLink newNext = new NodeLink(node, false);
             if (findResult.prev.nextAndMark.compareAndSet(findResult.cur, newNext)) {
                 return true;
             }
@@ -50,16 +51,17 @@ public class LockFreeSet<T extends Comparable<T>> implements
             if (nodeToBeRemoved == null) {
                 return false;
             }
-            NextAndMark curNext = nodeToBeRemoved.nextAndMark.get();
+            NodeLink curNext = nodeToBeRemoved.nextAndMark.get();
             if (curNext.marked
-                    || nodeToBeRemoved.value.compareTo(value) != 0) {
+                    || nodeToBeRemoved.valueStorage.value
+                    .compareTo(value) != 0) {
                 return false;
             }
 
-            nodeToBeRemoved.nextAndMark.set(new NextAndMark(curNext.next, true));
+            nodeToBeRemoved.nextAndMark.set(new NodeLink(curNext.next, true));
 
             if (findResult.prev.nextAndMark.compareAndSet(findResult.cur,
-                    new NextAndMark(curNext.next, curNext.marked))) {
+                    new NodeLink(curNext.next, curNext.marked))) {
                 return true;
             }
         }
@@ -68,8 +70,9 @@ public class LockFreeSet<T extends Comparable<T>> implements
 
     private FindResult find(T key) {
         Node cur = head;
-        NextAndMark next = cur.nextAndMark.get();
-        while (next.next != null && next.next.value.compareTo(key) < 0) {
+        NodeLink next = cur.nextAndMark.get();
+        while (next.next != null && next.next.valueStorage.value.compareTo(key) <
+                0) {
             cur = next.next;
             next = cur.nextAndMark.get();
         }
@@ -79,18 +82,20 @@ public class LockFreeSet<T extends Comparable<T>> implements
     @Override
     public boolean contains(T value) {
         Node cur = head;
-        while (cur != null && (cur.value == null || cur.value.compareTo
-                (value) <
+        while (cur != null && (cur.valueStorage.value == null || cur
+                .valueStorage.value.compareTo
+                        (value) <
                 0)) {
             cur = cur.nextAndMark.get().next;
         }
-        return cur != null && cur.value.compareTo(value) == 0 && !cur.nextAndMark
+        return cur != null && cur.valueStorage.value.compareTo(value) == 0 && !cur
+                .nextAndMark
                 .get().marked;
     }
 
     @Override
     public boolean isEmpty() {
-        NextAndMark nextAndMark = head.nextAndMark.get();
+        NodeLink nextAndMark = head.nextAndMark.get();
         while (nextAndMark.next != null) {
             if (!nextAndMark.marked) {
                 return false;
@@ -100,38 +105,38 @@ public class LockFreeSet<T extends Comparable<T>> implements
         return true;
     }
 
-    private List<AtomicReference<NextAndMark>> getNodes() {
+    private List<ValueStorage> getNodes() {
         Node cur = head;
-        List<AtomicReference<NextAndMark>> res = new ArrayList<>();
+        List<ValueStorage> res = new ArrayList<>();
         while (cur != null) {
-            AtomicReference<NextAndMark> atomicReference = cur.nextAndMark;
+            AtomicReference<NodeLink> atomicReference = cur.nextAndMark;
             cur = atomicReference.get().next;
-            if (atomicReference.get().marked) {
+            if (atomicReference.get().marked || cur == null) {
                 continue;
             }
-            res.add(atomicReference);
+            res.add(cur.valueStorage);
         }
         return res;
     }
 
     public List<T> scan() {
-        List<AtomicReference<NextAndMark>> snapshot = getNodes();
+        List<ValueStorage> snapshot = getNodes();
         while (true) {
-            List<AtomicReference<NextAndMark>> secondSnapshot = getNodes();
+            List<ValueStorage> secondSnapshot = getNodes();
             if (secondSnapshot.size() != snapshot.size()) {
                 snapshot = secondSnapshot;
                 continue;
             }
             boolean changed = false;
             for (int i = 0; i < snapshot.size(); i++) {
-                NextAndMark expected = secondSnapshot.get(i).get();
-                if (!snapshot.get(i).compareAndSet(expected, expected)) {
+                long expected = secondSnapshot.get(i).id;
+                if (snapshot.get(i).id != expected) {
                     changed = true;
                 }
             }
             if (!changed) {
-                return secondSnapshot.stream().filter(t -> t.get().next != null)
-                        .map(t -> t.get().next.value)
+                return secondSnapshot.stream()
+                        .map(t -> t.value)
                         .collect(
                                 Collectors.toList()
                         );
@@ -146,33 +151,42 @@ public class LockFreeSet<T extends Comparable<T>> implements
         return scan().iterator();
     }
 
-    private class NextAndMark {
-        private NextAndMark(Node next, boolean marked) {
+    private class NodeLink {
+        private NodeLink(Node next, boolean marked) {
             this.next = next;
             this.marked = marked;
-            id = LockFreeSet.this.counter.incrementAndGet();
+
         }
 
-        private long id;
         private Node next;
         private boolean marked;
     }
 
-    private class Node {
-        private Node(T value) {
+    private class ValueStorage {
+        private ValueStorage(T value) {
             this.value = value;
-            nextAndMark = new AtomicReference<>(new NextAndMark(null, false));
+            this.id = LockFreeSet.this.counter.incrementAndGet();
         }
 
         private T value;
-        private AtomicReference<NextAndMark> nextAndMark;
+        private long id;
+    }
+
+    private class Node {
+        private Node(T value) {
+            this.valueStorage = new ValueStorage(value);
+            nextAndMark = new AtomicReference<>(new NodeLink(null, false));
+        }
+
+        private ValueStorage valueStorage;
+        private AtomicReference<NodeLink> nextAndMark;
     }
 
     private class FindResult {
         private Node prev;
-        private NextAndMark cur;
+        private NodeLink cur;
 
-        private FindResult(Node prev, NextAndMark cur) {
+        private FindResult(Node prev, NodeLink cur) {
             this.prev = prev;
             this.cur = cur;
         }
