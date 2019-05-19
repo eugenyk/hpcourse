@@ -3,45 +3,63 @@ package ru.hse.egorov
 import java.util.concurrent.atomic.AtomicMarkableReference
 
 class LockFreeSet<T : Comparable<T>> : LockFreeSetInterface<T> {
-    private val tail = AtomicMarkableReference(Node<T?>(null, null), true)
-    private val head = AtomicMarkableReference(Node(null, tail), true)
+    private val head = AtomicMarkableReference(
+        Node(
+            null,
+            AtomicMarkableReference<Node<T>>(null, false)
+        ), true
+    )
 
 
     override val isEmpty: Boolean
-        get() = head.reference.next == tail
+        get() {
+            var cur = head.reference.next.reference
+            while (cur != null) {
+                if (!isRemoved(cur))
+                    return false
+                cur = cur.next.reference
+            }
+            return true
+        }
 
     override fun add(value: T): Boolean {
+        val node = Node(value, AtomicMarkableReference<Node<T>>(null, false))
+
         while (true) {
-            val (prev, node) = find(value)
-            if (node != tail && node!!.reference.value == value) {
+            val (prev, current) = find(value)
+
+            if (current != null) {
                 return false
-            }
-            if (prev.reference.next!!.compareAndSet(node.reference, Node(value, node), false, false)) {
-                return true
+            } else {
+                if (prev.next.compareAndSet(null, node, false, false)) {
+                    return true
+                }
             }
         }
     }
 
     override fun remove(value: T): Boolean {
         while (true) {
-            val (prev, node) = find(value)
-            if (node!!.reference.value != value || node.isMarked) {
+            val (prev, current) = find(value)
+
+            if (current == null)
                 return false
-            }
-            val next = node.reference.next
-            if (node.attemptMark(node.reference, true)) {
-                prev.reference.next!!.compareAndSet(node.reference, next!!.reference, false, false)
+
+            val ref = current.next.reference
+            if (current.next.compareAndSet(ref, ref, false, true)) {
+                physicallyRemove(prev, current)
                 return true
             }
         }
     }
 
+
     override fun contains(value: T): Boolean {
-        var cur = head.reference.next
-        while (cur != tail && cur!!.reference.value!! <= value) {
-            if (cur.reference.value == value)
-                return !cur.isMarked
-            cur = cur.reference.next
+        var cur = head.reference.next.reference
+        while (cur != null) {
+            if (cur.value == value)
+                return !isRemoved(cur)
+            cur = cur.next.reference
         }
         return false
     }
@@ -49,48 +67,55 @@ class LockFreeSet<T : Comparable<T>> : LockFreeSetInterface<T> {
     override fun iterator(): Iterator<T> {
         var firstSnapshot = takeSnapshot()
         var secondSnapshot = takeSnapshot()
-        while(firstSnapshot != secondSnapshot){
-             firstSnapshot = takeSnapshot()
-             secondSnapshot = takeSnapshot()
+        while (firstSnapshot != secondSnapshot) {
+            firstSnapshot = takeSnapshot()
+            secondSnapshot = takeSnapshot()
         }
         return firstSnapshot.iterator()
     }
 
     private fun takeSnapshot(): List<T> {
-        var cur = head.reference.next
-        val set = mutableListOf<AtomicMarkableReference<Node<T?>>>()
+        var cur = head.reference.next.reference
+        val set = mutableListOf<Node<T>>()
 
-        while (cur != tail) {
-                set.add(cur!!)
-            cur = cur.reference.next
+        while (cur != null) {
+            set.add(cur)
+            cur = cur.next.reference
         }
 
-        return set.filter{ ref -> !ref.isMarked}.map{ref -> ref.reference.value!!}
+        return set.filter { ref -> !isRemoved(ref) }.map { ref -> ref.value!! }
     }
 
-    private fun find(value: T): Pair<AtomicMarkableReference<Node<T?>>, AtomicMarkableReference<Node<T?>>?> {
-        while (true) {
-            var cur = head.reference.next
-            var prev = head
-            var node = head.reference.next
-            while (cur != tail && cur!!.reference.value!! < value) {
-                if (!cur.isMarked) {
-                    prev = cur
-                    node = prev.reference.next
-                }
-                cur = cur.reference.next as AtomicMarkableReference<Node<T?>>
-            }
-
-            if (prev.reference.next!!.compareAndSet(node!!.reference, cur.reference, false, false)) {
-                if (cur.isMarked) {
-                    continue
-                }
+    private fun find(value: T): Pair<Node<T>, Node<T>?> {
+        var prev: Node<T>
+        var node: Node<T>?
+        prev = head.reference
+        node = prev.next.reference
+        while (node != null) {
+            if (!isRemoved(node) && value == node.value) {
                 return Pair(prev, node)
             }
+            prev = node
+            node = node.next.reference
         }
+
+        return Pair<Node<T>, Node<T>?>(prev, node)
+    }
+
+    private fun isRemoved(node: Node<T>): Boolean {
+        return node.next.isMarked
+    }
+
+    private fun physicallyRemove(prev: Node<T>, node: Node<T>) {
+        var next: Node<T>? = node
+        do {
+            next = next!!.next.reference
+        } while (next != null && isRemoved(next))
+
+        prev.next.compareAndSet(node, next, false, false)
     }
 
     companion object {
-        private data class Node<T>(val value: T?, val next: AtomicMarkableReference<Node<T>>?)
+        private data class Node<T>(val value: T?, val next: AtomicMarkableReference<Node<T>>)
     }
 }
