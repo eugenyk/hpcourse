@@ -76,6 +76,11 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
         for (prev = head.getReference(), current = prev.next.getReference();
              current != null;
              prev = current, current = current.next.getReference()) {
+            if (!isPresent(current)) {
+                boolean mark = prev.next.isMarked();
+                prev.next.compareAndSet(current, current.next.getReference(), mark, mark);
+            }
+
             if (isPresent(current) && value.equals(current.value)) {
                 return new NodePair(prev, current);
             }

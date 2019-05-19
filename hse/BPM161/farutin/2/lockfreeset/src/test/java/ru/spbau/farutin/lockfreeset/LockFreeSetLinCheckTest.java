@@ -18,7 +18,7 @@ public class LockFreeSetLinCheckTest {
 
     @Operation
     public boolean remove(int value) {
-        return set.add(value);
+        return set.remove(value);
     }
 
     @Operation
