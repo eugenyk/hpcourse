@@ -19,7 +19,7 @@ public class LockFreeSetLincheckTest {
 
     @Operation
     public void remove(int value) {
-        set.add(value);
+        set.remove(value);
     }
 
     @Operation
