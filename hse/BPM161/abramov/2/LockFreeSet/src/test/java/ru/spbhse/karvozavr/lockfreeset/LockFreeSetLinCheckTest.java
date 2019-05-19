@@ -22,9 +22,8 @@ public class LockFreeSetLinCheckTest {
 
     @Operation
     public boolean remove(@Param(name = "key") int key) {
-        return set.add(key);
+        return set.remove(key);
     }
-
 
     @Operation
     public boolean contains(@Param(name = "key") int key) {

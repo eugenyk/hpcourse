@@ -33,6 +33,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile "org.openjdk.jcstress:jcstress-core:${jcstressVersion}"
     testCompile 'com.devexperts.lincheck:lincheck:2.0'
+    compile group: 'org.jetbrains', name: 'annotations', version: '15.0'
 }
 
 jcstress {

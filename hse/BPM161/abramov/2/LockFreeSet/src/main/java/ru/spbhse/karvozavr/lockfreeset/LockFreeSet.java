@@ -1,5 +1,8 @@
 package ru.spbhse.karvozavr.lockfreeset;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -12,6 +15,9 @@ import java.util.concurrent.atomic.AtomicStampedReference;
  */
 public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterface<T> {
 
+    private static final int REMOVED = -1;
+    private static final int INITIAL = 0;
+
     /**
      * List node.
      */
@@ -19,7 +25,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
         final T value;
 
-        AtomicStampedReference<Node> next = new AtomicStampedReference<>(null, 0);
+        AtomicStampedReference<Node> next = new AtomicStampedReference<>(null, INITIAL);
 
         Node(T value) {
             this.value = value;
@@ -30,14 +36,10 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
      * Stamped reference to the head of the list.
      * Head is fictive Node with null value.
      */
-    private final AtomicStampedReference<Node> head = new AtomicStampedReference<>(new Node(null), 0);
+    private final AtomicStampedReference<Node> head = new AtomicStampedReference<>(new Node(null), INITIAL);
 
     @Override
-    public boolean add(T value) {
-        if (value == null) {
-            throw new NullPointerException("Error: null values are not allowed in set!");
-        }
-
+    public boolean add(@NotNull T value) {
         Node node = new Node(value);
 
         while (true) {
@@ -49,19 +51,19 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
                 return false;
             } else {
                 var stamp = prev.next.getStamp();
-                if (stamp != -1 && prev.next.compareAndSet(null, node, stamp, stamp + 1)) {
-                    return true;
+                if (stamp != REMOVED) {
+                    if (prev.next.compareAndSet(null, node, stamp, stamp + 1)) {
+                        return true;
+                    }
+                } else {
+                    fixRemove();
                 }
             }
         }
     }
 
     @Override
-    public boolean remove(T value) {
-        if (value == null) {
-            return false;
-        }
-
+    public boolean remove(@NotNull T value) {
         while (true) {
             Pair<Node> prevAndCurrent = find(value);
             Node prev = prevAndCurrent.first;
@@ -70,7 +72,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
             if (current != null) {
                 Node ref = current.next.getReference();
                 var stamp = current.next.getStamp();
-                if (stamp != -1 && current.next.compareAndSet(ref, ref, stamp, -1)) {
+                if (stamp != REMOVED && current.next.compareAndSet(ref, ref, stamp, REMOVED)) {
                     physicallyRemove(prev, current);
                     return true;
                 }
@@ -101,7 +103,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
         return getSnapshot().iterator();
     }
 
-    private Pair<Node> find(T value) {
+    private Pair<Node> find(@NotNull T value) {
         Node prev, node;
         for (prev = head.getReference(), node = prev.next.getReference();
              node != null; prev = node, node = node.next.getReference()) {
@@ -113,18 +115,28 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
         return new Pair<>(prev, null);
     }
 
-    private boolean isRemoved(Node node) {
-        return node.next.getStamp() == -1;
+    private boolean isRemoved(@NotNull Node node) {
+        return node.next.getStamp() == REMOVED;
     }
 
-    private void physicallyRemove(Node prev, Node node) {
+    private void fixRemove() {
+        Node prev, node;
+        for (prev = head.getReference(), node = prev.next.getReference();
+             node != null; prev = node, node = node.next.getReference()) {
+            if (isRemoved(node)) {
+                physicallyRemove(prev, node);
+            }
+        }
+    }
+
+    private void physicallyRemove(@NotNull Node prev, @Nullable Node node) {
         Node next = node;
-        do {
+        while (next != null && isRemoved(next)) {
             next = next.next.getReference();
-        } while (next != null && isRemoved(next));
+        }
 
         var stamp = prev.next.getStamp();
-        if (stamp != -1) {
+        if (stamp != REMOVED) {
             prev.next.compareAndSet(node, next, stamp, stamp + 1);
         }
     }
