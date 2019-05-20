@@ -1,16 +1,34 @@
-plugins {
-    id 'java'
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.erizo.gradle:jcstress-gradle-plugin:0.8.1'
+    }
 }
 
-group '1'
-version '1.0-SNAPSHOT'
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.31'
+}
 
-sourceCompatibility = 1.8
+apply plugin: 'jcstress'
 
 repositories {
     mavenCentral()
+    maven {
+        url "https://dl.bintray.com/devexperts/Maven/"
+    }
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compile group: 'com.devexperts.lincheck', name: 'lincheck', version: '2.0'
+    testCompile group: 'junit', name: 'junit', version: '4.4'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
 }
