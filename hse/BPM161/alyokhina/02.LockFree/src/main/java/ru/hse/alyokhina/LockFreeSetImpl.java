@@ -1,3 +1,5 @@
+package ru.hse.alyokhina;
+
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Iterator;

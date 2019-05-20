@@ -1,3 +1,5 @@
+package ru.hse.alyokhina;
+
 import org.junit.Test;
 
 import java.util.Arrays;

@@ -1,3 +1,5 @@
+package ru.hse.alyokhina;
+
 /**
  * Lock-Free множество.
  * @param <T> Тип ключей
