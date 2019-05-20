@@ -81,6 +81,33 @@ public class LockFreeSetStressTest {
     }
 
     @JCStressTest
+    @Outcome(id = "true, false, false", expect = ACCEPTABLE, desc = "Order: 1, 2")
+    @Outcome(id = "false, true, false", expect = ACCEPTABLE, desc = "Order: 2, 1")
+    @State
+    public static class ManyRemovesTest {
+        private LockFreeSet<Integer> set = new LockFreeSet<>();
+
+        public ManyRemovesTest() {
+            set.add(1);
+        }
+
+        @Actor
+        public void actor1(ZZZ_Result r) {
+            r.r1 = set.remove(1);
+        }
+
+        @Actor
+        public void actor2(ZZZ_Result r) {
+            r.r2 = set.remove(1);
+        }
+
+        @Arbiter
+        public void arbiter(ZZZ_Result r) {
+            r.r3 = set.contains(1);
+        }
+    }
+
+    @JCStressTest
     @Outcome(id = "true, true, true, true", expect = ACCEPTABLE, desc = "All operations were successful")
     @State
     public static class RemovableTest {

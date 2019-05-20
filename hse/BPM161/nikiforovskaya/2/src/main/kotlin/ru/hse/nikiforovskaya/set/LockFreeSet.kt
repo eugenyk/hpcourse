@@ -1,6 +1,5 @@
 package ru.hse.nikiforovskaya.set
 
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicMarkableReference
 
 
@@ -8,13 +7,11 @@ class LockFreeSet<T:Comparable<T>> : LockFreeSetInterface<T> {
 
     private val head : AtomicMarkableReference<ListNode<T>?> = AtomicMarkableReference(null, ListNode.UNMARKED)
 
-    private var size : AtomicInteger = AtomicInteger(0)
-
     private class SearchResult<T : Comparable<T>>(val last: AtomicMarkableReference<ListNode<T>?>, val data: ListNode<T>?)
 
     override fun add(value: T): Boolean {
         val res = find(value)
-        if (res.data != null && res.data.getKey() == value) {
+        if (res.data != null && res.data.getKey() == value && !res.data.isMarked()) {
             return false
         }
 
@@ -22,16 +19,31 @@ class LockFreeSet<T:Comparable<T>> : LockFreeSetInterface<T> {
 
         while (!last.compareAndSet(null, ListNode(value), ListNode.UNMARKED, ListNode.UNMARKED)) {
 
+            if (last.isMarked) {
+                tryAllRemoves()
+            }
+
             val res = find(value)
-            if (res.data != null && res.data.getKey() == value) {
+            if (res.data != null && res.data.getKey() == value && !res.data.isMarked()) {
                 return false
             }
 
             last = res.last
         }
-
-        size.getAndIncrement()
         return true
+    }
+
+    private fun tryAllRemoves() {
+        var last = head
+        var node: ListNode<T>? = head.reference
+
+        while (node != null) {
+            if (node.isMarked()) {
+                actuallyRemove(last, node)
+            }
+            last = node.next
+            node = node.nextNode()
+        }
     }
 
     override fun remove(value: T): Boolean {
@@ -41,10 +53,9 @@ class LockFreeSet<T:Comparable<T>> : LockFreeSetInterface<T> {
             val last = found.last
 
             if (current != null) {
-                val ref = current.next.reference
+                val ref = current.nextNode()
                 if (current.next.compareAndSet(ref, ref, ListNode.UNMARKED, ListNode.MARKED)) {
                     actuallyRemove(last, current)
-                    size.getAndDecrement()
                     return true
                 }
             } else {
@@ -55,10 +66,9 @@ class LockFreeSet<T:Comparable<T>> : LockFreeSetInterface<T> {
 
     private fun actuallyRemove(last: AtomicMarkableReference<ListNode<T>?>, current: ListNode<T>) {
         var next : ListNode<T>? = current
-        do {
-            next = next!!.next.reference
-        } while (next != null && next.isMarked())
-
+        while (next != null && next.isMarked()) {
+            next = next.nextNode()
+        }
         last.compareAndSet(current, next, ListNode.UNMARKED, ListNode.UNMARKED)
     }
 
@@ -68,7 +78,7 @@ class LockFreeSet<T:Comparable<T>> : LockFreeSetInterface<T> {
     }
 
     override fun isEmpty(): Boolean {
-        return size.get() == 0
+        return !iterator().hasNext()
     }
 
     override fun iterator(): Iterator<T> {
@@ -95,21 +105,23 @@ class LockFreeSet<T:Comparable<T>> : LockFreeSetInterface<T> {
             val first = getSomeList()
             val second = getSomeList()
             if (first == second) {
-                return first
+                return first.first
             }
         }
     }
 
-    private fun getSomeList(): List<T> {
+    private fun getSomeList(): Pair<List<T>, AtomicMarkableReference<ListNode<T>?>> {
         val result = mutableListOf<T>()
+        var last = head
         var node: ListNode<T>? = head.reference
 
         while (node != null) {
             if (!node.isMarked()) {
                 result.add(node.getKey())
             }
+            last = node.next
             node = node.nextNode()
         }
-        return result
+        return Pair(result, last)
     }
 }

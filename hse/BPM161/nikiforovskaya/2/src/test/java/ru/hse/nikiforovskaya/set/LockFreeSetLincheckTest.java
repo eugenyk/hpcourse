@@ -1,8 +1,11 @@
 package ru.hse.nikiforovskaya.set;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
+import com.devexperts.dxlab.lincheck.LoggingLevel;
+import com.devexperts.dxlab.lincheck.Options;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressOptions;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -43,6 +46,10 @@ public class LockFreeSetLincheckTest {
 
     @Test
     public void runLinCheck() {
-        LinChecker.check(this.getClass());
+        Options opts = new StressOptions()
+                .iterations(5)
+                .threads(2)
+                .logLevel(LoggingLevel.DEBUG);
+        LinChecker.check(this.getClass(), opts);
     }
 }

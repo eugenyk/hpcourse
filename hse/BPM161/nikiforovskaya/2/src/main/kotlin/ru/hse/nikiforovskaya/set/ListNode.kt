@@ -26,4 +26,16 @@ class ListNode<T>(private val key: T) {
     fun getKey() : T {
         return key
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (other?.javaClass != javaClass) {
+            return false
+        }
+        other as ListNode<T>
+        return next == other
+    }
+
+    override fun toString(): String {
+        return "($key, ${isMarked()})"
+    }
 }
