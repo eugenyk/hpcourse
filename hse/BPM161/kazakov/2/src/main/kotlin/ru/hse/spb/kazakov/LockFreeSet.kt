@@ -151,7 +151,7 @@ class LockFreeSet<T : Comparable<T>> : Iterable<T> {
 
         fun casNext(currentNext: Node<T>, newNext: Node<T>) = nextRef.compareAndSet(currentNext, newNext, false, false)
 
-        fun casRemoveMark(currentNext: Node<T>) = nextRef.attemptMark(currentNext, true)
+        fun casRemoveMark(currentNext: Node<T>) = nextRef.compareAndSet(currentNext, currentNext, false, true)
     }
 
     private class ValueNode<T : Comparable<T>>(override val value: T, next: Node<T>) : Node<T>(next)
