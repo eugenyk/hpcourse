@@ -52,8 +52,7 @@ public class LockFreeSet<T extends Comparable<T>> implements
                 return false;
             }
             NodeLink curNext = nodeToBeRemoved.nextAndMark.get();
-            if (curNext.marked
-                    || nodeToBeRemoved.valueStorage.value
+            if (nodeToBeRemoved.valueStorage.value
                     .compareTo(value) != 0) {
                 return false;
             }

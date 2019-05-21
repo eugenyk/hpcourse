@@ -2,7 +2,6 @@ package ru.hse.lupuleac.lockfree;
 
 import org.junit.Test;
 
-import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -65,7 +64,6 @@ public class LockFreeSetSingleThreadTest {
             public void run() {
                 for (int i = 0; i < 1000; i++) {
                     set.add(i);
-                    System.err.println("Add");
                 }
             }
         });
@@ -74,7 +72,6 @@ public class LockFreeSetSingleThreadTest {
             public void run() {
                 for (int i = 0; i < 100000; i++) {
                     set.scan();
-                    System.err.println("Scan");
                 }
             }
         });

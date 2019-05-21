@@ -298,7 +298,8 @@ public class JcstressTest {
             r.r5 = values.get(3);
             r.r6 = values.get(4);
         }
-
     }
+
+
 }
 
