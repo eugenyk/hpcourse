@@ -70,22 +70,11 @@ class LockFreeSet<T : Comparable<T>> : Iterable<T> {
     }
 
     /**
-     * Wat-free проверка множества на пустоту.
+     * Lock-free проверка множества на пустоту.
      *
      * @return true если множество пусто, иначе - false
      */
-    fun isEmpty(): Boolean {
-        var current: Node<T> = head.next
-
-        while (current != tail) {
-            if (!current.isRemoved) {
-                return false
-            }
-            current = current.next
-        }
-
-        return true
-    }
+    fun isEmpty() = makeAtomicSnapshot().isEmpty()
 
     /**
      * Возвращает lock-free итератор для множества.
