@@ -116,11 +116,14 @@ int run_threads() {
 
     pthread_t producer, interrupter;
     pthread_create(&producer, nullptr, producer_routine, &updates_variable);
-    pthread_create(&interrupter, nullptr, consumer_interruptor_routine, nullptr);
     consumers = std::vector<pthread_t>(number_of_consumers);
     for (auto& consumer : consumers) {
         pthread_create(&consumer, nullptr, consumer_routine, &updates_variable);
     }
+    pthread_create(&interrupter, nullptr, consumer_interruptor_routine, nullptr);
+
+    pthread_join(producer, nullptr);
+    pthread_join(interrupter, nullptr);
 
     int total_sum = 0;
     for (auto& consumer : consumers) {
@@ -128,8 +131,6 @@ int run_threads() {
         pthread_join(consumer, (void **) &return_value);
         total_sum += *return_value;
     }
-    pthread_join(interrupter, nullptr);
-    pthread_join(producer, nullptr);
 
     return total_sum;
 }
