@@ -1,8 +1,11 @@
 package ru.hse.spb.sharkova.lockfreeset;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
+import com.devexperts.dxlab.lincheck.LoggingLevel;
+import com.devexperts.dxlab.lincheck.Options;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressOptions;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -13,33 +16,39 @@ public class LockFreeSetLincheckTest {
     private LockFreeSet<Integer> set = new LockFreeSet<>();
 
     @Operation
-    public void add(int value) {
-        set.add(value);
+    public boolean add(int key) {
+        return set.add(key);
     }
 
     @Operation
-    public void remove(int value) {
-        set.remove(value);
+    public boolean remove(int key) {
+        return set.remove(key);
+    }
+
+
+    @Operation
+    public boolean contains(int key) {
+        return set.contains(key);
     }
 
     @Operation
-    public void contains(int value) {
-        set.contains(value);
+    public boolean isEmpty() {
+        return set.isEmpty();
     }
 
     @Operation
-    public void isEmpty() {
-        set.isEmpty();
-    }
-
-    @Operation
-    public void iterator() {
-        List<Integer> list = new ArrayList<>();
-        set.iterator().forEachRemaining(list::add);
+    public String iterator() {
+        List<Integer> l = new ArrayList<>();
+        set.iterator().forEachRemaining(l::add);
+        return l.toString();
     }
 
     @Test
     public void runLinCheck() {
-        LinChecker.check(LockFreeSetLincheckTest.class);
+        Options opts = new StressOptions()
+                .iterations(10)
+                .threads(2)
+                .logLevel(LoggingLevel.DEBUG);
+        LinChecker.check(this.getClass(), opts);
     }
 }
