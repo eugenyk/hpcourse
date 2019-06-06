@@ -4,17 +4,14 @@ package ru.hse.lupuleac.lockfree;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.stream.Collectors;
 
 public class LockFreeSet<T extends Comparable<T>> implements
         Set<T> {
     private Node head;
-    private AtomicLong counter;
 
     public LockFreeSet() {
-        counter = new AtomicLong(0);
         head = new Node(null);
     }
 
@@ -22,19 +19,14 @@ public class LockFreeSet<T extends Comparable<T>> implements
     public boolean add(T value) {
         while (true) {
             FindResult findResult = find(value);
-
-            if (findResult.cur.marked) {
-                continue;
-            }
-            if (findResult.cur.next != null && findResult.cur.next
-                    .valueStorage.value
+            if (findResult.cur != null && findResult.cur.value
                     .compareTo(value) == 0) {
                 return false;
             }
             Node node = new Node(value);
-            node.nextAndMark.set(findResult.cur);
-            NodeLink newNext = new NodeLink(node, false);
-            if (findResult.prev.nextAndMark.compareAndSet(findResult.cur, newNext)) {
+            node.next.set(findResult.cur, false);
+            if (findResult.prev.next.compareAndSet(findResult.cur,
+                    node, false, false)) {
                 return true;
             }
         }
@@ -44,23 +36,19 @@ public class LockFreeSet<T extends Comparable<T>> implements
     public boolean remove(T value) {
         while (true) {
             FindResult findResult = find(value);
-            if (findResult.cur.marked) {
-                continue;
-            }
-            Node nodeToBeRemoved = findResult.cur.next;
-            if (nodeToBeRemoved == null) {
-                return false;
-            }
-            NodeLink curNext = nodeToBeRemoved.nextAndMark.get();
-            if (nodeToBeRemoved.valueStorage.value
+            Node nodeToBeRemoved = findResult.cur;
+
+            if (nodeToBeRemoved == null || nodeToBeRemoved.value
                     .compareTo(value) != 0) {
                 return false;
             }
+            Node next = nodeToBeRemoved.nextNode();
+            if (!nodeToBeRemoved.next.attemptMark(next, true)) {
+                continue;
+            }
 
-            nodeToBeRemoved.nextAndMark.set(new NodeLink(curNext.next, true));
-
-            if (findResult.prev.nextAndMark.compareAndSet(findResult.cur,
-                    new NodeLink(curNext.next, curNext.marked))) {
+            if (findResult.prev.next.compareAndSet(nodeToBeRemoved,
+                    next, false, false)) {
                 return true;
             }
         }
@@ -68,72 +56,57 @@ public class LockFreeSet<T extends Comparable<T>> implements
 
 
     private FindResult find(T key) {
-        Node cur = head;
-        NodeLink next = cur.nextAndMark.get();
-        while (next.next != null && next.next.valueStorage.value.compareTo(key) <
+        Node prev = head;
+        Node cur = head.nextNode();
+        while (cur != null && cur.value.compareTo(key) <
                 0) {
-            cur = next.next;
-            next = cur.nextAndMark.get();
+            prev = cur;
+            cur = cur.nextNode();
         }
-        return new FindResult(cur, next);
+        return new FindResult(prev, cur);
     }
 
     @Override
     public boolean contains(T value) {
-        Node cur = head;
-        while (cur != null && (cur.valueStorage.value == null || cur
-                .valueStorage.value.compareTo
-                        (value) <
-                0)) {
-            cur = cur.nextAndMark.get().next;
+        Node cur = head.nextNode();
+        while (cur != null && (cur.value.compareTo
+                        (value) < 0)) {
+            cur = cur.nextNode();
         }
-        return cur != null && cur.valueStorage.value.compareTo(value) == 0 && !cur
-                .nextAndMark
-                .get().marked;
+        return cur != null && cur.value.compareTo(value) == 0 && cur
+                .exists();
     }
 
     @Override
     public boolean isEmpty() {
-        NodeLink nextAndMark = head.nextAndMark.get();
-        while (nextAndMark.next != null) {
-            if (!nextAndMark.marked) {
+        Node cur = head.nextNode();
+        while (cur != null) {
+            if (cur.exists()) {
                 return false;
             }
-            nextAndMark = nextAndMark.next.nextAndMark.get();
+            cur = cur.nextNode();
         }
         return true;
     }
 
-    private List<ValueStorage> getNodes() {
-        Node cur = head;
-        List<ValueStorage> res = new ArrayList<>();
+    private List<Node> getNodes() {
+        Node cur = head.nextNode();
+        List<Node> res = new ArrayList<>();
         while (cur != null) {
-            AtomicReference<NodeLink> atomicReference = cur.nextAndMark;
-            cur = atomicReference.get().next;
-            if (atomicReference.get().marked || cur == null) {
-                continue;
-            }
-            res.add(cur.valueStorage);
+           if (cur.exists()){
+               res.add(cur);
+           }
+           cur = cur.nextNode();
         }
         return res;
     }
 
     public List<T> scan() {
-        List<ValueStorage> snapshot = getNodes();
+        List<Node> snapshot = getNodes();
         while (true) {
-            List<ValueStorage> secondSnapshot = getNodes();
-            if (secondSnapshot.size() != snapshot.size()) {
-                snapshot = secondSnapshot;
-                continue;
-            }
-            boolean changed = false;
-            for (int i = 0; i < snapshot.size(); i++) {
-                long expected = secondSnapshot.get(i).id;
-                if (snapshot.get(i).id != expected) {
-                    changed = true;
-                }
-            }
-            if (!changed) {
+            List<Node> secondSnapshot = getNodes();
+
+            if (snapshot.equals(secondSnapshot)) {
                 return secondSnapshot.stream()
                         .map(t -> t.value)
                         .collect(
@@ -150,42 +123,30 @@ public class LockFreeSet<T extends Comparable<T>> implements
         return scan().iterator();
     }
 
-    private class NodeLink {
-        private NodeLink(Node next, boolean marked) {
-            this.next = next;
-            this.marked = marked;
-
-        }
-
-        private Node next;
-        private boolean marked;
-    }
-
-    private class ValueStorage {
-        private ValueStorage(T value) {
-            this.value = value;
-            this.id = LockFreeSet.this.counter.incrementAndGet();
-        }
-
-        private T value;
-        private long id;
-    }
 
     private class Node {
         private Node(T value) {
-            this.valueStorage = new ValueStorage(value);
-            nextAndMark = new AtomicReference<>(new NodeLink(null, false));
+            this.value = value;
+            next = new AtomicMarkableReference<>(null, false);
         }
 
-        private ValueStorage valueStorage;
-        private AtomicReference<NodeLink> nextAndMark;
+        private T value;
+        private AtomicMarkableReference<Node> next;
+
+        public boolean exists() {
+            return !next.isMarked();
+        }
+
+        public Node nextNode() {
+            return next.getReference();
+        }
     }
 
     private class FindResult {
         private Node prev;
-        private NodeLink cur;
+        private Node cur;
 
-        private FindResult(Node prev, NodeLink cur) {
+        private FindResult(Node prev, Node cur) {
             this.prev = prev;
             this.cur = cur;
         }

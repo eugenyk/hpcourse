@@ -1,7 +1,6 @@
 package ru.hse.lupuleac.lockfree;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.Options;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
@@ -29,7 +28,7 @@ public class LinCheckTest {
         return set.contains(key);
     }
 
-    @Operation
+   @Operation
     public String iterator() {
         List<Integer> ints = new ArrayList<>();
         set.iterator().forEachRemaining(ints::add);
