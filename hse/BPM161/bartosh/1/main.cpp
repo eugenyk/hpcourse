@@ -87,7 +87,6 @@ public:
         pthread_mutex_lock(&value_mutex);
         flag_finished = true;
         pthread_cond_broadcast(&value_cond);
-        pthread_cond_broadcast(&value_cond);
         pthread_mutex_unlock(&value_mutex);
     }
 };
