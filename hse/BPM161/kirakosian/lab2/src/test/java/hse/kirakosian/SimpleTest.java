@@ -17,5 +17,13 @@ public class SimpleTest {
         assertFalse(set.contains(1));
     }
 
+    @Test
+    public void deleteTest() {
+        final var set = new LockFreeSet<Integer>();
+        set.add(1);
+        set.remove(1);
+        set.remove(0);
+        set.add(0);
+    }
 
 }

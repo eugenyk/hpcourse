@@ -75,9 +75,8 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
             while (next != null && !restart) {
                 final var ref = next.next;
                 if (ref.isMarked()) {
-                    if (curr.next.compareAndSet(next, ref.getReference(), true, true)) {
-                        restart = true;
-                    }
+                    curr.next.compareAndSet(next, ref.getReference(), false, false);
+                    restart = true;
                 } else {
                     if (next.value.equals(value)) {
                         return new AbstractMap.SimpleEntry<>(curr, next);
@@ -87,7 +86,7 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
                 }
             }
             if (!restart) {
-                return new AbstractMap.SimpleEntry<>(curr, next);
+                return new AbstractMap.SimpleEntry<>(curr, null);
             }
         }
     }
@@ -138,4 +137,5 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
         }
 
     }
+
 }
