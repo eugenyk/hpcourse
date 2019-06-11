@@ -184,8 +184,10 @@ void* consumer_interruptor_routine(void* arg) {
     while (!finished) {
         consumer_cond.unlock();
         int i = dist(rnd);
-        assert(pthread_cancel(consumers[i]) == 0);
         consumer_cond.lock();
+        if (!finished) {
+            assert(pthread_cancel(consumers[i]) == 0);
+        }
     }
     consumer_cond.unlock();
 
