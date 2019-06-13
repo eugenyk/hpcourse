@@ -2,6 +2,8 @@ package ru.hse.lupuleac.lockfree;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
+import com.devexperts.dxlab.lincheck.annotations.Param;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 
@@ -9,7 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@StressCTest(actorsAfter = 0, actorsBefore = 0)
+@Param(name = "key", gen = IntGen.class, conf = "1:5")
+@StressCTest
 public class LinCheckTest {
     private LockFreeSet<Integer> set = new LockFreeSet<>();
 
