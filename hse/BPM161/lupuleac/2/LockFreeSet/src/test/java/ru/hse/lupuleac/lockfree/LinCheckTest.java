@@ -28,6 +28,11 @@ public class LinCheckTest {
         return set.contains(key);
     }
 
+    @Operation
+    public boolean isEmpty() {
+        return set.isEmpty();
+    }
+
    @Operation
     public String iterator() {
         List<Integer> ints = new ArrayList<>();

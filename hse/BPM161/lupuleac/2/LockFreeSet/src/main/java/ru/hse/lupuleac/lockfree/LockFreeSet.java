@@ -79,14 +79,7 @@ public class LockFreeSet<T extends Comparable<T>> implements
 
     @Override
     public boolean isEmpty() {
-        Node cur = head.nextNode();
-        while (cur != null) {
-            if (cur.exists()) {
-                return false;
-            }
-            cur = cur.nextNode();
-        }
-        return true;
+        return !iterator().hasNext();
     }
 
     private List<Node> getNodes() {

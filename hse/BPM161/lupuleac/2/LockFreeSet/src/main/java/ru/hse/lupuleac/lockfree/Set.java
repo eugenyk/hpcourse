@@ -37,7 +37,7 @@ public interface Set<T extends Comparable<T>> {
     /**
      * Проверка множества на пустоту
      *
-     * Алгоритм должен быть как минимум wait-free
+     * Алгоритм должен быть как минимум lock-free
      *
      * @return true если множество пусто, иначе - false
      */
