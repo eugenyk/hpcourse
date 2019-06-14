@@ -168,7 +168,12 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
             Node start = head.next.getReference();
             if (start == null) return true;
             int mark = start.next.getStamp();
-            if (mark == UNMARKED) return false;
+            if (mark == UNMARKED) {
+                return false;
+            } else {
+                Node next = start.next.getReference();
+                head.next.compareAndSet(start, next, UNMARKED, UNMARKED);
+            }
         }
     }
 

@@ -12,7 +12,7 @@ import ru.hse.myutman.lockfreeset.LockFreeSetImpl;
 import java.util.ArrayList;
 import java.util.List;
 
-@Param(name = "key", gen = IntGen.class, conf = "1:5")
+@Param(name = "key", gen = IntGen.class, conf = "1:2")
 @StressCTest
 public class LincheckTest {
 
