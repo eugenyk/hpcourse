@@ -133,4 +133,58 @@ public class LockFreeSetJCStressTest {
             result.r4 = normalSet.contains(4);
         }
     }
+
+    @JCStressTest
+    @Outcome(id="1, 2, 3, 4, 5, 6", expect = ACCEPTABLE, desc = "")
+    @Outcome(id="1, 3, 4, 5, 6, 0", expect = ACCEPTABLE, desc = "")
+    @Outcome(id="1, 2, 3, 4, 6, 0", expect = ACCEPTABLE, desc = "")
+    @State
+    public static class VersionTest {
+        private LockFreeSet<Integer> set = new LockFreeSetImpl<>();
+        private volatile boolean flag = false;
+
+        @Actor
+        public void actor() {
+            set.add(1);
+            set.add(2);
+            set.add(3);
+            set.add(4);
+            set.add(5);
+            set.add(6);
+            flag = true;
+        }
+
+        @Actor
+        public void actor3() {
+            while (!flag) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            set.remove(2);
+            set.add(2);
+            set.remove(5);
+            set.add(5);
+        }
+
+        @Actor
+        public void actor1(IIIIII_Result result) {
+            while (!flag) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            Iterator<Integer> iterator = set.iterator();
+            result.r1 = iterator.hasNext() ? iterator.next() : 0;
+            result.r2 = iterator.hasNext() ? iterator.next() : 0;
+            result.r3 = iterator.hasNext() ? iterator.next() : 0;
+            result.r4 = iterator.hasNext() ? iterator.next() : 0;
+            result.r5 = iterator.hasNext() ? iterator.next() : 0;
+            result.r6 = iterator.hasNext() ? iterator.next() : 0;
+        }
+    }
 }

@@ -14,18 +14,19 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
     private Node head = new Node(null);
 
     private class Node {
-        final AtomicStampedReference<Node> next = new AtomicStampedReference<>(null, UNMARKED);
+        final AtomicStampedReference<Node> next;
         final T value;
-        final int id;
 
         Node (T value) {
             this.value = value;
-            this.id = counter.getAndIncrement();
+            int version = counter.getAndIncrement();
+            next = new AtomicStampedReference<>(null, version * 2 + UNMARKED);
         }
 
         Node(T value, Node next) {
             this(value);
-            this.next.set(next, UNMARKED);
+            int stamp = this.next.getStamp();
+            this.next.set(next, stamp);
         }
     }
 
@@ -53,8 +54,8 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
                     Node succ;
                     int[] tmp = new int[1];
                     succ = curr.next.get(tmp);
-                    int mark = tmp[0];
-                    if (mark != MARKED) {
+                    int stamp = tmp[0];
+                    if ((stamp & 1) != MARKED) {
                         snapshot.add(curr);
                     }
                     curr = succ;
@@ -66,9 +67,10 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
                     Node succ;
                     int[] tmp = new int[1];
                     succ = curr.next.get(tmp);
+                    int stamp = tmp[0];
                     int mark = tmp[0];
-                    if (mark != MARKED) {
-                        if (cnt >= snapshot.size() || snapshot.get(cnt++).id != curr.id) {
+                    if ((mark & 1) != MARKED) {
+                        if (cnt >= snapshot.size() || snapshot.get(cnt++).next.getStamp() != stamp) {
                             flag = false;
                             break;
                         }
@@ -102,9 +104,10 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
                 Node succ;
                 int[] tmp = new int[1];
                 succ = curr.next.get(tmp);
-                int mark = tmp[0];
-                if (mark == MARKED) {
-                    if (!prev.next.compareAndSet(curr, succ, UNMARKED, UNMARKED)) {
+                int stamp = tmp[0];
+                if ((stamp & 1) == MARKED) {
+                    int prevStamp = prev.next.getStamp();
+                    if (!prev.next.compareAndSet(curr, succ, prevStamp, prevStamp)) {
                         break;
                     }
                     curr = succ;
@@ -125,7 +128,13 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
             Node curr = pr.curr;
             if (curr != null && curr.value.compareTo(value) == 0) return false;
             Node next = new Node(value, curr);
-            if (prev.next.compareAndSet(curr, next, UNMARKED, UNMARKED)) return true;
+
+            int stamp = prev.next.getStamp();
+            if ((stamp & 1) == MARKED) continue;
+            int newStamp = counter.getAndIncrement() * 2 + UNMARKED;
+
+            // If new Node was added, change version
+            if (prev.next.compareAndSet(curr, next, stamp, newStamp)) return true;
         }
     }
 
@@ -136,9 +145,15 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
             Node prev = pr.prev;
             Node curr = pr.curr;
             if (curr == null || curr.value.compareTo(value) != 0) return false;
-            Node succ = curr.next.getReference();
-            if (!curr.next.compareAndSet(succ, succ, UNMARKED, MARKED)) continue;
-            prev.next.compareAndSet(curr, succ, UNMARKED, UNMARKED);
+            int[] tmp = new int[1];
+            Node succ = curr.next.get(tmp);
+            int stamp = tmp[0];
+
+            if (((stamp & 1) == MARKED) || !curr.next.compareAndSet(succ, succ, stamp, stamp ^ 1)) continue;
+
+            int stamp1 = prev.next.getStamp();
+            int newStamp = 2 * counter.getAndIncrement() + UNMARKED;
+            prev.next.compareAndSet(curr, succ, stamp1, newStamp);
             return true;
         }
     }
@@ -150,7 +165,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
             if (curr == null) return false;
             int[] tmp = new int[1];
             Node succ = curr.next.get(tmp);
-            int mark = tmp[0];
+            int mark = tmp[0] & 1;
             if (mark == MARKED) {
                 curr = succ;
             } else {
@@ -165,14 +180,16 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements  LockFreeSet<T>
     @Override
     public boolean isEmpty() {
         while (true) {
-            Node start = head.next.getReference();
+            int[] tmp = new int[1];
+            Node start = head.next.get(tmp);
+            int stamp = tmp[0];
             if (start == null) return true;
-            int mark = start.next.getStamp();
+            int mark = start.next.getStamp() & 1;
             if (mark == UNMARKED) {
                 return false;
             } else {
                 Node next = start.next.getReference();
-                head.next.compareAndSet(start, next, UNMARKED, UNMARKED);
+                head.next.compareAndSet(start, next, stamp, stamp);
             }
         }
     }
