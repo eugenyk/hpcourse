@@ -1,6 +1,4 @@
-import com.sun.istack.internal.NotNull;
-
-import java.util.function.Consumer;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Lock-Free множество.
