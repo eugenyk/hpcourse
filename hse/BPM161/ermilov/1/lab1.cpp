@@ -42,9 +42,8 @@ void* producer_routine(void* arg) {
         pthread_mutex_lock(&consumer_cond_mutex);
         empty_data = false;
         pthread_cond_signal(&consumer_cond);
-        pthread_mutex_unlock(&consumer_cond_mutex);
-
         pthread_mutex_lock(&producer_cond_mutex);
+        pthread_mutex_unlock(&consumer_cond_mutex);
         while (!empty_data) {
             pthread_cond_wait(&producer_cond, &producer_cond_mutex);
         }
@@ -113,12 +112,15 @@ int run_threads() {
     pthread_create(&interrupter, nullptr, consumer_interruptor_routine, nullptr);
 
     int overall_sum = 0;
+    int* thread_result;
+
+    pthread_join(producer, reinterpret_cast<void**>(&thread_result));
     for (auto& consumer : consumers) {
-        int* thread_result;
         pthread_join(consumer, reinterpret_cast<void**>(&thread_result));
         overall_sum += *thread_result;
         delete thread_result;
     }
+    pthread_join(interuptor, reinterpret_cast<void**>(&thread_result));
 
     pthread_mutex_destroy(&producer_cond_mutex);
     pthread_mutex_destroy(&consumer_cond_mutex);
