@@ -16,13 +16,14 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
     if (value == null) return false;
     var valNode = new SetNode<>(value);
     var node = head;
+    listSize.incrementAndGet();
     while (!node.next.compareAndSet(null, valNode)) {
       node = node.next.get();
       if (node.has(value)) {
+        listSize.decrementAndGet();
         return false;
       }
     }
-    listSize.incrementAndGet();
     return true;
   }
 
