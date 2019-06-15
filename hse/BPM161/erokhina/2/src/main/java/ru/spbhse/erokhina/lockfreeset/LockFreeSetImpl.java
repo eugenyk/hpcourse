@@ -2,6 +2,7 @@ package ru.spbhse.erokhina.lockfreeset;
 
 import ru.spbhse.erokhina.utils.Pair;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,7 +32,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     @Override
     public boolean add(T value) {
         while(true) {
-            Pair<Node<T>> pair = find(value);
+            Pair<Node<T>, Node<T>> pair = find(value);
             Node<T> pred = pair.getFirst();
             Node<T> curr = pair.getSecond();
 
@@ -49,7 +50,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     @Override
     public boolean remove(T value) {
         while (true) {
-            Pair<Node<T>> pair = find(value);
+            Pair<Node<T>, Node<T>> pair = find(value);
             Node<T> pred = pair.getFirst();
             Node<T> curr = pair.getSecond();
 
@@ -66,9 +67,9 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         }
     }
 
-    private Pair<Node<T>> find(T value) {
+    private Pair<Node<T>, Node<T>> find(T value) {
         while (true) {
-            Node<T> pred = head, curr = pred.getNextAndMark().getReference(), succ;
+            Node<T> pred = head, curr = pred.getNextAndMark().getReference();
 
             while (true) {
                 if (curr == null) {
@@ -81,7 +82,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
                         break;
                     }
                 } else {
-                    if (curr != head && (curr.getValue().compareTo(value) >= 0)) {
+                    if (curr != head && (curr.getValue().compareTo(value) == 0)) {
                         return new Pair<>(pred, curr);
                     }
                     pred = curr;
@@ -95,7 +96,7 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     public boolean contains(T value) {
         Node<T> curr = head;
 
-        while (curr != null && (curr == head || curr.getValue().compareTo(value) < 0)) {
+        while (curr != null && (curr == head || curr.getValue().compareTo(value) != 0)) {
             curr = curr.getNextAndMark().getReference();
         }
 
@@ -108,8 +109,9 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         return !iterator().hasNext();
     }
 
-    private List<T> getExistElementsList() {
+    private Pair<List<T>, Node<T>> getListAndLastNode() {
         List<T> list = new ArrayList<>();
+        Node<T> last = head;
 
         for (Node<T> curr = head.getNextAndMark().getReference(); curr != null;
                                                         curr = curr.getNextAndMark().getReference()) {
@@ -118,17 +120,24 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
             }
 
             list.add(curr.getValue());
+            last = curr;
         }
 
-        return list;
+        return new Pair<>(list, last);
     }
 
     private List<T> getSnapshot() {
         while (true) {
-            List<T> nodesBefore = getExistElementsList();
-            List<T> nodesAfter = getExistElementsList();
+            Pair<List<T>, Node<T>> resBefore = getListAndLastNode();
+            Pair<List<T>, Node<T>> resAfter = getListAndLastNode();
 
-            if (nodesBefore.equals(nodesAfter)) {
+            List<T> nodesBefore = resBefore.getFirst();
+            List<T> nodesAfter = resAfter.getFirst();
+
+            Node<T> lastBefore = resBefore.getSecond();
+            Node<T> lastAfter = resAfter.getSecond();
+
+            if (nodesBefore.equals(nodesAfter) && lastBefore.equals(lastAfter)) {
                 return nodesBefore;
             }
         }
@@ -136,6 +145,12 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
 
     @Override
     public Iterator<T> iterator() {
-        return getSnapshot().iterator();
+        List<T> snapshot = getSnapshot();
+        snapshot.sort(Comparable::compareTo);
+
+        return snapshot.iterator();
     }
+
+
+
 }

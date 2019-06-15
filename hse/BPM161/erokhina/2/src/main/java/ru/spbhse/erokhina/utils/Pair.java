@@ -1,9 +1,10 @@
 package ru.spbhse.erokhina.utils;
 
-public class Pair<T> {
-    private T first, second;
+public class Pair<T, N> {
+    private T first;
+    private N second;
 
-    public Pair(T first, T second) {
+    public Pair(T first, N second) {
         this.first = first;
         this.second = second;
     }
@@ -16,11 +17,11 @@ public class Pair<T> {
         this.first = first;
     }
 
-    public T getSecond() {
+    public N getSecond() {
         return second;
     }
 
-    public void setSecond(T second) {
+    public void setSecond(N second) {
         this.second = second;
     }
 }

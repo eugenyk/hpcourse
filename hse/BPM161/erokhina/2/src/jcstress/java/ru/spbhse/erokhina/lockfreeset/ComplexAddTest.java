@@ -16,7 +16,7 @@ public class ComplexAddTest {
     private List<Integer> expectedResult = new ArrayList<>();
 
     ComplexAddTest() {
-        for (int i = 0; i <= 30; i++) {
+        for (int i = 0; i <= 30; i ++) {
             expectedResult.add(i);
         }
     }
@@ -38,6 +38,7 @@ public class ComplexAddTest {
     @Arbiter
     public void arbiter(Z_Result r) {
         List<Integer> realResult = IteratorUtils.toList(set.iterator());
+
         r.r1 = realResult.equals(expectedResult);
     }
 }
