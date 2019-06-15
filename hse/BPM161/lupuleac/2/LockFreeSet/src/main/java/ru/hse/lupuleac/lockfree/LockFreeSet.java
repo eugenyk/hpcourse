@@ -133,6 +133,11 @@ public class LockFreeSet<T extends Comparable<T>> implements
         public Node nextNode() {
             return next.getReference();
         }
+
+        @Override
+        public boolean equals(Object other) {
+            return ((Node)other).next == next;
+        }
     }
 
     private class FindResult {
