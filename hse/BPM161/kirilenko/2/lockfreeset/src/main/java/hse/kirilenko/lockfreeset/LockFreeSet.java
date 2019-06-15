@@ -74,35 +74,33 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
     private List<T> getSnapshot() {
         while (true) {
-            List<T> unsafeSnapshot1 = unsafeSnapshot();
-            List<T> unsafeSnapshot2 = unsafeSnapshot();
+            SnapshotItem unsafeSnapshot1 = unsafeSnapshot();
+            SnapshotItem unsafeSnapshot2 = unsafeSnapshot();
 
-            if (unsafeSnapshot1.equals(unsafeSnapshot2)) {
-                return unsafeSnapshot1;
+            // if lists are equal, but state is incorrect, last nodes will be different
+            if (unsafeSnapshot1.items.equals(unsafeSnapshot2.items) &&
+                    unsafeSnapshot1.lastNode == unsafeSnapshot2.lastNode) {
+                return unsafeSnapshot1.items;
             }
         }
     }
 
-    private List<T> unsafeSnapshot() {
+    private SnapshotItem unsafeSnapshot() {
         List<T> result = new ArrayList<>();
+        Node node;
 
-        for (Node node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
+        for (node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
             if (!node.next.isMarked()) {
                 result.add(node.value);
             }
         }
 
-        return result;
+        return new SnapshotItem(result, node);
     }
 
     private PrevCurNodePair findPrevCur(@NotNull T value) {
         Node prev, node;
         for (prev = head.getReference(), node = prev.next.getReference(); node != null; prev = node, node = node.next.getReference()) {
-            if (node.next.isMarked()) {
-                boolean mark = prev.next.isMarked();
-                prev.next.compareAndSet(node, node.next.getReference(), mark, mark);
-            }
-            
             if (!node.next.isMarked() && value.equals(node.value)) {
                 return new PrevCurNodePair(prev, node);
             }
@@ -131,6 +129,16 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
         PrevCurNodePair(Node first, Node second) {
             this.prev = first;
             this.cur = second;
+        }
+    }
+
+    private class SnapshotItem {
+        final List<T> items;
+        final Node lastNode;
+
+        SnapshotItem(List<T> items, Node lastNode) {
+            this.items = items;
+            this.lastNode = lastNode;
         }
     }
 }
