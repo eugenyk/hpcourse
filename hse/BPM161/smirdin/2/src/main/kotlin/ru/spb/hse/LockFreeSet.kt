@@ -44,7 +44,7 @@ class LockFreeSet<T> : ILockFreeSet<T>
             val snapshot2 = getSnapshot()
             if (snapshot1.size == snapshot2.size) {
                 for ((el1, el2) in snapshot1.zip(snapshot2)) {
-                    if (el1 != el2) continue
+                    if (el1 !== el2) continue
                 }
             }
 
