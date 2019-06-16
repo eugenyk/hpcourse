@@ -104,7 +104,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
             if (l1.equals(l2)) {
                 List<T> result = new ArrayList<>();
                 for (Pair<T, Integer> elem : l1) {
-                    if (elem.fst != null) {
+                    if (elem.fst != null && elem.snd != 0) {
                         result.add(elem.fst);
                     }
                 }
@@ -117,10 +117,6 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
         ArrayList<Pair<T, Integer>> shot = new ArrayList<>();
 
         for (Node<T> currentNode = head; currentNode != null; currentNode = currentNode.getNextNode()) {
-            if (currentNode.getNodeVersion() == 0) {
-                continue;
-            }
-
             shot.add(new Pair<>(currentNode.getValue(), currentNode.getNodeVersion()));
         }
 
