@@ -1,5 +1,7 @@
 package ru.hse.iisuslik
 
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicStampedReference
 
 /**
@@ -9,6 +11,7 @@ import java.util.concurrent.atomic.AtomicStampedReference
  */
 class LockFreeSet<T : Comparable<T>> {
 
+    private var currentVersion = AtomicInteger(0)
     private val head = Node(Node<T>(null, null), null)
 
 
@@ -181,11 +184,13 @@ class LockFreeSet<T : Comparable<T>> {
     }
 
 
-    private class Node<T>(nextNode: Node<T>?, val data: T?) {
-        val next: AtomicStampedReference<Node<T>> = AtomicStampedReference<Node<T>>(nextNode, NOT_DELETED)
+    private inner class Node<T>(nextNode: Node<T>?, val data: T?) {
+        val next: AtomicStampedReference<Node<T>> = AtomicStampedReference<Node<T>>(nextNode,
+            currentVersion.getAndIncrement() * 2)
         val version: Int
             get() = next.stamp / 2
     }
+
 
     companion object {
         const val DELETED = 1
