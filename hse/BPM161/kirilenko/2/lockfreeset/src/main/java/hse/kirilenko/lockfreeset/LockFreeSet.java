@@ -87,15 +87,19 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
     private SnapshotItem unsafeSnapshot() {
         List<T> result = new ArrayList<>();
-        Node node;
+        Node lastNode = head.getReference();
 
-        for (node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
+        for (Node node = head.getReference().next.getReference(); node != null; node = node.next.getReference()) {
             if (!node.next.isMarked()) {
                 result.add(node.value);
             }
+
+            if (node.next.getReference() != null) {
+                lastNode = node.next.getReference();
+            }
         }
 
-        return new SnapshotItem(result, node);
+        return new SnapshotItem(result, lastNode);
     }
 
     private PrevCurNodePair findPrevCur(@NotNull T value) {
