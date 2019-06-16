@@ -120,7 +120,7 @@ int run_threads() {
         overall_sum += *thread_result;
         delete thread_result;
     }
-    pthread_join(interuptor, reinterpret_cast<void**>(&thread_result));
+    pthread_join(interrupter, reinterpret_cast<void**>(&thread_result));
 
     pthread_mutex_destroy(&producer_cond_mutex);
     pthread_mutex_destroy(&consumer_cond_mutex);
