@@ -15,11 +15,16 @@ class LockFreeSet<T> : ILockFreeSet<T>
     override val isEmpty: Boolean
         get() {
             val mark = booleanArrayOf(false)
-            var cur = head.reference.next.get(mark)
-            while (cur != null) {
-                if (!mark[0])
+            tryDeleteAfter(head)
+            var cur = head.reference.next
+            var curNode = cur.get(mark)
+            while (curNode != null) {
+                tryDeleteAfter(cur)
+                if (!mark[0]) {
                     return false
-                cur = cur.next.get(mark)
+                }
+                cur = curNode.next
+                curNode = cur.get(mark)
             }
             return true
         }
@@ -29,6 +34,7 @@ class LockFreeSet<T> : ILockFreeSet<T>
             var cur = head
             val curMark = booleanArrayOf(false)
             var curNode = cur.reference
+            tryDeleteAfter(cur)
             val nextMark = booleanArrayOf(false)
             var nextNode = curNode.next.get(nextMark)
             while (nextNode != null) {
@@ -38,6 +44,7 @@ class LockFreeSet<T> : ILockFreeSet<T>
                 cur = curNode.next
                 curNode = nextNode
                 curMark[0] = nextMark[0]
+                tryDeleteAfter(cur)
                 nextNode = curNode.next.get(nextMark)
             }
             if (cur.compareAndSet(
@@ -54,6 +61,7 @@ class LockFreeSet<T> : ILockFreeSet<T>
 
     override fun remove(value: T): Boolean {
         val mark = booleanArrayOf(false)
+        tryDeleteAfter(head)
         var cur = head.reference.next
         var curNode = cur.get(mark)
         while (curNode != null) {
@@ -63,6 +71,7 @@ class LockFreeSet<T> : ILockFreeSet<T>
                 }
                 curNode = cur.get(mark)
             }
+            tryDeleteAfter(cur)
             cur = curNode.next
             curNode = cur.get(mark)
         }
@@ -71,12 +80,16 @@ class LockFreeSet<T> : ILockFreeSet<T>
 
     override operator fun contains(value: T): Boolean {
         val mark = booleanArrayOf(false)
-        var curNode = head.reference.next.get(mark)
+        tryDeleteAfter(head)
+        var cur = head.reference.next
+        var curNode = cur.get(mark)
         while (curNode != null) {
+            tryDeleteAfter(cur)
             if (curNode.value == value && !mark[0]) {
                 return true
             }
-            curNode = curNode.next.get(mark)
+            cur = curNode.next
+            curNode = cur.get(mark)
         }
         return false
     }
@@ -87,15 +100,33 @@ class LockFreeSet<T> : ILockFreeSet<T>
         do {
             curSeq.clear()
             val mark = booleanArrayOf(false)
-            var cur = head.reference.next.get(mark)
-            while (cur != null) {
+            tryDeleteAfter(head)
+            var cur = head.reference.next
+            var curNode = cur.get(mark)
+            while (curNode != null) {
+                tryDeleteAfter(cur)
                 if (!mark[0]) {
-                    curSeq.add(cur)
+                    curSeq.add(curNode)
                 }
-                cur = cur.next.get(mark)
+                cur = curNode.next
+                curNode = cur.get(mark)
             }
             curSeq = prevSeq.also { prevSeq = curSeq }
         } while (curSeq != prevSeq)
         return curSeq.map { it.value!! }.iterator()
     }
+
+    private fun tryDeleteAfter(cur: LockFreeNode<T>) {
+        val mark = booleanArrayOf(false)
+        val curNode = cur.get(mark)
+        val nextMark = booleanArrayOf(false)
+        val nextNode = curNode.next.get(nextMark)
+        val nextNextMark = booleanArrayOf(false)
+
+        // Current node was not removed, next nde marked to remove, next node is not last
+        if (!mark[0] && nextMark[0] && nextNode.next.get(nextNextMark) != null) {
+            cur.compareAndSet(curNode, Node(curNode.value, nextNode.next), false, false)
+        }
+    }
 }
+
