@@ -93,13 +93,22 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
         return true;
     }
 
-
+    private boolean identical(List<T> first, List<T> second) {
+        if (first.size() != second.size())
+            return false;
+        for (int i = 0; i < first.size(); i++) {
+            if (first.get(i) != second.get(i))
+                return false;
+        }
+        return true;
+    }
+    
     @Override
     public Iterator<T> iterator() {
         while (true) {
             List<T> snap = snapshot();
             List<T> nextSnap = snapshot();
-            if (snap.equals(nextSnap)) {
+            if (identical(snap, nextSnap)) {
                 return snap.iterator();
             }
         }
