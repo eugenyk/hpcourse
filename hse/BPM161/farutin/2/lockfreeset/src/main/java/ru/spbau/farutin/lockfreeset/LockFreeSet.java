@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.stream.Collectors;
 
 public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterface<T> {
     private AtomicMarkableReference<Node> head =
@@ -94,29 +95,29 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
     }
 
     private List<T> getSnapshot() {
-        List<T> values;
-        List<T> newValues;
+        List<Node> nodes;
+        List<Node> newNodes;
 
         do {
-            values = getCurrentValues();
-            newValues = getCurrentValues();
-        } while (!values.equals(newValues));
+            nodes = getCurrentNodes();
+            newNodes = getCurrentNodes();
+        } while (!nodes.equals(newNodes));
 
-        return values;
+        return nodes.stream().map(node -> node.value).collect(Collectors.toList());
     }
 
-    private List<T> getCurrentValues() {
-        List<T> values = new ArrayList<>();
+    private List<Node> getCurrentNodes() {
+        List<Node> nodes = new ArrayList<>();
 
         for (Node node = head.getReference().next.getReference();
              node != null;
              node = node.next.getReference()) {
             if (isPresent(node)) {
-                values.add(node.value);
+                nodes.add(node);
             }
         }
 
-        return values;
+        return nodes;
     }
 
     private class Node {
