@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.stream.Collectors;
 
 public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> {
 
@@ -65,10 +66,10 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     @Override
     public Iterator<T> iterator() {
         while (true) {
-            List<T> firstSnapshot = getValues();
-            List<T> secondSnapshot = getValues();
+            List<Node> firstSnapshot = getValues();
+            List<Node> secondSnapshot = getValues();
             if (firstSnapshot.equals(secondSnapshot)) {
-                return secondSnapshot.iterator();
+                return secondSnapshot.stream().map(n -> n.value).collect(Collectors.toList()).iterator();
             }
         }
     }
@@ -87,12 +88,12 @@ public class LockFreeSetImpl<T extends Comparable<T>> implements LockFreeSet<T> 
     }
 
 
-    private List<T> getValues() {
-        final List<T> res = new ArrayList<>();
+    private List<Node> getValues() {
+        final List<Node> res = new ArrayList<>();
         Node cur = head.getReference().next.getReference();
         while (cur != null) {
             if (!cur.next.isMarked()) {
-                res.add(cur.value);
+                res.add(cur);
             }
             cur = cur.next.getReference();
         }
