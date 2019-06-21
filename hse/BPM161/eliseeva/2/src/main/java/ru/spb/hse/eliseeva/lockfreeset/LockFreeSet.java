@@ -1,10 +1,10 @@
 package ru.spb.hse.eliseeva.lockfreeset;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.stream.Collectors;
 
 public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterface<T> {
     private Node root = new Node(null);
@@ -64,7 +64,7 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
     @Override
     public boolean isEmpty() {
-        return iterator().hasNext();
+        return !iterator().hasNext();
     }
 
     @Override
@@ -93,26 +93,26 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
 
     private List<T> snapshot() {
         while (true) {
-            List<T> list1 = getElements();
-            List<T> list2 = getElements();
+            List<Node> list1 = getElements();
+            List<Node> list2 = getElements();
             if (list1.size() != list2.size()) {
                  continue;
             }
             boolean isEqual = true;
             for (int i = 0; i < list1.size(); i++) {
-                if (list1.get(i).compareTo(list2.get(i)) != 0) {
+                if (list1.get(i) != list2.get(i)) {
                     isEqual = false;
                     break;
                 }
             }
             if (isEqual) {
-                return list1;
+                return list1.stream().map(x -> x.nodeValue).sorted().collect(Collectors.toList());
             }
         }
     }
 
-    private List<T> getElements() {
-        List<T> answer = new ArrayList<>();
+    private List<Node> getElements() {
+        List<Node> answer = new ArrayList<>();
         Node curNode = root;
         boolean[] isMarked = new boolean[1];
         Node nextNode;
@@ -121,9 +121,8 @@ public class LockFreeSet<T extends Comparable<T>> implements LockFreeSetInterfac
                 return getElements();
             }
             curNode = nextNode;
-            answer.add(curNode.nodeValue);
+            answer.add(curNode);
         }
-        Collections.sort(answer);
         return answer;
     }
 }
