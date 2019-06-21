@@ -1,8 +1,6 @@
 package hse.kirakosian;
 
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.Iterator;
 
 /**
@@ -58,7 +56,6 @@ public interface ILockFreeSet<T extends Comparable<T>> extends Iterable<T> {
          *
          * @return новый экземпляр итератор для множества
          */
-         @NotNull
          @Override
          Iterator<T> iterator();
 }

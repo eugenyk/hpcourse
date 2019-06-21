@@ -1,9 +1,8 @@
 package hse.kirakosian;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.stream.Collectors;
 
 public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
 
@@ -58,7 +57,6 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
         return false;
     }
 
-    @NotNull
     @Override
     public Iterator<T> iterator() {
         return getSnapshot().iterator();
@@ -96,28 +94,28 @@ public class LockFreeSet<T extends Comparable<T>> implements ILockFreeSet<T> {
             final var firstSnap = collect();
             final var secondSnap = collect();
             if (areSnapsEqual(firstSnap, secondSnap)) {
-                return firstSnap;
+                return firstSnap.stream().map(node -> node.value).collect(Collectors.toList());
             }
         }
     }
 
-    private boolean areSnapsEqual(final List<T> first, final List<T> second) {
+    private boolean areSnapsEqual(final List<Node> first, final List<Node> second) {
         if (first.size() != second.size()) {
             return false;
         }
         for (int i = 0; i < first.size(); i++) {
-            if (!first.get(i).equals(second.get(i))) {
+            if (first.get(i) != second.get(i)) {
                 return false;
             }
         }
         return true;
     }
 
-    private List<T> collect() {
-        final var list = new ArrayList<T>();
+    private List<Node> collect() {
+        final var list = new ArrayList<Node>();
         var curr = head.next.getReference();
         while (curr != null) {
-            final var value = curr.value;
+            final var value = curr;
             if (!curr.next.isMarked()) {
                 list.add(value);
             }
