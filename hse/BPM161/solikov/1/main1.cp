@@ -10,6 +10,8 @@ unsigned int N_consumer;
 unsigned int milliseconds;
 
 thread_local int part_sum;
+bool done = false;
+int stopped_threads = 0;
 
 int number_of_digits(int x) {
     int length = 1;
@@ -42,16 +44,20 @@ void *producer_routine(void *arg) {
         i += number_of_digits(cur_int);
         *parg->p_shared_int = cur_int;
         pthread_cond_signal(parg->p_shared_int_cond_produce);
-        while (*parg->p_shared_int_delivery_status != 1) {
+        while (*parg->p_shared_int_delivery_status != 1 && !done) {
             pthread_cond_wait(parg->p_shared_int_cond_consume, parg->p_shared_int_mutex);
         }
+        pthread_cond_signal(parg->p_shared_int_cond_produce);
         pthread_mutex_unlock(parg->p_shared_int_mutex);
     }
-
-    pthread_mutex_lock(parg->p_shared_int_mutex);
+    done = true;
+//    pthread_mutex_lock(parg->p_shared_int_mutex);
     *parg->p_shared_int_delivery_status = -1;
-    pthread_cond_broadcast(parg->p_shared_int_cond_produce);
-    pthread_mutex_unlock(parg->p_shared_int_mutex);
+    while (stopped_threads < N_consumer) {
+        pthread_cond_signal(parg->p_shared_int_cond_produce);
+    }
+//    pthread_cond_broadcast(parg->p_shared_int_cond_produce);
+//    pthread_mutex_unlock(parg->p_shared_int_mutex);
 
     return nullptr;
 }
@@ -65,11 +71,18 @@ void *consumer_routine(void *arg) {
     auto parg = (producer_arg_t *) arg;
     pthread_barrier_wait(parg->consumer_barrier);
 
-    while (true) {
+    while (!done) {
         pthread_mutex_lock(parg->p_shared_int_mutex);
-        while (*parg->p_shared_int_delivery_status == 1) {
+        while (*parg->p_shared_int_delivery_status == 1 && !done) {
             pthread_cond_wait(parg->p_shared_int_cond_produce, parg->p_shared_int_mutex);
         }
+
+        if (done){
+            stopped_threads++;
+            pthread_mutex_unlock(parg->p_shared_int_mutex);
+            break;
+        }
+
         if (*parg->p_shared_int_delivery_status == -1) {
 //            std::cout << "part_sum" << part_sum << std::endl;
             pthread_mutex_unlock(parg->p_shared_int_mutex);
@@ -85,6 +98,11 @@ void *consumer_routine(void *arg) {
         pthread_mutex_unlock(parg->p_shared_int_mutex);
         usleep(sm);
     }
+
+    if (done){
+        stopped_threads++;
+        pthread_mutex_unlock(parg->p_shared_int_mutex);
+    }
 }
 
 void *consumer_interruptor_routine(void *arg) {
@@ -93,7 +111,7 @@ void *consumer_interruptor_routine(void *arg) {
     auto parg = (producer_arg_t *) arg;
     pthread_barrier_wait(parg->consumer_barrier);
 
-    while (true) {
+    while (!done) {
         pthread_mutex_lock(parg->p_shared_int_mutex);
         if (*parg->p_shared_int_delivery_status == -1) {
             pthread_mutex_unlock(parg->p_shared_int_mutex);
@@ -134,9 +152,11 @@ int run_threads() {
     pthread_create(&producer, nullptr, producer_routine, &arg);
     pthread_create(&consumer_intr, nullptr, consumer_interruptor_routine, &arg);
     for (int i = 0; i < N_consumer; i++) {
+        std::cout << i <<  " " << sizeof(consumer) / sizeof(pthread_t  ) << '\n';
         arg.consumers.push_back(&consumer[i]);
         pthread_create(&consumer[i], nullptr, consumer_routine, &arg);
     }
+    std::cout <<  sizeof(pthread_t  ) << " " << sizeof(consumer) / sizeof(pthread_t  ) << '\n';
     for (pthread_t pthread : consumer) {
         void *sn;
         pthread_join(pthread, &sn);
