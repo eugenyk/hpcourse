@@ -1,29 +1,24 @@
 package ru.hse.spb.solikov;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.stream.Collectors;
 
 public class LockFreeSetWithSnapshots<T extends Comparable<T>> implements LockFreeSet<T> {
 
-    public AtomicMarkableReference<ListNode<T>> head =
-            new AtomicMarkableReference<>(new ListNode<>(), false);
+    public ListNode<T> head =
+            new ListNode<>();
 
-    private ListNodePair<T> find(T data) {
-        ListNode<T> x = head.getReference();
-        ListNode<T> xNext = x.next.getReference();
-
-        while (xNext != null) {
-            if (data.equals(xNext.data) && !xNext.next.isMarked()) {
-                return new ListNodePair<>(x, xNext);
-            }
-            x = xNext;
-            xNext = xNext.next.getReference();
+    private ListNodePair<T> find(T value) {
+        ListNodePair<T> res = new ListNodePair<>(null, head);
+        while (res.second != null) {
+            ListNode<T> nextNode = res.second.next.getReference();
+            boolean ok = !res.second.next.isMarked();
+            res.first = res.second;
+            res.second = nextNode;
+            if ((nextNode == null || nextNode.data == value) && ok) return res;
         }
-
-        return new ListNodePair<>(x, null);
+        return res;
     }
 
     @Override
@@ -31,9 +26,10 @@ public class LockFreeSetWithSnapshots<T extends Comparable<T>> implements LockFr
         ListNode<T> node = new ListNode<>(data);
         while (true) {
             ListNodePair<T> res = find(data);
-            if (res.second != null) return false;
-            if (res.first.next.compareAndSet(
-                    null, node, false, false)) return true;
+            ListNode<T> x = res.first;
+            ListNode<T> xNext = res.second;
+            if (xNext != null) return false;
+            if (x.next.compareAndSet(xNext, node, false, false)) return true;
         }
     }
 
@@ -59,30 +55,33 @@ public class LockFreeSetWithSnapshots<T extends Comparable<T>> implements LockFr
 
     @Override
     public boolean isEmpty() {
-        AtomicMarkableReference<ListNode<T>> next = head.getReference().next;
+        AtomicMarkableReference<ListNode<T>> next = head.next;
         while (next.getReference() != null) {
-            if (!next.isMarked()) return false;
+            if (next.isMarked()) return false;
             next = next.getReference().next;
         }
         return true;
     }
 
-    private Set<ListNode<T>> scan() {
-        Set<ListNode<T>> snapshot = new HashSet<>();
-        ListNode<T> x = head.getReference();
-        x = x.next.getReference();
-        while (x != null) {
-            if (!x.next.isMarked()) snapshot.add(x);
-            x = x.next.getReference();
+    private List<ListNode<T>> scan() {
+        List<ListNode<T>> res = new ArrayList<>();
+        ListNode<T> x = head;
+        ListNode<T> xNext;
+        boolean ok = x.next.isMarked();
+        while (x.next.getReference() != null) {
+            xNext = x.next.getReference();
+            if (ok) return scan();
+            x = xNext;
+            res.add(x);
         }
-        return snapshot;
+        return res;
     }
 
     @Override
     public Iterator<T> iterator() {
         while (true) {
-            Set<ListNode<T>> snap1 = scan();
-            Set<ListNode<T>> snap2 = scan();
+            List<ListNode<T>> snap1 = scan();
+            List<ListNode<T>> snap2 = scan();
             if (snap1.size() != snap2.size()) continue;
             boolean same = true;
             for (Iterator<ListNode<T>> i = snap1.iterator(),
