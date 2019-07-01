@@ -57,7 +57,7 @@ public class LockFreeSetWithSnapshots<T extends Comparable<T>> implements LockFr
     public boolean isEmpty() {
         AtomicMarkableReference<ListNode<T>> next = head.next;
         while (next.getReference() != null) {
-            if (next.isMarked()) return false;
+            if (!next.isMarked()) return false;
             next = next.getReference().next;
         }
         return true;
