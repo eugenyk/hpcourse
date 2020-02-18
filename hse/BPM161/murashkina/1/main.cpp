@@ -6,14 +6,10 @@
 #include <numeric>
 #include <random>
 
-int NUM_CONSUMERS = 1;
-int MAX_SLEEP_MS = 0;
-
-int CURRENT_NUMBER = -1;
-bool NUMBERS_LEFT = true;
+int current_number = -1;
 
 struct consumer_arg {
-    const int * current_number_ptr = &CURRENT_NUMBER;
+    const int * current_number_ptr = &current_number;
     int * sum_ptr = nullptr;
     explicit consumer_arg(int * sum_ptr) {
         this->sum_ptr = sum_ptr;
@@ -21,20 +17,18 @@ struct consumer_arg {
     consumer_arg() = default;
 };
 
-bool AT_LEAST_ONE_THREAD_STARTED = false;
-int NUM_CONSUMER_THREADS_SET_NO_INTERRUPT = 0;
-pthread_mutex_t AT_LEAST_ONE_THREAD_STARTED_MUTEX = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t AT_LEAST_ONE_THREAD_STARTED_COND = PTHREAD_COND_INITIALIZER;
-
-bool IS_NUMBER_CONSUMED = true;
-pthread_mutex_t CURRENT_NUMBER_MUTEX = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t NUMBER_PRODUCED_COND = PTHREAD_COND_INITIALIZER;
-pthread_cond_t NUMBER_CONSUMED_COND = PTHREAD_COND_INITIALIZER;
-
-std::vector<pthread_t> THREADS;
+int num_consumers = 1;
+int max_sleep_ms = 0;
+bool are_numbers_left = true;
+bool is_number_consumed = true;
+pthread_mutex_t current_number_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t number_produced_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t number_consumed_cond = PTHREAD_COND_INITIALIZER;
+std::vector<pthread_t> threads;
 
 
 std::vector<int> read_data() {
+    return {7, 8, 9, 10, 11};
     std::vector<int> numbers;
     std::string line;
     std::getline(std::cin, line);
@@ -52,30 +46,22 @@ void* producer_routine(void* arg) {
     // Read data, loop through each value and update the value, notify consumer, wait for consumer to process
 
     std::vector<int> numbers = read_data();
+    assert(!numbers.empty());
 
-    if (!AT_LEAST_ONE_THREAD_STARTED) {
-        pthread_mutex_lock(&AT_LEAST_ONE_THREAD_STARTED_MUTEX);
-        if (!AT_LEAST_ONE_THREAD_STARTED) {
-            pthread_cond_wait(&AT_LEAST_ONE_THREAD_STARTED_COND, &AT_LEAST_ONE_THREAD_STARTED_MUTEX);
+    for (unsigned long i = 0; i < numbers.size(); i++) {
+        pthread_mutex_lock(&current_number_mutex);
+        current_number = numbers[i];
+        is_number_consumed = false;
+        pthread_cond_signal(&number_produced_cond);
+        while (!is_number_consumed) {
+            pthread_cond_wait(&number_consumed_cond, &current_number_mutex);
         }
-        pthread_mutex_unlock(&AT_LEAST_ONE_THREAD_STARTED_MUTEX);
-    }
-
-    for (int i = 0; i < numbers.size(); i++) {
-        pthread_mutex_lock(&CURRENT_NUMBER_MUTEX);
-        assert(IS_NUMBER_CONSUMED);
-        CURRENT_NUMBER = numbers[i];
-        IS_NUMBER_CONSUMED = false;
-        // проверка, что хоть кто-то ждет не нужна, т.к. есть флаг скушано ли число
-        pthread_cond_signal(&NUMBER_PRODUCED_COND);
-        pthread_cond_wait(&NUMBER_CONSUMED_COND, &CURRENT_NUMBER_MUTEX);
-        assert(IS_NUMBER_CONSUMED);
         if (i == numbers.size() - 1) {
-            NUMBERS_LEFT = false;
-            pthread_cond_broadcast(&NUMBER_PRODUCED_COND); // can this be outside of the mutex?
-            // wakes up all consumers so that they'll found out that no numbers left and terminate
+            are_numbers_left = false;
+            // wake up all consumers, they'll know that no numbers left and terminate
+            pthread_cond_broadcast(&number_produced_cond);
         }
-        pthread_mutex_unlock(&CURRENT_NUMBER_MUTEX);
+        pthread_mutex_unlock(&current_number_mutex);
     }
 
     return nullptr;
@@ -88,39 +74,29 @@ void* consumer_routine(void* arg) {
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 
-    pthread_mutex_lock(&AT_LEAST_ONE_THREAD_STARTED_MUTEX);
-    AT_LEAST_ONE_THREAD_STARTED = true;
-    NUM_CONSUMER_THREADS_SET_NO_INTERRUPT++;
-    pthread_cond_signal(&AT_LEAST_ONE_THREAD_STARTED_COND);
-    pthread_mutex_unlock(&AT_LEAST_ONE_THREAD_STARTED_MUTEX);
-
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(0, MAX_SLEEP_MS); // []
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, max_sleep_ms); // []
 
-    while (NUMBERS_LEFT) {
-        pthread_mutex_lock(&CURRENT_NUMBER_MUTEX);
-        if (!NUMBERS_LEFT) {
-            pthread_mutex_unlock(&CURRENT_NUMBER_MUTEX);
+    while (are_numbers_left) {
+        pthread_mutex_lock(&current_number_mutex);
+        while (are_numbers_left && is_number_consumed) {
+            pthread_cond_wait(&number_produced_cond, &current_number_mutex);
+        }
+        if (!are_numbers_left) {
+            pthread_mutex_unlock(&current_number_mutex);
             break;
         }
-        if (IS_NUMBER_CONSUMED) {
-            pthread_cond_wait(&NUMBER_PRODUCED_COND, &CURRENT_NUMBER_MUTEX);
-            if (IS_NUMBER_CONSUMED) {
-                pthread_mutex_unlock(&CURRENT_NUMBER_MUTEX);
-                continue;
-            }
-        }
+
         *(((consumer_arg *)arg)->sum_ptr) += *(((consumer_arg *)arg)->current_number_ptr);
-        IS_NUMBER_CONSUMED = true;
-        pthread_cond_signal(&NUMBER_CONSUMED_COND);
-        pthread_mutex_unlock(&CURRENT_NUMBER_MUTEX);
+        is_number_consumed = true;
+        pthread_cond_signal(&number_consumed_cond);
+        pthread_mutex_unlock(&current_number_mutex);
 
         int sleep_time = dist(rng);
 
         usleep(sleep_time * 1000);
     }
-
     return nullptr;
 }
 
@@ -130,11 +106,11 @@ void* consumer_interruptor_routine(void* arg) {
 
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(0, NUM_CONSUMERS - 1); // []
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, num_consumers - 1); // []
 
-    while (NUMBERS_LEFT) {
+    while (are_numbers_left) {
         int random_consumer_thread_index = dist(rng);
-        pthread_cancel(THREADS[random_consumer_thread_index]);
+        pthread_cancel(threads[random_consumer_thread_index]);
     }
 
     return nullptr;
@@ -144,24 +120,18 @@ int run_threads() {
     // start N threads and wait until they're done
     // return aggregated sum of values
 
-    std::vector<int> sums(NUM_CONSUMERS, 0);
-    std::vector<consumer_arg> CONSUMER_ARGS(NUM_CONSUMERS);
-    THREADS.resize(NUM_CONSUMERS + 2);
+    std::vector<int> sums(num_consumers, 0);
+    std::vector<consumer_arg> consumer_args(num_consumers);
+    threads.resize(num_consumers + 2);
 
-    for (int i = 0; i < NUM_CONSUMERS; i++) {
-        CONSUMER_ARGS[i] = consumer_arg(&(sums[i]));
+    for (int i = 0; i < num_consumers; i++) {
+        consumer_args[i] = consumer_arg(&(sums[i]));
+        pthread_create(&threads[i], nullptr, consumer_routine, &(consumer_args[i]));
     }
+    pthread_create(&threads[num_consumers], nullptr, producer_routine, nullptr);
+    pthread_create(&threads[num_consumers + 1], nullptr, consumer_interruptor_routine, nullptr);
 
-    for (int i = 0; i < NUM_CONSUMERS; i++) {
-        pthread_create(&THREADS[i], nullptr, consumer_routine, &(CONSUMER_ARGS[i]));
-    }
-    pthread_create(&THREADS[NUM_CONSUMERS], nullptr, producer_routine, nullptr);
-
-    while (NUM_CONSUMER_THREADS_SET_NO_INTERRUPT != NUM_CONSUMERS) {
-        pthread_create(&THREADS[NUM_CONSUMERS + 1], nullptr, consumer_interruptor_routine, nullptr);
-    }
-
-    for (pthread_t thread : THREADS) {
+    for (pthread_t thread : threads) {
         pthread_join(thread, nullptr);
     }
 
@@ -169,8 +139,8 @@ int run_threads() {
 }
 
 int main(int argc, char *argv[]) {
-    NUM_CONSUMERS = atoi(argv[1]);
-    MAX_SLEEP_MS = atoi(argv[2]);
+    num_consumers = atoi(argv[1]);
+    max_sleep_ms = atoi(argv[2]);
 
     std::cout << run_threads() << std::endl;
     return 0;
